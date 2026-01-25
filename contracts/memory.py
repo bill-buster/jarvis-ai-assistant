@@ -3,6 +3,7 @@
 Workstreams 1 and 5 implement against these contracts.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
@@ -68,6 +69,6 @@ class MemoryController(Protocol):
         """Request memory, potentially unloading lower-priority components."""
         ...
 
-    def register_pressure_callback(self, callback: callable) -> None:
+    def register_pressure_callback(self, callback: Callable[[], None]) -> None:
         """Register callback for memory pressure events."""
         ...

@@ -66,7 +66,7 @@ class DegradationController(Protocol):
         """Register a feature with its degradation policy."""
         ...
 
-    def execute(self, feature_name: str, *args, **kwargs) -> Any:
+    def execute(self, feature_name: str, *args: Any, **kwargs: Any) -> Any:
         """Execute feature with automatic fallback on failure."""
         ...
 
