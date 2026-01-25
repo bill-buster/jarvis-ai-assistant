@@ -69,7 +69,11 @@ def generate_report(results_dir: Path) -> str:
 
     # G1: Coverage
     coverage = load_json_safe(results_dir / "coverage.json")
-    if coverage and "coverage_at_70" in coverage:
+    if coverage and coverage.get("skipped"):
+        gate_statuses.append("SKIP")
+        reason = coverage.get("reason", "skipped")
+        lines.append(f"| G1 | Template Coverage @0.7 | {reason} | >=60% | SKIP |")
+    elif coverage and "coverage_at_70" in coverage:
         cov_70 = coverage["coverage_at_70"]
         status = format_gate_status(cov_70, (0.60, 0.40), higher_is_better=True)
         gate_statuses.append(status)
@@ -80,7 +84,11 @@ def generate_report(results_dir: Path) -> str:
 
     # G2: Memory
     memory = load_json_safe(results_dir / "memory.json")
-    if memory and "profiles" in memory:
+    if memory and memory.get("skipped"):
+        gate_statuses.append("SKIP")
+        reason = memory.get("reason", "skipped")
+        lines.append(f"| G2 | Model Stack Memory | {reason} | <5.5GB | SKIP |")
+    elif memory and "profiles" in memory:
         total_mb = sum(p.get("rss_mb", 0) for p in memory["profiles"])
         status = format_gate_status(total_mb, (5500, 6500), higher_is_better=False)
         gate_statuses.append(status)
@@ -91,7 +99,11 @@ def generate_report(results_dir: Path) -> str:
 
     # G3: HHEM
     hhem = load_json_safe(results_dir / "hhem.json")
-    if hhem and "mean_score" in hhem:
+    if hhem and hhem.get("skipped"):
+        gate_statuses.append("SKIP")
+        reason = hhem.get("reason", "skipped")
+        lines.append(f"| G3 | Mean HHEM Score | {reason} | >=0.5 | SKIP |")
+    elif hhem and "mean_score" in hhem:
         mean_score = hhem["mean_score"]
         status = format_gate_status(mean_score, (0.5, 0.4), higher_is_better=True)
         gate_statuses.append(status)
@@ -102,7 +114,12 @@ def generate_report(results_dir: Path) -> str:
 
     # G4 & G5: Latency
     latency = load_json_safe(results_dir / "latency.json")
-    if latency and "results" in latency:
+    if latency and latency.get("skipped"):
+        reason = latency.get("reason", "skipped")
+        gate_statuses.extend(["SKIP", "SKIP"])
+        lines.append(f"| G4 | Warm-Start Latency (p95) | {reason} | <3s | SKIP |")
+        lines.append(f"| G5 | Cold-Start Latency (p95) | {reason} | <15s | SKIP |")
+    elif latency and "results" in latency:
         warm_results = [r for r in latency["results"] if r.get("scenario") == "warm"]
         if warm_results:
             warm_p95 = warm_results[0].get("p95_ms", 0)
