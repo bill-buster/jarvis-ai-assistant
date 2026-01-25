@@ -44,6 +44,9 @@ benchmarks = [
     "pandas>=2.1.0",
 ]
 
+[project.scripts]
+jarvis = "jarvis.cli:run"
+
 [project.urls]
 Homepage = "https://github.com/jwalinshah/jarvis-ai-assistant"
 Documentation = "https://github.com/jwalinshah/jarvis-ai-assistant#readme"

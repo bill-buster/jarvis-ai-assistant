@@ -20,6 +20,7 @@ JARVIS is a local-first AI assistant for macOS that provides intelligent iMessag
 | Memory Controller (WS5) | COMPLETE | Three-tier modes (FULL/LITE/MINIMAL) |
 | Degradation Controller (WS6) | COMPLETE | Circuit breaker pattern |
 | Setup Wizard | COMPLETE | Environment validation, config init, health report |
+| CLI Entry Point | COMPLETE | `jarvis/cli.py` with chat, search, health commands |
 
 **Default Model**: Qwen2.5-0.5B-Instruct-4bit (configured in `models/loader.py`)
 
@@ -221,6 +222,63 @@ git worktree list
 
 ---
 
+## CLI Usage
+
+JARVIS provides a command-line interface for interacting with the assistant.
+
+### Running JARVIS
+
+```bash
+# Via entry point (after pip install)
+jarvis --help
+
+# Via module (development)
+python -m jarvis --help
+```
+
+### Available Commands
+
+```bash
+# Interactive chat mode
+jarvis chat
+
+# Search iMessage conversations
+jarvis search-messages "meeting tomorrow"
+jarvis search-messages "dinner" --limit 50
+
+# Show system health status
+jarvis health
+
+# Summarize emails (Gmail integration pending)
+jarvis summarize-emails
+
+# Run benchmarks
+jarvis benchmark memory
+jarvis benchmark latency
+jarvis benchmark hhem
+jarvis benchmark coverage
+jarvis benchmark memory --output results.json
+
+# Version information
+jarvis version
+jarvis --version
+```
+
+### Options
+
+```bash
+jarvis -v, --verbose    # Enable debug logging
+jarvis --version        # Show version and exit
+```
+
+### Permissions Required
+
+- **iMessage**: Requires Full Disk Access
+  - Grant in System Settings > Privacy & Security > Full Disk Access
+- **Gmail**: OAuth2 credentials required (not yet implemented)
+
+---
+
 ## Architecture
 
 ### Contract-Based Design
@@ -241,6 +299,7 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 | Directory | Purpose | Status |
 |-----------|---------|--------|
+| `jarvis/` | CLI entry point and main application | COMPLETE |
 | `benchmarks/coverage/` | Template matching analysis | COMPLETE |
 | `benchmarks/memory/` | Memory profiling (WS1) | COMPLETE |
 | `benchmarks/hallucination/` | HHEM benchmark (WS2) | COMPLETE |

@@ -1,12 +1,13 @@
-"""Entry point for python -m jarvis.setup.
+"""Entry point for python -m jarvis execution.
 
-This allows running the setup wizard as:
-    python -m jarvis.setup
+This module allows running JARVIS as a module:
+    python -m jarvis chat
+    python -m jarvis health
+    python -m jarvis setup
+    python -m jarvis --help
 """
 
-import sys
-
-from jarvis.setup import main
+from jarvis.cli import run
 
 if __name__ == "__main__":
-    sys.exit(main())
+    run()
