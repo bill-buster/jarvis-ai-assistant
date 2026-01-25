@@ -14,10 +14,11 @@ JARVIS is a local-first AI assistant for macOS that provides intelligent email a
 | Template Coverage (WS3) | COMPLETE | 75 templates, 1000 test scenarios |
 | Model Generator (WS8) | COMPLETE | MLX loader, template fallback, RAG support |
 | iMessage Reader (WS10) | MOSTLY COMPLETE | Has TODOs for attachments/reactions |
-| Memory Profiler (WS1) | NOT STARTED | Contract only, stub implementation |
-| HHEM Benchmark (WS2) | NOT STARTED | Contract only, stub implementation |
-| Latency Benchmark (WS4) | NOT STARTED | Contract only, stub implementation |
-| Core Infrastructure (WS5-7) | NOT STARTED | Contracts only, stub implementations |
+| Memory Profiler (WS1) | COMPLETE | MLX memory profiling with model unload |
+| HHEM Benchmark (WS2) | COMPLETE | Vectara HHEM model evaluation |
+| Latency Benchmark (WS4) | COMPLETE | Cold/warm/hot start scenarios |
+| Memory Controller (WS5) | COMPLETE | Three-tier modes (FULL/LITE/MINIMAL) |
+| Degradation Controller (WS6) | COMPLETE | Circuit breaker pattern |
 | Gmail Integration (WS9) | NOT STARTED | Contract only, stub implementation |
 
 **Default Model**: Qwen2.5-0.5B-Instruct-4bit (configured in `models/loader.py`)
@@ -224,11 +225,11 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 | Contract | Protocol(s) | Implementation Status |
 |----------|-------------|----------------------|
-| `contracts/memory.py` | MemoryProfiler, MemoryController | CONTRACTS ONLY |
-| `contracts/hallucination.py` | HallucinationEvaluator | CONTRACTS ONLY |
+| `contracts/memory.py` | MemoryProfiler, MemoryController | IMPLEMENTED in `benchmarks/memory/` and `core/memory/` |
+| `contracts/hallucination.py` | HallucinationEvaluator | IMPLEMENTED in `benchmarks/hallucination/` |
 | `contracts/coverage.py` | CoverageAnalyzer | IMPLEMENTED in `benchmarks/coverage/` |
-| `contracts/latency.py` | LatencyBenchmarker | CONTRACTS ONLY |
-| `contracts/health.py` | DegradationController, PermissionMonitor, SchemaDetector | CONTRACTS ONLY |
+| `contracts/latency.py` | LatencyBenchmarker | IMPLEMENTED in `benchmarks/latency/` |
+| `contracts/health.py` | DegradationController, PermissionMonitor, SchemaDetector | IMPLEMENTED (DegradationController only) in `core/health/` |
 | `contracts/models.py` | Generator | IMPLEMENTED in `models/` |
 | `contracts/gmail.py` | GmailClient | CONTRACTS ONLY |
 | `contracts/imessage.py` | iMessageReader | IMPLEMENTED in `integrations/imessage/` |
@@ -238,11 +239,11 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 | Directory | Purpose | Status |
 |-----------|---------|--------|
 | `benchmarks/coverage/` | Template matching analysis | COMPLETE |
-| `benchmarks/memory/` | Memory profiling (WS1) | STUB ONLY |
-| `benchmarks/hallucination/` | HHEM benchmark (WS2) | STUB ONLY |
-| `benchmarks/latency/` | Latency benchmark (WS4) | STUB ONLY |
-| `core/memory/` | Memory controller (WS5) | STUB ONLY |
-| `core/health/` | Health monitoring (WS6-7) | STUB ONLY |
+| `benchmarks/memory/` | Memory profiling (WS1) | COMPLETE |
+| `benchmarks/hallucination/` | HHEM benchmark (WS2) | COMPLETE |
+| `benchmarks/latency/` | Latency benchmark (WS4) | COMPLETE |
+| `core/memory/` | Memory controller (WS5) | COMPLETE |
+| `core/health/` | Health monitoring (WS6) | COMPLETE (circuit breaker + degradation) |
 | `core/config/` | Configuration | STUB ONLY |
 | `models/` | MLX model inference (WS8) | COMPLETE |
 | `integrations/imessage/` | iMessage reader (WS10) | MOSTLY COMPLETE |
@@ -258,42 +259,42 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 **iMessage Schema Detection**: ChatDBReader detects macOS schema versions (v14/v15) and uses version-specific SQL queries. Database is opened read-only with timeout handling for SQLITE_BUSY.
 
-### Patterns (Planned but NOT Implemented)
+**Circuit Breaker Degradation**: `GracefulDegradationController` in `core/health/degradation.py` implements the circuit breaker pattern with states CLOSED → OPEN → HALF_OPEN. Use `get_degradation_controller()` for singleton access.
 
-**Circuit Breaker Degradation**: DegradationController is defined in contracts but has no implementation.
+**Memory Controller**: `DefaultMemoryController` in `core/memory/controller.py` provides three-tier memory modes (FULL/LITE/MINIMAL) based on available system memory. Use `get_memory_controller()` for singleton access.
 
-**Memory Controller**: Three-tier memory modes (FULL/LITE/MINIMAL) are defined in contracts but not implemented.
-
-**HHEM Quality Validation**: Hallucination evaluation is defined in contracts but not implemented.
+**HHEM Quality Validation**: `HHEMEvaluator` in `benchmarks/hallucination/hhem.py` uses Vectara's HHEM model for hallucination scoring. Scores range from 0 (hallucinated) to 1 (grounded).
 
 ### Data Flow for Text Generation (Current)
 
 1. Template matching (fast path, no model load) - if match >= 0.7, return immediately
-2. ~~Memory check via MemoryController~~ (NOT IMPLEMENTED - loads directly)
+2. Memory check via MemoryController - determine operating mode (FULL/LITE/MINIMAL)
 3. RAG context injection via PromptBuilder
 4. Few-shot prompt formatting via PromptBuilder
 5. MLX model generation with temperature control
-6. ~~HHEM quality validation~~ (NOT IMPLEMENTED)
+6. (Optional) HHEM quality validation post-generation
 
 ---
 
 ## Validation Gates
 
-Five gates determine project viability. The gate checker script exists (`scripts/check_gates.py`) but requires benchmark outputs that are not yet generated because WS1, WS2, and WS4 are not implemented.
+Five gates determine project viability. All benchmarks are now implemented.
 
-| Gate | Metric | Pass | Conditional | Fail | Can Run? |
-|------|--------|------|-------------|------|----------|
-| G1 | Template coverage @ 0.7 | >=60% | 40-60% | <40% | YES - `python -m benchmarks.coverage.run` |
-| G2 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB | NO - WS1 not implemented |
-| G3 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 | NO - WS2 not implemented |
-| G4 | Warm-start latency | <3s | 3-5s | >5s | NO - WS4 not implemented |
-| G5 | Cold-start latency | <15s | 15-20s | >20s | NO - WS4 not implemented |
+| Gate | Metric | Pass | Conditional | Fail | How to Run |
+|------|--------|------|-------------|------|------------|
+| G1 | Template coverage @ 0.7 | >=60% | 40-60% | <40% | `python -m benchmarks.coverage.run` |
+| G2 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB | `python -m benchmarks.memory.run` |
+| G3 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 | `python -m benchmarks.hallucination.run` |
+| G4 | Warm-start latency | <3s | 3-5s | >5s | `python -m benchmarks.latency.run` |
+| G5 | Cold-start latency | <15s | 15-20s | >20s | `python -m benchmarks.latency.run` |
 
-### Missing Scripts
+### Benchmark Scripts
 
-The following scripts are referenced in the design doc but do not exist:
+- `scripts/generate_report.py` - Generates BENCHMARKS.md from benchmark results
+- `scripts/check_gates.py` - Evaluates gate pass/fail status from results
+
+Missing (TODO):
 - `scripts/overnight_eval.sh` - Would run all benchmarks sequentially
-- `scripts/generate_report.py` - Would create BENCHMARKS.md from results
 
 ---
 
