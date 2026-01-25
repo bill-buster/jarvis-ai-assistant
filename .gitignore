@@ -45,6 +45,8 @@ uv.lock
 htmlcov/
 .tox/
 .nox/
+test_results.txt
+test_results.xml
 
 # Type checking
 .mypy_cache/

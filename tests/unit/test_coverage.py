@@ -240,3 +240,71 @@ class TestPerformance:
         # Second call should use cached embeddings
         analyzer.match_query("test2")
         # If we got here without timeout, caching is working
+
+
+class TestCLIRunner:
+    """Tests for the coverage CLI runner."""
+
+    def test_main_creates_output_file(self, tmp_path, monkeypatch):
+        """Test main function creates output file."""
+        import sys
+
+        from benchmarks.coverage.run import main
+
+        output_file = tmp_path / "results.json"
+
+        # Mock sys.argv
+        monkeypatch.setattr(sys, "argv", ["run.py", "--output", str(output_file)])
+
+        result = main()
+
+        assert result == 0
+        assert output_file.exists()
+
+        # Verify output is valid JSON
+        import json
+
+        with open(output_file) as f:
+            data = json.load(f)
+
+        assert "total_queries" in data
+        assert "coverage_at_50" in data
+        assert "coverage_at_70" in data
+        assert "coverage_at_90" in data
+        assert "timestamp" in data
+
+    def test_main_verbose_mode(self, tmp_path, monkeypatch, capsys):
+        """Test main function with verbose flag."""
+        import sys
+
+        from benchmarks.coverage.run import main
+
+        output_file = tmp_path / "results.json"
+
+        monkeypatch.setattr(sys, "argv", ["run.py", "--output", str(output_file), "--verbose"])
+
+        result = main()
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Initializing analyzer" in captured.out
+        assert "Analyzing" in captured.out
+        assert "Unmatched examples" in captured.out
+
+    def test_main_prints_coverage_summary(self, tmp_path, monkeypatch, capsys):
+        """Test main function prints coverage summary."""
+        import sys
+
+        from benchmarks.coverage.run import main
+
+        output_file = tmp_path / "results.json"
+
+        monkeypatch.setattr(sys, "argv", ["run.py", "--output", str(output_file)])
+
+        main()
+
+        captured = capsys.readouterr()
+        assert "Coverage@0.5:" in captured.out
+        assert "Coverage@0.7:" in captured.out
+        assert "Coverage@0.9:" in captured.out
+        assert "Results saved to:" in captured.out

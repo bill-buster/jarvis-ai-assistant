@@ -101,3 +101,82 @@ Five gates determine project viability. Run `scripts/check_gates.py` to evaluate
 - **Read-Only Database Access**: iMessage chat.db must use `file:...?mode=ro` URI
 - **No Fine-Tuning**: Research shows it increases hallucinations - use RAG + few-shot instead
 - **Model Unloading**: Always unload models between profiles/benchmarks (`gc.collect()`, `mx.metal.clear_cache()`)
+
+## Test Execution Rules
+
+**IMPORTANT: These rules are mandatory for all test runs.**
+
+- **NEVER** run pytest without capturing output to a file
+- Always use `make test` or the equivalent command with output capture:
+  ```bash
+  uv run pytest --tb=long -v --junit-xml=test_results.xml 2>&1 | tee test_results.txt
+  ```
+- If tests fail, **ALWAYS** read `test_results.txt` to get full tracebacks before responding
+- Never summarize test failures from truncated terminal output - read the file first
+- After any test run, report the actual error messages from the file, not a summary
+- Use `make test-fail-fast` when debugging to stop at the first failure
+
+### Available Make Targets
+
+```bash
+make test           # Run all tests with output capture
+make test-verbose   # Run with extra verbosity (-vvv)
+make test-fail-fast # Stop at first failure (--maxfail=1)
+make lint           # Run linters (ruff, mypy)
+make clean          # Remove test artifacts and caches
+```
+
+## Worktree Workflow
+
+For parallel development tasks, use git worktrees to avoid conflicts between branches.
+
+### Creating a Worktree
+
+```bash
+# Always start from latest main
+git checkout main
+git pull origin main
+
+# Create worktree with a new branch
+git worktree add ../jarvis-feature-name -b feature-branch-name
+
+# Move into the worktree
+cd ../jarvis-feature-name
+
+# Each worktree needs its own virtual environment
+uv sync
+```
+
+### Working in a Worktree
+
+- Each worktree is an independent working directory with its own `.venv/`
+- Don't share virtual environments across worktrees
+- Run `uv sync` in each worktree after creation
+- Commits in worktrees automatically update the shared git history
+
+### Before Creating PRs
+
+```bash
+# Ensure you're up to date with main
+git fetch origin
+git rebase origin/main
+
+# Resolve any conflicts, then push
+git push -u origin feature-branch-name
+```
+
+### Cleanup After Merge
+
+```bash
+# From main worktree, remove the feature worktree
+git worktree remove ../jarvis-feature-name
+
+# Optionally delete the branch if merged
+git branch -d feature-branch-name
+```
+
+### Listing Worktrees
+
+```bash
+git worktree list
+```

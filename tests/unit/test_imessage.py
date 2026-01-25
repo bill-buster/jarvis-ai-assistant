@@ -148,6 +148,98 @@ class TestParseAttributedBody:
         result = parse_attributed_body(b"")
         assert result is None
 
+    def test_valid_plist_with_objects_array(self):
+        """Extract text from $objects array in NSKeyedArchiver format."""
+        import plistlib
+
+        # Create a valid plist with $objects array containing text
+        plist_data = {
+            "$objects": [
+                "$null",
+                "NSMutableAttributedString",  # Should be skipped
+                "Hello from attributed body",  # This should be returned
+            ]
+        }
+        data = plistlib.dumps(plist_data)
+        result = parse_attributed_body(data)
+        assert result == "Hello from attributed body"
+
+    def test_valid_plist_with_ns_string_dict(self):
+        """Extract text from NS.string key in dict object."""
+        import plistlib
+
+        plist_data = {
+            "$objects": [
+                {"NS.string": "Text from NS.string"},
+            ]
+        }
+        data = plistlib.dumps(plist_data)
+        result = parse_attributed_body(data)
+        assert result == "Text from NS.string"
+
+    def test_valid_plist_with_nsstring_dict(self):
+        """Extract text from NSString key in dict object."""
+        import plistlib
+
+        plist_data = {
+            "$objects": [
+                {"NSString": "Text from NSString"},
+            ]
+        }
+        data = plistlib.dumps(plist_data)
+        result = parse_attributed_body(data)
+        assert result == "Text from NSString"
+
+    def test_valid_plist_skips_metadata_strings(self):
+        """Skip metadata strings starting with $ or known class names."""
+        import plistlib
+
+        plist_data = {
+            "$objects": [
+                "$class",
+                "NSAttributedString",
+                "NSMutableString",
+                "NSString",
+                "NSDictionary",
+                "NSArray",
+                "Actual message text",
+            ]
+        }
+        data = plistlib.dumps(plist_data)
+        result = parse_attributed_body(data)
+        assert result == "Actual message text"
+
+    def test_plist_without_objects_returns_none(self):
+        """Return None for valid plist without $objects."""
+        import plistlib
+
+        plist_data = {"other_key": "value"}
+        data = plistlib.dumps(plist_data)
+        result = parse_attributed_body(data)
+        assert result is None
+
+    def test_plist_with_empty_objects_returns_none(self):
+        """Return None for plist with empty $objects array."""
+        import plistlib
+
+        plist_data = {"$objects": []}
+        data = plistlib.dumps(plist_data)
+        result = parse_attributed_body(data)
+        assert result is None
+
+    def test_ns_string_with_non_string_value(self):
+        """Return None if NS.string value is not a string."""
+        import plistlib
+
+        plist_data = {
+            "$objects": [
+                {"NS.string": 12345},  # Not a string
+            ]
+        }
+        data = plistlib.dumps(plist_data)
+        result = parse_attributed_body(data)
+        assert result is None
+
 
 class TestParseAttachments:
     """Tests for attachment parsing (v1 stub)."""
@@ -198,6 +290,49 @@ class TestExtractTextFromRow:
         result = extract_text_from_row(row)
         assert result == ""
 
+    def test_fallback_to_attributed_body(self):
+        """Fall back to attributedBody when text is empty."""
+        import plistlib
+
+        plist_data = {"$objects": ["Fallback text"]}
+        row = {"text": None, "attributedBody": plistlib.dumps(plist_data)}
+        result = extract_text_from_row(row)
+        assert result == "Fallback text"
+
+    def test_fallback_strips_whitespace(self):
+        """Strip whitespace from attributedBody fallback."""
+        import plistlib
+
+        plist_data = {"$objects": ["  Fallback text with spaces  "]}
+        row = {"text": "", "attributedBody": plistlib.dumps(plist_data)}
+        result = extract_text_from_row(row)
+        assert result == "Fallback text with spaces"
+
+    def test_whitespace_only_text_uses_fallback(self):
+        """Use attributedBody when text is whitespace only."""
+        import plistlib
+
+        plist_data = {"$objects": ["From attributed body"]}
+        row = {"text": "   ", "attributedBody": plistlib.dumps(plist_data)}
+        result = extract_text_from_row(row)
+        assert result == "From attributed body"
+
+
+class TestParseAppleTimestampEdgeCases:
+    """Additional edge case tests for timestamp parsing."""
+
+    def test_overflow_returns_epoch(self):
+        """Return Apple epoch on overflow error."""
+        # Very large timestamp that would cause overflow
+        result = parse_apple_timestamp(10**30)
+        assert result.year == 2001  # Apple epoch
+
+    def test_negative_timestamp(self):
+        """Handle negative timestamps (before Apple epoch)."""
+        result = parse_apple_timestamp(-1_000_000_000_000_000_000)
+        # Should return a valid datetime or epoch
+        assert result is not None
+
 
 # =============================================================================
 # Query Tests
@@ -219,6 +354,38 @@ class TestDetectSchemaVersion:
             [(1, "ROWID", "INTEGER", 0, None, 1), (2, "thread_originator_guid", "TEXT", 0, None, 0)],
             # Second call: chat table columns (no service_name)
             [(1, "ROWID", "INTEGER", 0, None, 1), (2, "guid", "TEXT", 0, None, 0)],
+        ]
+
+        result = detect_schema_version(conn)
+        assert result == "v14"
+
+    def test_detects_v15_schema(self):
+        """Detect v15 schema with service_name in chat table."""
+        conn = MagicMock()
+        cursor = MagicMock()
+        conn.cursor.return_value = cursor
+
+        # Simulate v15 columns
+        cursor.fetchall.side_effect = [
+            # First call: message table columns with thread_originator_guid
+            [(1, "ROWID", "INTEGER", 0, None, 1), (2, "thread_originator_guid", "TEXT", 0, None, 0)],
+            # Second call: chat table columns WITH service_name (v15 indicator)
+            [(1, "ROWID", "INTEGER", 0, None, 1), (2, "service_name", "TEXT", 0, None, 0)],
+        ]
+
+        result = detect_schema_version(conn)
+        assert result == "v15"
+
+    def test_old_schema_without_thread_guid(self):
+        """Detect v14 for older schema without thread_originator_guid."""
+        conn = MagicMock()
+        cursor = MagicMock()
+        conn.cursor.return_value = cursor
+
+        # Simulate older schema without thread_originator_guid
+        cursor.fetchall.return_value = [
+            (1, "ROWID", "INTEGER", 0, None, 1),
+            (2, "text", "TEXT", 0, None, 0),
         ]
 
         result = detect_schema_version(conn)
@@ -364,6 +531,49 @@ class TestChatDBReaderCheckAccess:
         result = reader.check_access()
         assert result is True
         reader.close()
+
+    def test_operational_error_unable_to_open(self, tmp_path, monkeypatch):
+        """Return False on 'unable to open database' error."""
+        db_path = tmp_path / "chat.db"
+        db_path.touch()  # Create empty file
+
+        reader = ChatDBReader(db_path=db_path)
+
+        # Mock _get_connection to raise OperationalError
+        def mock_get_connection():
+            raise sqlite3.OperationalError("unable to open database file")
+
+        monkeypatch.setattr(reader, "_get_connection", mock_get_connection)
+        result = reader.check_access()
+        assert result is False
+
+    def test_operational_error_other(self, tmp_path, monkeypatch):
+        """Return False on other OperationalError."""
+        db_path = tmp_path / "chat.db"
+        db_path.touch()
+
+        reader = ChatDBReader(db_path=db_path)
+
+        def mock_get_connection():
+            raise sqlite3.OperationalError("some other error")
+
+        monkeypatch.setattr(reader, "_get_connection", mock_get_connection)
+        result = reader.check_access()
+        assert result is False
+
+    def test_unexpected_exception(self, tmp_path, monkeypatch):
+        """Return False on unexpected exception."""
+        db_path = tmp_path / "chat.db"
+        db_path.touch()
+
+        reader = ChatDBReader(db_path=db_path)
+
+        def mock_get_connection():
+            raise RuntimeError("Unexpected error")
+
+        monkeypatch.setattr(reader, "_get_connection", mock_get_connection)
+        result = reader.check_access()
+        assert result is False
 
 
 class TestChatDBReaderGetConversations:
@@ -632,6 +842,72 @@ class TestChatDBReaderContext:
 
         # Should get 5 messages (2 before + target + 2 after)
         assert len(result) == 5
+        reader.close()
+
+
+class TestChatDBReaderFilters:
+    """Tests for query filters."""
+
+    def test_get_conversations_with_since_filter(self, tmp_path):
+        """Test get_conversations with since filter."""
+        from datetime import datetime, UTC
+
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)")
+        conn.execute("CREATE TABLE chat_handle_join (chat_id INTEGER, handle_id INTEGER)")
+        conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
+        conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
+        conn.execute("CREATE TABLE message (ROWID INTEGER, date INTEGER, text TEXT, thread_originator_guid TEXT)")
+
+        conn.execute("INSERT INTO chat VALUES (1, 'chat;test', 'Test', 'test')")
+        conn.execute("INSERT INTO handle VALUES (1, '+1234567890')")
+        conn.execute("INSERT INTO chat_handle_join VALUES (1, 1)")
+        # Old message
+        conn.execute("INSERT INTO message VALUES (1, 100000000000000000, 'Old', NULL)")
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 1)")
+        # New message
+        conn.execute("INSERT INTO message VALUES (2, 800000000000000000000, 'New', NULL)")
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 2)")
+        conn.commit()
+        conn.close()
+
+        reader = ChatDBReader(db_path=db_path)
+        # Filter for messages after a certain date
+        since = datetime(2025, 1, 1, tzinfo=UTC)
+        result = reader.get_conversations(limit=10, since=since)
+        # The implementation should filter based on last_message_date
+        assert isinstance(result, list)
+        reader.close()
+
+    def test_get_messages_with_before_filter(self, tmp_path):
+        """Test get_messages with before filter."""
+        from datetime import datetime, UTC
+
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT)")
+        conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
+        conn.execute("""
+            CREATE TABLE message (
+                ROWID INTEGER, date INTEGER, text TEXT, attributedBody BLOB,
+                is_from_me INTEGER, handle_id INTEGER, thread_originator_guid TEXT
+            )
+        """)
+        conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
+
+        conn.execute("INSERT INTO chat VALUES (1, 'chat;test')")
+        conn.execute("INSERT INTO message VALUES (1, 100000000000000000, 'Early', NULL, 0, NULL, NULL)")
+        conn.execute("INSERT INTO message VALUES (2, 900000000000000000000, 'Late', NULL, 0, NULL, NULL)")
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 1)")
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 2)")
+        conn.commit()
+        conn.close()
+
+        reader = ChatDBReader(db_path=db_path)
+        before = datetime(2020, 1, 1, tzinfo=UTC)
+        result = reader.get_messages("chat;test", limit=10, before=before)
+        assert isinstance(result, list)
         reader.close()
 
 

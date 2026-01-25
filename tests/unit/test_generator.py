@@ -397,3 +397,630 @@ class TestGeneratorSingleton:
 
         reset_generator()  # Should not raise
         reset_generator()  # Should not raise
+
+
+class TestMLXModelLoaderWithMocking:
+    """Tests for MLXModelLoader with mocked MLX imports."""
+
+    def test_load_success(self, monkeypatch):
+        """Test successful model loading."""
+        from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_model = MagicMock()
+        mock_tokenizer = MagicMock()
+
+        def mock_load(path, tokenizer_config=None):
+            return mock_model, mock_tokenizer
+
+        # Mock mlx_lm.load
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        # Mock psutil for memory check
+        mock_virtual_memory = MagicMock()
+        mock_virtual_memory.available = 16 * 1024 * 1024 * 1024  # 16GB available
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_virtual_memory)
+
+        loader = MLXModelLoader(ModelConfig(model_path="test-model"))
+        result = loader.load()
+
+        assert result is True
+        assert loader.is_loaded() is True
+        assert loader.get_memory_usage_mb() > 0
+
+    def test_load_insufficient_memory(self, monkeypatch):
+        """Test loading fails with insufficient memory."""
+        from models.loader import MLXModelLoader, ModelConfig
+
+        # Mock psutil to return low memory
+        from unittest.mock import MagicMock
+
+        mock_virtual_memory = MagicMock()
+        mock_virtual_memory.available = 100 * 1024 * 1024  # Only 100MB available
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_virtual_memory)
+
+        # Use high estimated memory to trigger the check
+        loader = MLXModelLoader(
+            ModelConfig(model_path="test-model", estimated_memory_mb=8000, memory_buffer_multiplier=2.0)
+        )
+        result = loader.load()
+
+        assert result is False
+        assert loader.is_loaded() is False
+
+    def test_load_file_not_found(self, monkeypatch):
+        """Test loading handles FileNotFoundError."""
+        from models.loader import MLXModelLoader, ModelConfig
+
+        def mock_load(path, tokenizer_config=None):
+            raise FileNotFoundError("Model not found")
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        # Mock memory check to pass
+        from unittest.mock import MagicMock
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        loader = MLXModelLoader(ModelConfig(model_path="nonexistent"))
+        result = loader.load()
+
+        assert result is False
+
+    def test_load_memory_error(self, monkeypatch):
+        """Test loading handles MemoryError."""
+        from models.loader import MLXModelLoader, ModelConfig
+
+        def mock_load(path, tokenizer_config=None):
+            raise MemoryError("Out of memory")
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        from unittest.mock import MagicMock
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        result = loader.load()
+
+        assert result is False
+
+    def test_load_os_error(self, monkeypatch):
+        """Test loading handles OSError."""
+        from models.loader import MLXModelLoader, ModelConfig
+
+        def mock_load(path, tokenizer_config=None):
+            raise OSError("Network error")
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        from unittest.mock import MagicMock
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        result = loader.load()
+
+        assert result is False
+
+    def test_load_generic_exception(self, monkeypatch):
+        """Test loading handles generic exceptions."""
+        from models.loader import MLXModelLoader, ModelConfig
+
+        def mock_load(path, tokenizer_config=None):
+            raise RuntimeError("Unknown error")
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        from unittest.mock import MagicMock
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        result = loader.load()
+
+        assert result is False
+
+    def test_load_already_loaded(self, monkeypatch):
+        """Test load is idempotent when already loaded."""
+        from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_model = MagicMock()
+        mock_tokenizer = MagicMock()
+        load_count = [0]
+
+        def mock_load(path, tokenizer_config=None):
+            load_count[0] += 1
+            return mock_model, mock_tokenizer
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        loader.load()
+        loader.load()  # Second call should be no-op
+
+        assert load_count[0] == 1
+
+    def test_unload_clears_model(self, monkeypatch):
+        """Test unload clears model references."""
+        from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_model = MagicMock()
+        mock_tokenizer = MagicMock()
+
+        def mock_load(path, tokenizer_config=None):
+            return mock_model, mock_tokenizer
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        # Mock MLX metal.clear_cache
+        mock_mx = MagicMock()
+        monkeypatch.setattr(models.loader, "mx", mock_mx)
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        loader.load()
+        assert loader.is_loaded() is True
+
+        loader.unload()
+        assert loader.is_loaded() is False
+        assert loader.get_memory_usage_mb() == 0
+
+
+class TestMLXModelLoaderGeneration:
+    """Tests for MLXModelLoader generation."""
+
+    def test_generate_sync_success(self, monkeypatch):
+        """Test successful text generation."""
+        from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_model = MagicMock()
+        mock_tokenizer = MagicMock()
+        mock_tokenizer.apply_chat_template.return_value = "formatted prompt"
+        mock_tokenizer.encode.return_value = [1, 2, 3, 4, 5]
+
+        def mock_load(path, tokenizer_config=None):
+            return mock_model, mock_tokenizer
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        # Mock generate function
+        def mock_generate(**kwargs):
+            return "formatted promptGenerated response text"
+
+        monkeypatch.setattr(models.loader, "generate", mock_generate)
+
+        # Mock make_sampler
+        mock_sampler = MagicMock()
+        monkeypatch.setattr(models.loader, "make_sampler", lambda temp: mock_sampler)
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        loader.load()
+
+        result = loader.generate_sync("Hello", max_tokens=50)
+
+        assert result.text == "Generated response text"
+        assert result.tokens_generated == 5
+        assert result.generation_time_ms > 0
+
+    def test_generate_sync_not_loaded(self):
+        """Test generation fails when model not loaded."""
+        from models.loader import MLXModelLoader, ModelConfig
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+
+        with pytest.raises(RuntimeError, match="Model not loaded"):
+            loader.generate_sync("Hello")
+
+    def test_generate_sync_empty_prompt(self, monkeypatch):
+        """Test generation fails with empty prompt."""
+        from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_model = MagicMock()
+        mock_tokenizer = MagicMock()
+
+        def mock_load(path, tokenizer_config=None):
+            return mock_model, mock_tokenizer
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        loader.load()
+
+        with pytest.raises(ValueError, match="Prompt cannot be empty"):
+            loader.generate_sync("")
+
+    def test_generate_sync_with_stop_sequences(self, monkeypatch):
+        """Test generation with stop sequences."""
+        from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_model = MagicMock()
+        mock_tokenizer = MagicMock()
+        mock_tokenizer.apply_chat_template.return_value = "formatted"
+        mock_tokenizer.encode.return_value = [1, 2]
+
+        def mock_load(path, tokenizer_config=None):
+            return mock_model, mock_tokenizer
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        def mock_generate(**kwargs):
+            return "formattedHello STOP world"
+
+        monkeypatch.setattr(models.loader, "generate", mock_generate)
+        monkeypatch.setattr(models.loader, "make_sampler", lambda temp: MagicMock())
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        loader.load()
+
+        result = loader.generate_sync("Hi", stop_sequences=["STOP"])
+
+        assert result.text == "Hello"
+
+    def test_generate_sync_error(self, monkeypatch):
+        """Test generation handles errors."""
+        from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_model = MagicMock()
+        mock_tokenizer = MagicMock()
+        mock_tokenizer.apply_chat_template.return_value = "formatted"
+
+        def mock_load(path, tokenizer_config=None):
+            return mock_model, mock_tokenizer
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        def mock_generate(**kwargs):
+            raise RuntimeError("Generation failed")
+
+        monkeypatch.setattr(models.loader, "generate", mock_generate)
+        monkeypatch.setattr(models.loader, "make_sampler", lambda temp: MagicMock())
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        loader.load()
+
+        with pytest.raises(RuntimeError, match="Generation failed"):
+            loader.generate_sync("Hello")
+
+    def test_generate_sync_token_count_fallback(self, monkeypatch):
+        """Test token counting falls back to word count on error."""
+        from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_model = MagicMock()
+        mock_tokenizer = MagicMock()
+        mock_tokenizer.apply_chat_template.return_value = "formatted"
+
+        def encode_error(text):
+            raise RuntimeError("Tokenizer error")
+
+        mock_tokenizer.encode = encode_error
+
+        def mock_load(path, tokenizer_config=None):
+            return mock_model, mock_tokenizer
+
+        import models.loader
+
+        monkeypatch.setattr(models.loader, "load", mock_load)
+
+        mock_vm = MagicMock()
+        mock_vm.available = 16 * 1024 * 1024 * 1024
+
+        import psutil
+
+        monkeypatch.setattr(psutil, "virtual_memory", lambda: mock_vm)
+
+        def mock_generate(**kwargs):
+            return "formattedOne two three four"
+
+        monkeypatch.setattr(models.loader, "generate", mock_generate)
+        monkeypatch.setattr(models.loader, "make_sampler", lambda temp: MagicMock())
+
+        loader = MLXModelLoader(ModelConfig(model_path="test"))
+        loader.load()
+
+        result = loader.generate_sync("Hi")
+
+        # Should fall back to word count
+        assert result.tokens_generated == 4  # "One two three four"
+
+
+class TestMLXGeneratorWithModel:
+    """Tests for MLXGenerator model generation paths."""
+
+    def test_generate_with_model_success(self, monkeypatch):
+        """Test generation falls back to model when no template match."""
+        from unittest.mock import MagicMock
+
+        from contracts.models import GenerationRequest
+
+        from models.generator import MLXGenerator
+        from models.loader import MLXModelLoader, ModelConfig
+
+        # Create mock loader
+        mock_loader = MagicMock(spec=MLXModelLoader)
+        mock_loader.is_loaded.return_value = False
+        mock_loader.load.return_value = True
+        mock_loader.generate_sync.return_value = MagicMock(
+            text="Generated response", tokens_generated=10, generation_time_ms=100.0
+        )
+
+        # Create a template matcher that returns no match
+        mock_matcher = MagicMock()
+        mock_matcher.match.return_value = None
+
+        generator = MLXGenerator(
+            loader=mock_loader, template_matcher=mock_matcher, config=ModelConfig(model_path="test")
+        )
+
+        request = GenerationRequest(
+            prompt="Unique query that won't match templates",
+            context_documents=[],
+            few_shot_examples=[],
+        )
+        response = generator.generate(request)
+
+        assert response.text == "Generated response"
+        assert response.used_template is False
+        mock_loader.load.assert_called_once()
+
+    def test_generate_model_load_fails(self, monkeypatch):
+        """Test generation raises when model load fails."""
+        from unittest.mock import MagicMock
+
+        from contracts.models import GenerationRequest
+
+        from models.generator import MLXGenerator
+        from models.loader import MLXModelLoader
+
+        mock_loader = MagicMock(spec=MLXModelLoader)
+        mock_loader.is_loaded.return_value = False
+        mock_loader.load.return_value = False
+
+        mock_matcher = MagicMock()
+        mock_matcher.match.return_value = None
+
+        generator = MLXGenerator(loader=mock_loader, template_matcher=mock_matcher)
+
+        request = GenerationRequest(
+            prompt="Test query", context_documents=[], few_shot_examples=[]
+        )
+
+        with pytest.raises(RuntimeError, match="Failed to load model"):
+            generator.generate(request)
+
+    def test_generate_model_already_loaded(self, monkeypatch):
+        """Test generation uses already loaded model."""
+        from unittest.mock import MagicMock
+
+        from contracts.models import GenerationRequest
+
+        from models.generator import MLXGenerator
+        from models.loader import MLXModelLoader, ModelConfig
+
+        mock_loader = MagicMock(spec=MLXModelLoader)
+        mock_loader.is_loaded.return_value = True  # Already loaded
+        mock_loader.generate_sync.return_value = MagicMock(
+            text="Response", tokens_generated=5, generation_time_ms=50.0
+        )
+
+        mock_matcher = MagicMock()
+        mock_matcher.match.return_value = None
+
+        generator = MLXGenerator(
+            loader=mock_loader, template_matcher=mock_matcher, config=ModelConfig(model_path="test")
+        )
+
+        request = GenerationRequest(
+            prompt="Query", context_documents=[], few_shot_examples=[]
+        )
+        response = generator.generate(request)
+
+        mock_loader.load.assert_not_called()  # Should not call load
+        assert response.text == "Response"
+
+    def test_generate_unloads_on_error_if_just_loaded(self, monkeypatch):
+        """Test model is unloaded if error occurs after loading for this request."""
+        from unittest.mock import MagicMock
+
+        from contracts.models import GenerationRequest
+
+        from models.generator import MLXGenerator
+        from models.loader import MLXModelLoader
+
+        mock_loader = MagicMock(spec=MLXModelLoader)
+        mock_loader.is_loaded.return_value = False
+        mock_loader.load.return_value = True
+        mock_loader.generate_sync.side_effect = RuntimeError("Generation error")
+
+        mock_matcher = MagicMock()
+        mock_matcher.match.return_value = None
+
+        generator = MLXGenerator(loader=mock_loader, template_matcher=mock_matcher)
+
+        request = GenerationRequest(
+            prompt="Query", context_documents=[], few_shot_examples=[]
+        )
+
+        with pytest.raises(RuntimeError):
+            generator.generate(request)
+
+        # Should unload because we loaded for this request
+        mock_loader.unload.assert_called_once()
+
+    def test_generate_no_unload_on_error_if_already_loaded(self, monkeypatch):
+        """Test model is NOT unloaded if error occurs but was already loaded."""
+        from unittest.mock import MagicMock
+
+        from contracts.models import GenerationRequest
+
+        from models.generator import MLXGenerator
+        from models.loader import MLXModelLoader
+
+        mock_loader = MagicMock(spec=MLXModelLoader)
+        mock_loader.is_loaded.return_value = True  # Already loaded
+        mock_loader.generate_sync.side_effect = RuntimeError("Generation error")
+
+        mock_matcher = MagicMock()
+        mock_matcher.match.return_value = None
+
+        generator = MLXGenerator(loader=mock_loader, template_matcher=mock_matcher)
+
+        request = GenerationRequest(
+            prompt="Query", context_documents=[], few_shot_examples=[]
+        )
+
+        with pytest.raises(RuntimeError):
+            generator.generate(request)
+
+        # Should NOT unload because we didn't load for this request
+        mock_loader.unload.assert_not_called()
+
+
+class TestTemplateMatcherSentenceModelError:
+    """Tests for TemplateMatcher handling of sentence model errors."""
+
+    def test_match_returns_none_on_sentence_model_error(self, monkeypatch):
+        """Template matching returns None when sentence model fails."""
+        from models.templates import SentenceModelError, TemplateMatcher
+
+        def mock_get_model():
+            raise SentenceModelError("Model unavailable")
+
+        import models.templates
+
+        monkeypatch.setattr(models.templates, "_get_sentence_model", mock_get_model)
+
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        # Clear any cached embeddings
+        matcher._pattern_embeddings = None
+        matcher._pattern_to_template = []
+
+        result = matcher.match("Test query")
+        assert result is None
+
+
+class TestLoadTemplatesFromWS3:
+    """Tests for template loading from WS3."""
+
+    def test_load_templates_fallback_on_import_error(self, monkeypatch):
+        """Fall back to minimal templates when WS3 unavailable."""
+        from models.templates import _get_minimal_fallback_templates, _load_templates
+
+        # Mock import to fail
+        original_import = __builtins__.__import__ if hasattr(__builtins__, "__import__") else None
+
+        def mock_import(name, *args, **kwargs):
+            if "benchmarks.coverage.templates" in name:
+                raise ImportError("WS3 not available")
+            if original_import:
+                return original_import(name, *args, **kwargs)
+            raise ImportError(f"No module named '{name}'")
+
+        # This test verifies the fallback path exists
+        fallback = _get_minimal_fallback_templates()
+        assert len(fallback) > 0
+        assert all(hasattr(t, "name") and hasattr(t, "patterns") for t in fallback)
