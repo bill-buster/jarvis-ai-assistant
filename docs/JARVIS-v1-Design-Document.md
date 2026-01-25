@@ -545,3 +545,49 @@ End-to-end tests verify complete user scenarios.
 **Adversarial Design Review**: Original review that identified the five critical blockers leading to v0 rejection.
 
 **Self-Critique Mechanisms for Agent Execution**: Analysis of agent execution failures and required self-critique checkpoints.
+
+---
+
+## Appendix B: Implementation Status (as of 2026-01-25)
+
+This appendix tracks what has actually been implemented versus what is described as planned in this document.
+
+### Workstream Implementation Status
+
+| Workstream | Description | Status | Notes |
+|------------|-------------|--------|-------|
+| WS1 | Memory Profiler | NOT IMPLEMENTED | Contract defined, stub only |
+| WS2 | HHEM Benchmark | NOT IMPLEMENTED | Contract defined, stub only |
+| WS3 | Template Coverage | COMPLETE | Full implementation with 75 templates, 1000 scenarios |
+| WS4 | Latency Benchmark | NOT IMPLEMENTED | Contract defined, stub only |
+| WS5 | Memory Controller | NOT IMPLEMENTED | Contract defined, stub only |
+| WS6 | Degradation Controller | NOT IMPLEMENTED | Contract defined, stub only |
+| WS7 | Permission/Schema | NOT IMPLEMENTED | Contract defined, stub only |
+| WS8 | Model Generator | COMPLETE | MLX loader, template fallback, RAG support |
+| WS9 | Gmail Integration | NOT IMPLEMENTED | Contract defined, stub only |
+| WS10 | iMessage Reader | MOSTLY COMPLETE | Has TODOs for attachments/reactions |
+
+### Validation Gates Status
+
+| Gate | Can Be Evaluated? | Notes |
+|------|-------------------|-------|
+| G1 (Coverage) | YES | `python -m benchmarks.coverage.run` |
+| G2 (Memory) | NO | WS1 not implemented |
+| G3 (HHEM) | NO | WS2 not implemented |
+| G4 (Warm Latency) | NO | WS4 not implemented |
+| G5 (Cold Latency) | NO | WS4 not implemented |
+
+### Missing Scripts
+
+The following scripts referenced in this document do not exist:
+- `scripts/overnight_eval.sh` - Overnight benchmark runner
+- `scripts/generate_report.py` - Report generator
+
+### Key Deviations from Design
+
+1. **Model Size**: Document specifies 3B parameter model; current implementation defaults to Qwen2.5-0.5B-Instruct-4bit (much smaller)
+2. **Memory Modes**: Three-tier modes (FULL/LITE/MINIMAL) defined in contract but not implemented
+3. **Circuit Breaker**: Pattern described but no implementation exists
+4. **HHEM Validation**: Described in data flow but not implemented
+
+See `docs/CODEBASE_AUDIT_REPORT.md` for comprehensive audit details.

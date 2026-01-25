@@ -4,7 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-JARVIS is a local-first AI assistant for macOS that provides intelligent email and iMessage management using MLX-based language models. It runs entirely on Apple Silicon with no cloud data transmission, targeting a 3B parameter model on devices with 8-16GB RAM.
+JARVIS is a local-first AI assistant for macOS that provides intelligent email and iMessage management using MLX-based language models. It runs entirely on Apple Silicon with no cloud data transmission.
+
+### Current Implementation Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Contracts/Interfaces | COMPLETE | All 9 protocol definitions in `contracts/` |
+| Template Coverage (WS3) | COMPLETE | 75 templates, 1000 test scenarios |
+| Model Generator (WS8) | COMPLETE | MLX loader, template fallback, RAG support |
+| iMessage Reader (WS10) | MOSTLY COMPLETE | Has TODOs for attachments/reactions |
+| Memory Profiler (WS1) | NOT STARTED | Contract only, stub implementation |
+| HHEM Benchmark (WS2) | NOT STARTED | Contract only, stub implementation |
+| Latency Benchmark (WS4) | NOT STARTED | Contract only, stub implementation |
+| Core Infrastructure (WS5-7) | NOT STARTED | Contracts only, stub implementations |
+| Gmail Integration (WS9) | NOT STARTED | Contract only, stub implementation |
+
+**Default Model**: Qwen2.5-0.5B-Instruct-4bit (configured in `models/loader.py`)
+
+See [docs/CODEBASE_AUDIT_REPORT.md](docs/CODEBASE_AUDIT_REPORT.md) for full audit details.
 
 ## Quick Reference
 
@@ -204,54 +222,78 @@ git worktree list
 
 The project uses Python Protocols in `contracts/` to enable parallel development across 10 workstreams. All implementations code against these interfaces:
 
-- `contracts/memory.py` - MemoryProfiler, MemoryController (3-tier modes: FULL/LITE/MINIMAL)
-- `contracts/hallucination.py` - HallucinationEvaluator (HHEM scoring)
-- `contracts/coverage.py` - CoverageAnalyzer (template matching)
-- `contracts/latency.py` - LatencyBenchmarker (cold/warm/hot scenarios)
-- `contracts/health.py` - DegradationController, PermissionMonitor, SchemaDetector
-- `contracts/models.py` - Generator (GenerationRequest/Response)
-- `contracts/gmail.py` - GmailClient, Email
-- `contracts/imessage.py` - iMessageReader, Message, Conversation
+| Contract | Protocol(s) | Implementation Status |
+|----------|-------------|----------------------|
+| `contracts/memory.py` | MemoryProfiler, MemoryController | CONTRACTS ONLY |
+| `contracts/hallucination.py` | HallucinationEvaluator | CONTRACTS ONLY |
+| `contracts/coverage.py` | CoverageAnalyzer | IMPLEMENTED in `benchmarks/coverage/` |
+| `contracts/latency.py` | LatencyBenchmarker | CONTRACTS ONLY |
+| `contracts/health.py` | DegradationController, PermissionMonitor, SchemaDetector | CONTRACTS ONLY |
+| `contracts/models.py` | Generator | IMPLEMENTED in `models/` |
+| `contracts/gmail.py` | GmailClient | CONTRACTS ONLY |
+| `contracts/imessage.py` | iMessageReader | IMPLEMENTED in `integrations/imessage/` |
 
 ### Module Structure
 
-- `benchmarks/` - Validation gates (WS1-4): memory, hallucination, coverage, latency
-- `core/` - Infrastructure (WS5-7): memory controller, health monitoring, config
-- `models/` - Model inference (WS8): MLX loader, generator with template fallback
-- `integrations/` - External services (WS9-10): Gmail API, iMessage chat.db reader
+| Directory | Purpose | Status |
+|-----------|---------|--------|
+| `benchmarks/coverage/` | Template matching analysis | COMPLETE |
+| `benchmarks/memory/` | Memory profiling (WS1) | STUB ONLY |
+| `benchmarks/hallucination/` | HHEM benchmark (WS2) | STUB ONLY |
+| `benchmarks/latency/` | Latency benchmark (WS4) | STUB ONLY |
+| `core/memory/` | Memory controller (WS5) | STUB ONLY |
+| `core/health/` | Health monitoring (WS6-7) | STUB ONLY |
+| `core/config/` | Configuration | STUB ONLY |
+| `models/` | MLX model inference (WS8) | COMPLETE |
+| `integrations/imessage/` | iMessage reader (WS10) | MOSTLY COMPLETE |
+| `integrations/gmail/` | Gmail API (WS9) | STUB ONLY |
 
-### Key Patterns
+### Key Patterns (Implemented)
 
 **Template-First Generation**: Queries are matched against templates (semantic similarity via all-MiniLM-L6-v2) before invoking the model. Threshold: 0.7 similarity.
 
 **Thread-Safe Lazy Initialization**: MLXModelLoader uses double-check locking for singleton model loading. See `models/loader.py`.
 
+**Singleton Generator**: Use `get_generator()` to get the shared instance, `reset_generator()` to reinitialize.
+
 **iMessage Schema Detection**: ChatDBReader detects macOS schema versions (v14/v15) and uses version-specific SQL queries. Database is opened read-only with timeout handling for SQLITE_BUSY.
 
-**Circuit Breaker Degradation**: DegradationController implements CLOSED -> OPEN -> HALF_OPEN state machine for graceful failure handling.
+### Patterns (Planned but NOT Implemented)
 
-### Data Flow for Text Generation
+**Circuit Breaker Degradation**: DegradationController is defined in contracts but has no implementation.
+
+**Memory Controller**: Three-tier memory modes (FULL/LITE/MINIMAL) are defined in contracts but not implemented.
+
+**HHEM Quality Validation**: Hallucination evaluation is defined in contracts but not implemented.
+
+### Data Flow for Text Generation (Current)
 
 1. Template matching (fast path, no model load) - if match >= 0.7, return immediately
-2. Memory check via MemoryController - determine operating mode
-3. RAG context injection from Gmail/iMessage
-4. Few-shot prompt formatting
+2. ~~Memory check via MemoryController~~ (NOT IMPLEMENTED - loads directly)
+3. RAG context injection via PromptBuilder
+4. Few-shot prompt formatting via PromptBuilder
 5. MLX model generation with temperature control
-6. (Planned) HHEM quality validation
+6. ~~HHEM quality validation~~ (NOT IMPLEMENTED)
 
 ---
 
 ## Validation Gates
 
-Five gates determine project viability. Run `scripts/check_gates.py` to evaluate:
+Five gates determine project viability. The gate checker script exists (`scripts/check_gates.py`) but requires benchmark outputs that are not yet generated because WS1, WS2, and WS4 are not implemented.
 
-| Gate | Metric | Pass | Conditional | Fail |
-|------|--------|------|-------------|------|
-| G1 | Template coverage @ 0.7 | >=60% | 40-60% | <40% |
-| G2 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB |
-| G3 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 |
-| G4 | Warm-start latency | <3s | 3-5s | >5s |
-| G5 | Cold-start latency | <15s | 15-20s | >20s |
+| Gate | Metric | Pass | Conditional | Fail | Can Run? |
+|------|--------|------|-------------|------|----------|
+| G1 | Template coverage @ 0.7 | >=60% | 40-60% | <40% | YES - `python -m benchmarks.coverage.run` |
+| G2 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB | NO - WS1 not implemented |
+| G3 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 | NO - WS2 not implemented |
+| G4 | Warm-start latency | <3s | 3-5s | >5s | NO - WS4 not implemented |
+| G5 | Cold-start latency | <15s | 15-20s | >20s | NO - WS4 not implemented |
+
+### Missing Scripts
+
+The following scripts are referenced in the design doc but do not exist:
+- `scripts/overnight_eval.sh` - Would run all benchmarks sequentially
+- `scripts/generate_report.py` - Would create BENCHMARKS.md from results
 
 ---
 
