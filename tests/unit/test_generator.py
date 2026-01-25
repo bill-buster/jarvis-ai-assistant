@@ -37,7 +37,8 @@ class TestTemplateMatching:
 
     def test_matcher_high_similarity_match(self):
         """Test exact pattern match returns high similarity."""
-        matcher = TemplateMatcher()
+        # Use fallback templates explicitly for consistent testing
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
         # Use exact template pattern
         match = matcher.match("Thanks for sending the report")
         assert match is not None
@@ -46,14 +47,16 @@ class TestTemplateMatching:
 
     def test_matcher_semantic_similarity_match(self):
         """Test semantically similar query matches template."""
-        matcher = TemplateMatcher()
+        # Use fallback templates explicitly for consistent testing
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
         match = matcher.match("Thank you for the update on the project")
         assert match is not None
         assert match.similarity >= TemplateMatcher.SIMILARITY_THRESHOLD
 
     def test_matcher_no_match_below_threshold(self):
         """Test unrelated queries return no match."""
-        matcher = TemplateMatcher()
+        # Use fallback templates explicitly for consistent testing
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
         match = matcher.match("What is the capital of France?")
         assert match is None
 
@@ -172,7 +175,9 @@ class TestMLXGenerator:
 
     def test_template_match_returns_response(self):
         """Test generator returns template response for matching query."""
-        generator = MLXGenerator()
+        # Use fallback templates explicitly for consistent testing
+        template_matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        generator = MLXGenerator(template_matcher=template_matcher)
         request = GenerationRequest(
             prompt="Thanks for sending the report",
             context_documents=[],
@@ -187,7 +192,9 @@ class TestMLXGenerator:
 
     def test_template_response_has_text(self):
         """Test template response includes response text."""
-        generator = MLXGenerator()
+        # Use fallback templates explicitly for consistent testing
+        template_matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        generator = MLXGenerator(template_matcher=template_matcher)
         request = GenerationRequest(
             prompt="Thank you for the update",
             context_documents=[],
@@ -267,7 +274,9 @@ class TestGeneratorProtocolCompliance:
 
     def test_generate_returns_generation_response(self):
         """Verify generate returns GenerationResponse."""
-        generator = MLXGenerator()
+        # Use fallback templates explicitly for consistent testing
+        template_matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        generator = MLXGenerator(template_matcher=template_matcher)
         request = GenerationRequest(
             prompt="Thanks for the update",
             context_documents=[],

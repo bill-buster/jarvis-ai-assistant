@@ -8,7 +8,7 @@ import gc
 import logging
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import mlx.core as mx
 import psutil
@@ -115,9 +115,28 @@ class MLXModelLoader:
                 logger.info("Model loaded in %.0fms", load_time)
                 return True
 
+            except FileNotFoundError:
+                logger.error(
+                    "Model not found: %s. Run `huggingface-cli download %s` first.",
+                    self.config.model_path,
+                    self.config.model_path,
+                )
+                self.unload()
+                return False
+            except MemoryError:
+                logger.error(
+                    "Out of memory loading model. Free up memory or use a smaller model."
+                )
+                self.unload()
+                return False
+            except OSError as e:
+                # Covers network errors, disk errors, permission issues
+                logger.error("OS error loading model: %s", e)
+                self.unload()
+                return False
             except Exception:
                 logger.exception("Failed to load model")
-                self.unload()  # Cleanup on failure
+                self.unload()
                 return False
 
     def unload(self) -> None:

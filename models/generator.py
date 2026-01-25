@@ -8,7 +8,6 @@ import logging
 import time
 
 from contracts.models import GenerationRequest, GenerationResponse
-
 from models.loader import MLXModelLoader, ModelConfig
 from models.prompt_builder import PromptBuilder
 from models.templates import TemplateMatcher
