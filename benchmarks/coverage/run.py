@@ -20,9 +20,7 @@ def main() -> int:
     Returns:
         Exit code (0 for success, 1 for error)
     """
-    parser = argparse.ArgumentParser(
-        description="Run template coverage analysis benchmark"
-    )
+    parser = argparse.ArgumentParser(description="Run template coverage analysis benchmark")
     parser.add_argument(
         "--output",
         type=Path,

@@ -2,6 +2,7 @@
 
 Workstream 8 implements against these contracts.
 """
+
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -9,8 +10,9 @@ from typing import Protocol
 @dataclass
 class GenerationRequest:
     """Request for text generation."""
+
     prompt: str
-    context_documents: list[str]        # RAG context to inject
+    context_documents: list[str]  # RAG context to inject
     few_shot_examples: list[tuple[str, str]]  # (input, output) pairs
     max_tokens: int = 100
     temperature: float = 0.7
@@ -20,13 +22,14 @@ class GenerationRequest:
 @dataclass
 class GenerationResponse:
     """Response from text generation."""
+
     text: str
     tokens_used: int
     generation_time_ms: float
     model_name: str
     used_template: bool
     template_name: str | None
-    finish_reason: str      # "stop", "length", "template"
+    finish_reason: str  # "stop", "length", "template"
 
 
 class Generator(Protocol):

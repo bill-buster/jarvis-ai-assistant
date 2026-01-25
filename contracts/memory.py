@@ -2,39 +2,43 @@
 
 Workstreams 1 and 5 implement against these contracts.
 """
+
 from dataclasses import dataclass
-from typing import Protocol
 from enum import Enum
+from typing import Protocol
 
 
 @dataclass
 class MemoryProfile:
     """Result of profiling a model's memory usage."""
+
     model_name: str
     quantization: str
     context_length: int
-    rss_mb: float           # Resident Set Size (actual RAM used)
-    virtual_mb: float       # Virtual memory allocated
-    metal_mb: float         # GPU memory (Apple Metal)
+    rss_mb: float  # Resident Set Size (actual RAM used)
+    virtual_mb: float  # Virtual memory allocated
+    metal_mb: float  # GPU memory (Apple Metal)
     load_time_seconds: float
-    timestamp: str          # ISO format
+    timestamp: str  # ISO format
 
 
 class MemoryMode(Enum):
     """Operating modes based on available memory."""
-    FULL = "full"           # 16GB+ : All features, concurrent models
-    LITE = "lite"           # 8-16GB : Sequential loading, reduced context
-    MINIMAL = "minimal"     # <8GB : Templates only, cloud fallback
+
+    FULL = "full"  # 16GB+ : All features, concurrent models
+    LITE = "lite"  # 8-16GB : Sequential loading, reduced context
+    MINIMAL = "minimal"  # <8GB : Templates only, cloud fallback
 
 
 @dataclass
 class MemoryState:
     """Current memory status of the system."""
+
     available_mb: float
     used_mb: float
     model_loaded: bool
     current_mode: MemoryMode
-    pressure_level: str     # "green", "yellow", "red", "critical"
+    pressure_level: str  # "green", "yellow", "red", "critical"
 
 
 class MemoryProfiler(Protocol):

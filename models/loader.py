@@ -124,9 +124,7 @@ class MLXModelLoader:
                 self.unload()
                 return False
             except MemoryError:
-                logger.error(
-                    "Out of memory loading model. Free up memory or use a smaller model."
-                )
+                logger.error("Out of memory loading model. Free up memory or use a smaller model.")
                 self.unload()
                 return False
             except OSError as e:

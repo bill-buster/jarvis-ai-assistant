@@ -2,6 +2,7 @@
 
 Workstream 2 implements against these contracts.
 """
+
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -9,17 +10,19 @@ from typing import Protocol
 @dataclass
 class HHEMResult:
     """Result of evaluating a single source/summary pair."""
+
     model_name: str
     prompt_template: str
     source_text: str
     generated_summary: str
-    hhem_score: float       # 0.0 = hallucinated, 1.0 = grounded
+    hhem_score: float  # 0.0 = hallucinated, 1.0 = grounded
     timestamp: str
 
 
 @dataclass
 class HHEMBenchmarkResult:
     """Aggregate results from a benchmark run."""
+
     model_name: str
     num_samples: int
     mean_score: float
@@ -43,10 +46,7 @@ class HallucinationEvaluator(Protocol):
         ...
 
     def run_benchmark(
-        self,
-        model_name: str,
-        dataset_path: str,
-        prompt_templates: list[str]
+        self, model_name: str, dataset_path: str, prompt_templates: list[str]
     ) -> HHEMBenchmarkResult:
         """Run full benchmark and return aggregate results."""
         ...

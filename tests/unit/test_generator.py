@@ -7,15 +7,14 @@ without requiring actual model loading.
 import pytest
 
 from contracts.models import GenerationRequest, GenerationResponse
+from models.generator import MLXGenerator
+from models.loader import MLXModelLoader, ModelConfig
+from models.prompt_builder import PromptBuilder
 from models.templates import (
     ResponseTemplate,
     TemplateMatcher,
-    TemplateMatch,
     _get_minimal_fallback_templates,
 )
-from models.prompt_builder import PromptBuilder
-from models.loader import ModelConfig, MLXModelLoader, GenerationResult
-from models.generator import MLXGenerator
 
 
 class TestTemplateMatching:
@@ -436,10 +435,10 @@ class TestMLXModelLoaderWithMocking:
 
     def test_load_insufficient_memory(self, monkeypatch):
         """Test loading fails with insufficient memory."""
-        from models.loader import MLXModelLoader, ModelConfig
-
         # Mock psutil to return low memory
         from unittest.mock import MagicMock
+
+        from models.loader import MLXModelLoader, ModelConfig
 
         mock_virtual_memory = MagicMock()
         mock_virtual_memory.available = 100 * 1024 * 1024  # Only 100MB available
@@ -450,7 +449,9 @@ class TestMLXModelLoaderWithMocking:
 
         # Use high estimated memory to trigger the check
         loader = MLXModelLoader(
-            ModelConfig(model_path="test-model", estimated_memory_mb=8000, memory_buffer_multiplier=2.0)
+            ModelConfig(
+                model_path="test-model", estimated_memory_mb=8000, memory_buffer_multiplier=2.0
+            )
         )
         result = loader.load()
 
@@ -836,7 +837,6 @@ class TestMLXGeneratorWithModel:
         from unittest.mock import MagicMock
 
         from contracts.models import GenerationRequest
-
         from models.generator import MLXGenerator
         from models.loader import MLXModelLoader, ModelConfig
 
@@ -872,7 +872,6 @@ class TestMLXGeneratorWithModel:
         from unittest.mock import MagicMock
 
         from contracts.models import GenerationRequest
-
         from models.generator import MLXGenerator
         from models.loader import MLXModelLoader
 
@@ -885,9 +884,7 @@ class TestMLXGeneratorWithModel:
 
         generator = MLXGenerator(loader=mock_loader, template_matcher=mock_matcher)
 
-        request = GenerationRequest(
-            prompt="Test query", context_documents=[], few_shot_examples=[]
-        )
+        request = GenerationRequest(prompt="Test query", context_documents=[], few_shot_examples=[])
 
         with pytest.raises(RuntimeError, match="Failed to load model"):
             generator.generate(request)
@@ -897,7 +894,6 @@ class TestMLXGeneratorWithModel:
         from unittest.mock import MagicMock
 
         from contracts.models import GenerationRequest
-
         from models.generator import MLXGenerator
         from models.loader import MLXModelLoader, ModelConfig
 
@@ -914,9 +910,7 @@ class TestMLXGeneratorWithModel:
             loader=mock_loader, template_matcher=mock_matcher, config=ModelConfig(model_path="test")
         )
 
-        request = GenerationRequest(
-            prompt="Query", context_documents=[], few_shot_examples=[]
-        )
+        request = GenerationRequest(prompt="Query", context_documents=[], few_shot_examples=[])
         response = generator.generate(request)
 
         mock_loader.load.assert_not_called()  # Should not call load
@@ -927,7 +921,6 @@ class TestMLXGeneratorWithModel:
         from unittest.mock import MagicMock
 
         from contracts.models import GenerationRequest
-
         from models.generator import MLXGenerator
         from models.loader import MLXModelLoader
 
@@ -941,9 +934,7 @@ class TestMLXGeneratorWithModel:
 
         generator = MLXGenerator(loader=mock_loader, template_matcher=mock_matcher)
 
-        request = GenerationRequest(
-            prompt="Query", context_documents=[], few_shot_examples=[]
-        )
+        request = GenerationRequest(prompt="Query", context_documents=[], few_shot_examples=[])
 
         with pytest.raises(RuntimeError):
             generator.generate(request)
@@ -956,7 +947,6 @@ class TestMLXGeneratorWithModel:
         from unittest.mock import MagicMock
 
         from contracts.models import GenerationRequest
-
         from models.generator import MLXGenerator
         from models.loader import MLXModelLoader
 
@@ -969,9 +959,7 @@ class TestMLXGeneratorWithModel:
 
         generator = MLXGenerator(loader=mock_loader, template_matcher=mock_matcher)
 
-        request = GenerationRequest(
-            prompt="Query", context_documents=[], few_shot_examples=[]
-        )
+        request = GenerationRequest(prompt="Query", context_documents=[], few_shot_examples=[])
 
         with pytest.raises(RuntimeError):
             generator.generate(request)
@@ -1008,7 +996,7 @@ class TestLoadTemplatesFromWS3:
 
     def test_load_templates_fallback_on_import_error(self, monkeypatch):
         """Fall back to minimal templates when WS3 unavailable."""
-        from models.templates import _get_minimal_fallback_templates, _load_templates
+        from models.templates import _get_minimal_fallback_templates
 
         # Mock import to fail
         original_import = __builtins__.__import__ if hasattr(__builtins__, "__import__") else None

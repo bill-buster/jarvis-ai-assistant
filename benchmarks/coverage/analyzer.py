@@ -102,9 +102,7 @@ class TemplateCoverageAnalyzer:
         template_embeddings = self._ensure_embeddings()
 
         # Encode query
-        query_embedding = model.encode(
-            [query], show_progress_bar=False, convert_to_numpy=True
-        )[0]
+        query_embedding = model.encode([query], show_progress_bar=False, convert_to_numpy=True)[0]
 
         # Compute similarities
         similarities = self._compute_cosine_similarity(query_embedding, template_embeddings)
@@ -155,9 +153,7 @@ class TemplateCoverageAnalyzer:
 
         # Compute all similarities at once
         # Shape: (num_queries, num_templates)
-        query_norms = query_embeddings / np.linalg.norm(
-            query_embeddings, axis=1, keepdims=True
-        )
+        query_norms = query_embeddings / np.linalg.norm(query_embeddings, axis=1, keepdims=True)
         template_norms = template_embeddings / np.linalg.norm(
             template_embeddings, axis=1, keepdims=True
         )
