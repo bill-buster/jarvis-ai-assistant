@@ -300,9 +300,34 @@ Five gates determine project viability. All benchmarks are now implemented.
 
 - `scripts/generate_report.py` - Generates BENCHMARKS.md from benchmark results
 - `scripts/check_gates.py` - Evaluates gate pass/fail status from results
+- `scripts/overnight_eval.sh` - Runs all benchmarks sequentially and generates report
 
-Missing (TODO):
-- `scripts/overnight_eval.sh` - Would run all benchmarks sequentially
+#### Running the Overnight Evaluation
+
+```bash
+# Full evaluation (all benchmarks)
+./scripts/overnight_eval.sh
+
+# Quick mode (reduced iterations for testing)
+./scripts/overnight_eval.sh --quick
+```
+
+**Output:**
+- Results directory: `results/YYYYMMDD_HHMMSS/`
+- Log file: `results/YYYYMMDD_HHMMSS/eval.log`
+- Report: `results/YYYYMMDD_HHMMSS/BENCHMARKS.md`
+- JSON results: `coverage.json`, `memory.json`, `hhem.json`, `latency.json`
+- Latest symlink: `results/latest/`
+
+**Exit Codes:**
+- `0` - All gates pass
+- `1` - One gate failed (reassess)
+- `2` - Two or more gates failed (consider project cancellation)
+
+**Notes:**
+- Memory and latency benchmarks require MLX (Apple Silicon) and will be skipped if unavailable
+- Benchmarks run sequentially to respect 8GB memory budget
+- Errors in one benchmark don't stop the others from running
 
 ---
 
