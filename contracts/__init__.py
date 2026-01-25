@@ -4,53 +4,53 @@ This module exports all Protocol interfaces that enable parallel workstream deve
 All implementations should code against these contracts, not concrete implementations.
 """
 
-from contracts.memory import (
-    MemoryProfile,
-    MemoryMode,
-    MemoryState,
-    MemoryProfiler,
-    MemoryController,
-)
-from contracts.hallucination import (
-    HHEMResult,
-    HHEMBenchmarkResult,
-    HallucinationEvaluator,
-)
 from contracts.coverage import (
-    TemplateMatch,
-    CoverageResult,
     CoverageAnalyzer,
-)
-from contracts.latency import (
-    Scenario,
-    LatencyResult,
-    LatencyBenchmarkResult,
-    LatencyBenchmarker,
-)
-from contracts.health import (
-    FeatureState,
-    Permission,
-    PermissionStatus,
-    SchemaInfo,
-    DegradationPolicy,
-    DegradationController,
-    PermissionMonitor,
-    SchemaDetector,
-)
-from contracts.models import (
-    GenerationRequest,
-    GenerationResponse,
-    Generator,
+    CoverageResult,
+    TemplateMatch,
 )
 from contracts.gmail import (
     Email,
     EmailSearchResult,
     GmailClient,
 )
+from contracts.hallucination import (
+    HallucinationEvaluator,
+    HHEMBenchmarkResult,
+    HHEMResult,
+)
+from contracts.health import (
+    DegradationController,
+    DegradationPolicy,
+    FeatureState,
+    Permission,
+    PermissionMonitor,
+    PermissionStatus,
+    SchemaDetector,
+    SchemaInfo,
+)
 from contracts.imessage import (
-    Message,
     Conversation,
+    Message,
     iMessageReader,
+)
+from contracts.latency import (
+    LatencyBenchmarker,
+    LatencyBenchmarkResult,
+    LatencyResult,
+    Scenario,
+)
+from contracts.memory import (
+    MemoryController,
+    MemoryMode,
+    MemoryProfile,
+    MemoryProfiler,
+    MemoryState,
+)
+from contracts.models import (
+    GenerationRequest,
+    GenerationResponse,
+    Generator,
 )
 
 __all__ = [

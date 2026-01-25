@@ -8,6 +8,7 @@ Gates:
 - G4: Warm Latency - p95 warm start latency
 - G5: Cold Latency - p95 cold start latency
 """
+
 import json
 import sys
 from pathlib import Path

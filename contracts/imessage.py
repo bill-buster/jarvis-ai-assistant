@@ -2,6 +2,7 @@
 
 Workstream 10 implements against these contracts.
 """
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -10,21 +11,23 @@ from typing import Protocol
 @dataclass
 class Message:
     """Normalized iMessage representation."""
+
     id: int
     chat_id: str
-    sender: str             # Phone number or email
-    sender_name: str | None # Resolved from contacts if available
+    sender: str  # Phone number or email
+    sender_name: str | None  # Resolved from contacts if available
     text: str
     date: datetime
     is_from_me: bool
     attachments: list[str]
     reply_to_id: int | None
-    reactions: list[str]    # Tapback reactions
+    reactions: list[str]  # Tapback reactions
 
 
 @dataclass
 class Conversation:
     """iMessage conversation summary."""
+
     chat_id: str
     participants: list[str]
     display_name: str | None
@@ -41,18 +44,13 @@ class iMessageReader(Protocol):
         ...
 
     def get_conversations(
-        self,
-        limit: int = 50,
-        since: datetime | None = None
+        self, limit: int = 50, since: datetime | None = None
     ) -> list[Conversation]:
         """Get recent conversations."""
         ...
 
     def get_messages(
-        self,
-        chat_id: str,
-        limit: int = 100,
-        before: datetime | None = None
+        self, chat_id: str, limit: int = 100, before: datetime | None = None
     ) -> list[Message]:
         """Get messages from a conversation."""
         ...
@@ -62,10 +60,7 @@ class iMessageReader(Protocol):
         ...
 
     def get_conversation_context(
-        self,
-        chat_id: str,
-        around_message_id: int,
-        context_messages: int = 5
+        self, chat_id: str, around_message_id: int, context_messages: int = 5
     ) -> list[Message]:
         """Get messages around a specific message for context."""
         ...

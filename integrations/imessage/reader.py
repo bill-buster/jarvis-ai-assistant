@@ -150,10 +150,7 @@ class ChatDBReader:
             return False
         except sqlite3.OperationalError as e:
             if "unable to open database" in str(e).lower():
-                logger.warning(
-                    f"Cannot open {self.db_path}. "
-                    "Ensure Full Disk Access is granted."
-                )
+                logger.warning(f"Cannot open {self.db_path}. Ensure Full Disk Access is granted.")
             else:
                 logger.warning(f"Database error: {e}")
             return False
@@ -202,9 +199,7 @@ class ChatDBReader:
             # Parse participants
             participants_str = row["participants"] or ""
             participants = [
-                normalize_phone_number(p.strip())
-                for p in participants_str.split(",")
-                if p.strip()
+                normalize_phone_number(p.strip()) for p in participants_str.split(",") if p.strip()
             ]
 
             # Determine if group chat
@@ -338,9 +333,7 @@ class ChatDBReader:
 
         return messages
 
-    def _rows_to_messages(
-        self, rows: Sequence[sqlite3.Row], chat_id: str
-    ) -> list[Message]:
+    def _rows_to_messages(self, rows: Sequence[sqlite3.Row], chat_id: str) -> list[Message]:
         """Convert database rows to Message objects.
 
         Args:

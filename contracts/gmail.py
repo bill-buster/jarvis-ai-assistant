@@ -2,6 +2,7 @@
 
 Workstream 9 implements against these contracts.
 """
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -10,6 +11,7 @@ from typing import Protocol
 @dataclass
 class Email:
     """Normalized email representation."""
+
     id: str
     thread_id: str
     subject: str
@@ -21,12 +23,13 @@ class Email:
     date: datetime
     labels: list[str]
     attachments: list[str]
-    snippet: str            # Short preview
+    snippet: str  # Short preview
 
 
 @dataclass
 class EmailSearchResult:
     """Result of email search."""
+
     emails: list[Email]
     total_count: int
     next_page_token: str | None
@@ -44,10 +47,7 @@ class GmailClient(Protocol):
         ...
 
     def search(
-        self,
-        query: str,
-        max_results: int = 10,
-        page_token: str | None = None
+        self, query: str, max_results: int = 10, page_token: str | None = None
     ) -> EmailSearchResult:
         """Search emails using Gmail query syntax."""
         ...
@@ -56,11 +56,7 @@ class GmailClient(Protocol):
         """Get full email by ID."""
         ...
 
-    def get_recent(
-        self,
-        days: int = 7,
-        max_results: int = 50
-    ) -> list[Email]:
+    def get_recent(self, days: int = 7, max_results: int = 50) -> list[Email]:
         """Get recent emails."""
         ...
 

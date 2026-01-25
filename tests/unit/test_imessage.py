@@ -351,7 +351,10 @@ class TestDetectSchemaVersion:
         # Simulate v14 columns
         cursor.fetchall.side_effect = [
             # First call: message table columns
-            [(1, "ROWID", "INTEGER", 0, None, 1), (2, "thread_originator_guid", "TEXT", 0, None, 0)],
+            [
+                (1, "ROWID", "INTEGER", 0, None, 1),
+                (2, "thread_originator_guid", "TEXT", 0, None, 0),
+            ],
             # Second call: chat table columns (no service_name)
             [(1, "ROWID", "INTEGER", 0, None, 1), (2, "guid", "TEXT", 0, None, 0)],
         ]
@@ -368,7 +371,10 @@ class TestDetectSchemaVersion:
         # Simulate v15 columns
         cursor.fetchall.side_effect = [
             # First call: message table columns with thread_originator_guid
-            [(1, "ROWID", "INTEGER", 0, None, 1), (2, "thread_originator_guid", "TEXT", 0, None, 0)],
+            [
+                (1, "ROWID", "INTEGER", 0, None, 1),
+                (2, "thread_originator_guid", "TEXT", 0, None, 0),
+            ],
             # Second call: chat table columns WITH service_name (v15 indicator)
             [(1, "ROWID", "INTEGER", 0, None, 1), (2, "service_name", "TEXT", 0, None, 0)],
         ]
@@ -478,7 +484,9 @@ class TestChatDBReaderInit:
         conn = sqlite3.connect(db_path)
         conn.execute("CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, guid TEXT)")
         conn.execute("INSERT INTO chat VALUES (1, 'test')")
-        conn.execute("CREATE TABLE message (ROWID INTEGER PRIMARY KEY, thread_originator_guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER PRIMARY KEY, thread_originator_guid TEXT)"
+        )
         conn.close()
 
         with ChatDBReader(db_path=db_path) as reader:
@@ -494,7 +502,9 @@ class TestChatDBReaderInit:
         conn = sqlite3.connect(db_path)
         conn.execute("CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, guid TEXT)")
         conn.execute("INSERT INTO chat VALUES (1, 'test')")
-        conn.execute("CREATE TABLE message (ROWID INTEGER PRIMARY KEY, thread_originator_guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER PRIMARY KEY, thread_originator_guid TEXT)"
+        )
         conn.close()
 
         try:
@@ -524,7 +534,9 @@ class TestChatDBReaderCheckAccess:
         conn = sqlite3.connect(db_path)
         conn.execute("CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, guid TEXT)")
         conn.execute("INSERT INTO chat VALUES (1, 'test')")
-        conn.execute("CREATE TABLE message (ROWID INTEGER PRIMARY KEY, thread_originator_guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER PRIMARY KEY, thread_originator_guid TEXT)"
+        )
         conn.close()
 
         reader = ChatDBReader(db_path=db_path)
@@ -583,11 +595,15 @@ class TestChatDBReaderGetConversations:
         """Return empty list for database with no conversations."""
         db_path = tmp_path / "chat.db"
         conn = sqlite3.connect(db_path)
-        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)")
+        conn.execute(
+            "CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)"
+        )
         conn.execute("CREATE TABLE chat_handle_join (chat_id INTEGER, handle_id INTEGER)")
         conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
         conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
-        conn.execute("CREATE TABLE message (ROWID INTEGER, date INTEGER, text TEXT, thread_originator_guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER, date INTEGER, text TEXT, thread_originator_guid TEXT)"
+        )
         conn.close()
 
         reader = ChatDBReader(db_path=db_path)
@@ -600,11 +616,15 @@ class TestChatDBReaderGetConversations:
         db_path = tmp_path / "chat.db"
         conn = sqlite3.connect(db_path)
         # Create schema
-        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)")
+        conn.execute(
+            "CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)"
+        )
         conn.execute("CREATE TABLE chat_handle_join (chat_id INTEGER, handle_id INTEGER)")
         conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
         conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
-        conn.execute("CREATE TABLE message (ROWID INTEGER, date INTEGER, text TEXT, thread_originator_guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER, date INTEGER, text TEXT, thread_originator_guid TEXT)"
+        )
 
         # Insert test data
         conn.execute("INSERT INTO chat VALUES (1, 'chat;+1234567890', NULL, '+1234567890')")
@@ -652,7 +672,9 @@ class TestChatDBReaderGetMessages:
         # Insert test data
         conn.execute("INSERT INTO chat VALUES (1, 'chat;+1234567890')")
         conn.execute("INSERT INTO handle VALUES (1, '+1234567890')")
-        conn.execute("INSERT INTO message VALUES (1, 726753600000000000, 'Hello', NULL, 0, 1, NULL)")
+        conn.execute(
+            "INSERT INTO message VALUES (1, 726753600000000000, 'Hello', NULL, 0, 1, NULL)"
+        )
         conn.execute("INSERT INTO chat_message_join VALUES (1, 1)")
         conn.commit()
         conn.close()
@@ -832,13 +854,17 @@ class TestChatDBReaderContext:
 
         conn.execute("INSERT INTO chat VALUES (1, 'chat;test')")
         for i in range(1, 11):
-            conn.execute(f"INSERT INTO message VALUES ({i}, {i}, 'Message {i}', NULL, 0, NULL, NULL)")
+            conn.execute(
+                f"INSERT INTO message VALUES ({i}, {i}, 'Message {i}', NULL, 0, NULL, NULL)"
+            )
             conn.execute(f"INSERT INTO chat_message_join VALUES (1, {i})")
         conn.commit()
         conn.close()
 
         reader = ChatDBReader(db_path=db_path)
-        result = reader.get_conversation_context("chat;test", around_message_id=5, context_messages=2)
+        result = reader.get_conversation_context(
+            "chat;test", around_message_id=5, context_messages=2
+        )
 
         # Should get 5 messages (2 before + target + 2 after)
         assert len(result) == 5
@@ -850,15 +876,19 @@ class TestChatDBReaderFilters:
 
     def test_get_conversations_with_since_filter(self, tmp_path):
         """Test get_conversations with since filter."""
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         db_path = tmp_path / "chat.db"
         conn = sqlite3.connect(db_path)
-        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)")
+        conn.execute(
+            "CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)"
+        )
         conn.execute("CREATE TABLE chat_handle_join (chat_id INTEGER, handle_id INTEGER)")
         conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
         conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
-        conn.execute("CREATE TABLE message (ROWID INTEGER, date INTEGER, text TEXT, thread_originator_guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER, date INTEGER, text TEXT, thread_originator_guid TEXT)"
+        )
 
         conn.execute("INSERT INTO chat VALUES (1, 'chat;test', 'Test', 'test')")
         conn.execute("INSERT INTO handle VALUES (1, '+1234567890')")
@@ -882,7 +912,7 @@ class TestChatDBReaderFilters:
 
     def test_get_messages_with_before_filter(self, tmp_path):
         """Test get_messages with before filter."""
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         db_path = tmp_path / "chat.db"
         conn = sqlite3.connect(db_path)
@@ -897,8 +927,12 @@ class TestChatDBReaderFilters:
         conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
 
         conn.execute("INSERT INTO chat VALUES (1, 'chat;test')")
-        conn.execute("INSERT INTO message VALUES (1, 100000000000000000, 'Early', NULL, 0, NULL, NULL)")
-        conn.execute("INSERT INTO message VALUES (2, 900000000000000000000, 'Late', NULL, 0, NULL, NULL)")
+        conn.execute(
+            "INSERT INTO message VALUES (1, 100000000000000000, 'Early', NULL, 0, NULL, NULL)"
+        )
+        conn.execute(
+            "INSERT INTO message VALUES (2, 900000000000000000000, 'Late', NULL, 0, NULL, NULL)"
+        )
         conn.execute("INSERT INTO chat_message_join VALUES (1, 1)")
         conn.execute("INSERT INTO chat_message_join VALUES (1, 2)")
         conn.commit()
@@ -943,7 +977,9 @@ class TestProtocolCompliance:
         conn = sqlite3.connect(db_path)
 
         # Create minimal schema
-        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)")
+        conn.execute(
+            "CREATE TABLE chat (ROWID INTEGER, guid TEXT, display_name TEXT, chat_identifier TEXT)"
+        )
         conn.execute("CREATE TABLE chat_handle_join (chat_id INTEGER, handle_id INTEGER)")
         conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
         conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
@@ -963,7 +999,9 @@ class TestProtocolCompliance:
         conn.execute("INSERT INTO chat VALUES (1, 'chat;test', 'Test Chat', 'test')")
         conn.execute("INSERT INTO handle VALUES (1, '+1234567890')")
         conn.execute("INSERT INTO chat_handle_join VALUES (1, 1)")
-        conn.execute("INSERT INTO message VALUES (1, 726753600000000000, 'Hello', NULL, 0, 1, NULL)")
+        conn.execute(
+            "INSERT INTO message VALUES (1, 726753600000000000, 'Hello', NULL, 0, 1, NULL)"
+        )
         conn.execute("INSERT INTO chat_message_join VALUES (1, 1)")
         conn.commit()
         conn.close()

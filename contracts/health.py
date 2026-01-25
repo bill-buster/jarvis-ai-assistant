@@ -2,13 +2,16 @@
 
 Workstreams 6 and 7 implement against these contracts.
 """
+
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Protocol, Callable, Any
 from enum import Enum
+from typing import Any, Protocol
 
 
 class FeatureState(Enum):
     """Health state of a feature."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     FAILED = "failed"
@@ -16,6 +19,7 @@ class FeatureState(Enum):
 
 class Permission(Enum):
     """macOS permissions required by JARVIS."""
+
     FULL_DISK_ACCESS = "full_disk_access"
     CONTACTS = "contacts"
     CALENDAR = "calendar"
@@ -25,25 +29,28 @@ class Permission(Enum):
 @dataclass
 class PermissionStatus:
     """Status of a single permission."""
+
     permission: Permission
     granted: bool
     last_checked: str
-    fix_instructions: str   # User-friendly instructions if not granted
+    fix_instructions: str  # User-friendly instructions if not granted
 
 
 @dataclass
 class SchemaInfo:
     """Information about iMessage chat.db schema."""
+
     version: str
     tables: list[str]
     compatible: bool
     migration_needed: bool
-    known_schema: bool      # False if we don't recognize this version
+    known_schema: bool  # False if we don't recognize this version
 
 
 @dataclass
 class DegradationPolicy:
     """Policy for degrading a feature gracefully."""
+
     feature_name: str
     health_check: Callable[[], bool]
     degraded_behavior: Callable[..., Any]
