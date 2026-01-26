@@ -64,6 +64,16 @@ class ConversationResponse(BaseModel):
     last_message_text: str | None = None  # Preview of the last message
 
 
+class ModelInfo(BaseModel):
+    """Current model information."""
+
+    id: str | None = None
+    display_name: str
+    loaded: bool
+    memory_usage_mb: float
+    quality_tier: str | None = None
+
+
 class HealthResponse(BaseModel):
     """System health status response."""
 
@@ -78,6 +88,10 @@ class HealthResponse(BaseModel):
     # JARVIS process-specific memory
     jarvis_rss_mb: float = 0.0  # Resident Set Size (actual RAM used by JARVIS)
     jarvis_vms_mb: float = 0.0  # Virtual Memory Size (JARVIS allocation)
+    # Model information
+    model: ModelInfo | None = None
+    recommended_model: str | None = None
+    system_ram_gb: float | None = None
 
 
 class ErrorResponse(BaseModel):

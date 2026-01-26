@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 CONFIG_PATH = Path.home() / ".jarvis" / "config.json"
 
 # Current config schema version for migration tracking
-CONFIG_VERSION = 2
+CONFIG_VERSION = 3
 
 
 class MemoryThresholds(BaseModel):
@@ -82,18 +82,37 @@ class ChatConfig(BaseModel):
     show_typing_indicator: bool = True
 
 
+class ModelSettings(BaseModel):
+    """Model configuration for text generation.
+
+    Attributes:
+        model_id: Model identifier from the registry (e.g., "qwen-1.5b").
+        auto_select: Automatically select the best model based on available RAM.
+        max_tokens_reply: Maximum tokens for reply generation.
+        max_tokens_summary: Maximum tokens for summarization.
+        temperature: Sampling temperature for generation (0.0-2.0).
+    """
+
+    model_id: str = "qwen-1.5b"
+    auto_select: bool = True
+    max_tokens_reply: int = Field(default=150, ge=1, le=2048)
+    max_tokens_summary: int = Field(default=500, ge=1, le=4096)
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+
+
 class JarvisConfig(BaseModel):
     """JARVIS configuration schema.
 
     Attributes:
         config_version: Schema version for migration tracking.
-        model_path: HuggingFace model path for MLX inference.
+        model_path: HuggingFace model path for MLX inference (deprecated, use model.model_id).
         template_similarity_threshold: Minimum similarity score for template matching (0-1).
         memory_thresholds: Memory thresholds for mode selection.
         imessage_default_limit: Default limit for iMessage search (deprecated).
         ui: UI preferences for the Tauri frontend.
         search: Search preferences.
         chat: Chat preferences.
+        model: Model configuration for text generation.
     """
 
     config_version: int = CONFIG_VERSION
@@ -104,6 +123,7 @@ class JarvisConfig(BaseModel):
     ui: UIConfig = Field(default_factory=UIConfig)
     search: SearchConfig = Field(default_factory=SearchConfig)
     chat: ChatConfig = Field(default_factory=ChatConfig)
+    model: ModelSettings = Field(default_factory=ModelSettings)
 
 
 # Module-level singleton with thread safety
@@ -115,7 +135,9 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
     """Migrate config data from older versions to current schema.
 
     Preserves existing values while adding new defaults for missing fields.
-    Handles migration from v1 (no version field) to v2 (with ui/search/chat sections).
+    Handles migration from:
+    - v1 (no version field) to v2 (with ui/search/chat sections)
+    - v2 to v3 (with model section)
 
     Args:
         data: Raw config data loaded from file.
@@ -140,8 +162,31 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
         if "chat" not in data:
             data["chat"] = {}
 
-        # Update version
-        data["config_version"] = CONFIG_VERSION
+        version = 2
+
+    if version < 3:
+        logger.info(f"Migrating config from version {version} to {CONFIG_VERSION}")
+
+        # Add model section if missing
+        if "model" not in data:
+            data["model"] = {}
+
+        # Migrate model_path to model.model_id if possible
+        if "model_path" in data and "model_id" not in data["model"]:
+            # Map known paths to model IDs
+            path_to_id = {
+                "mlx-community/Qwen2.5-0.5B-Instruct-4bit": "qwen-0.5b",
+                "mlx-community/Qwen2.5-1.5B-Instruct-4bit": "qwen-1.5b",
+                "mlx-community/Qwen2.5-3B-Instruct-4bit": "qwen-3b",
+            }
+            model_path = data["model_path"]
+            if model_path in path_to_id:
+                data["model"]["model_id"] = path_to_id[model_path]
+
+        version = 3
+
+    # Update version
+    data["config_version"] = CONFIG_VERSION
 
     return data
 

@@ -143,14 +143,25 @@ class TestModelConfig:
     """Tests for ModelConfig."""
 
     def test_default_config(self):
-        """Test default configuration values."""
+        """Test default configuration values.
+
+        Default model is now determined by the registry's DEFAULT_MODEL_ID,
+        which is "qwen-1.5b" (the balanced model).
+        """
         config = ModelConfig()
-        assert config.model_path == "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
-        assert config.estimated_memory_mb == 800
+        # Default is now qwen-1.5b from the registry
+        assert config.model_path == "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
+        assert config.estimated_memory_mb == 1.5 * 1024  # 1.5GB in MB
         assert config.memory_buffer_multiplier == 1.5
 
-    def test_custom_config(self):
-        """Test custom configuration."""
+    def test_custom_config_with_model_id(self):
+        """Test custom configuration with model_id."""
+        config = ModelConfig(model_id="qwen-0.5b")
+        assert config.model_path == "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+        assert config.estimated_memory_mb == 0.8 * 1024
+
+    def test_custom_config_with_model_path(self):
+        """Test custom configuration with explicit model_path."""
         config = ModelConfig(
             model_path="custom/model",
             estimated_memory_mb=500,

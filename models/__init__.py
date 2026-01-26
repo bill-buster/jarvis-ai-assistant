@@ -2,13 +2,37 @@
 
 Provides MLX-based text generation with template fallback,
 RAG context injection, and few-shot prompt formatting.
+
+Model Registry:
+    from models import get_model_spec, get_recommended_model, MODEL_REGISTRY
+
+    # Get best model for available RAM
+    spec = get_recommended_model(16.0)  # 16GB RAM
+
+    # Get specific model
+    spec = get_model_spec("qwen-1.5b")
+
+    # List all models
+    for model_id, spec in MODEL_REGISTRY.items():
+        print(f"{model_id}: {spec.display_name}")
 """
 
 import threading
 
 from models.generator import MLXGenerator
-from models.loader import LoadingStatus, MLXModelLoader, ModelConfig
+from models.loader import MLXModelLoader, ModelConfig
 from models.prompt_builder import PromptBuilder
+from models.registry import (
+    DEFAULT_MODEL_ID,
+    MODEL_REGISTRY,
+    ModelSpec,
+    ensure_model_available,
+    get_all_models,
+    get_model_spec,
+    get_model_spec_by_path,
+    get_recommended_model,
+    is_model_available,
+)
 from models.templates import (
     ResponseTemplate,
     SentenceModelError,
@@ -19,15 +43,27 @@ from models.templates import (
 )
 
 __all__ = [
-    "LoadingStatus",
+    # Generator
     "MLXGenerator",
     "MLXModelLoader",
     "ModelConfig",
     "PromptBuilder",
+    # Registry
+    "DEFAULT_MODEL_ID",
+    "MODEL_REGISTRY",
+    "ModelSpec",
+    "ensure_model_available",
+    "get_all_models",
+    "get_model_spec",
+    "get_model_spec_by_path",
+    "get_recommended_model",
+    "is_model_available",
+    # Templates
     "ResponseTemplate",
     "SentenceModelError",
     "TemplateMatcher",
     "TemplateMatch",
+    # Singleton functions
     "get_generator",
     "reset_generator",
     "unload_generator",

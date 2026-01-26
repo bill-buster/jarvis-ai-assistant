@@ -577,15 +577,19 @@ class ChatDBReader:
                 "LEFT JOIN handle AS affected_handle "
                 "ON message.other_handle = affected_handle.ROWID"
             )
-            fallback_query = fallback_query.replace(
-                "message.group_action_type,",
-                "NULL as group_action_type,",
-            ).replace(
-                "affected_handle.id as affected_handle_id",
-                "NULL as affected_handle_id",
-            ).replace(
-                affected_handle_join,
-                "",
+            fallback_query = (
+                fallback_query.replace(
+                    "message.group_action_type,",
+                    "NULL as group_action_type,",
+                )
+                .replace(
+                    "affected_handle.id as affected_handle_id",
+                    "NULL as affected_handle_id",
+                )
+                .replace(
+                    affected_handle_join,
+                    "",
+                )
             )
 
             # Read receipt columns
@@ -727,15 +731,19 @@ class ChatDBReader:
                 "LEFT JOIN handle AS affected_handle "
                 "ON message.other_handle = affected_handle.ROWID"
             )
-            fallback_query = fallback_query.replace(
-                "message.group_action_type,",
-                "NULL as group_action_type,",
-            ).replace(
-                "affected_handle.id as affected_handle_id",
-                "NULL as affected_handle_id",
-            ).replace(
-                affected_handle_join,
-                "",
+            fallback_query = (
+                fallback_query.replace(
+                    "message.group_action_type,",
+                    "NULL as group_action_type,",
+                )
+                .replace(
+                    "affected_handle.id as affected_handle_id",
+                    "NULL as affected_handle_id",
+                )
+                .replace(
+                    affected_handle_join,
+                    "",
+                )
             )
 
             try:

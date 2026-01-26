@@ -3,26 +3,19 @@
 Provides system health status including memory, model, and permission state.
 """
 
-from __future__ import annotations
-
-import asyncio
 import os
-from typing import TYPE_CHECKING
 
 import psutil
-from fastapi import APIRouter, BackgroundTasks
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter
 
-from api.schemas import HealthResponse, ModelStatusResponse, PreloadResponse
+from api.schemas import HealthResponse, ModelInfo
 from integrations.imessage import ChatDBReader
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
 
 router = APIRouter(tags=["health"])
 
 # Constants
 BYTES_PER_MB = 1024 * 1024
+BYTES_PER_GB = 1024**3
 
 
 def _get_process_memory() -> tuple[float, float]:
@@ -74,31 +67,46 @@ def _check_model_loaded() -> bool:
         return False
 
 
-def _get_model_status() -> ModelStatusResponse:
-    """Get detailed model loading status."""
+def _get_model_info() -> ModelInfo | None:
+    """Get information about the current model.
+
+    Returns:
+        ModelInfo with current model details, or None if unavailable.
+    """
     try:
         from models import get_generator
 
         generator = get_generator()
-        # Access the internal loader's status
         loader = generator._loader
-        status = loader.get_loading_status()
+        info = loader.get_current_model_info()
 
-        return ModelStatusResponse(
-            state=status.state,
-            progress=status.progress if status.state == "loading" else None,
-            message=status.message or None,
-            memory_usage_mb=loader.get_memory_usage_mb() if status.state == "loaded" else None,
-            load_time_seconds=status.load_time_seconds,
-            error=status.error,
+        return ModelInfo(
+            id=info.get("id"),
+            display_name=info.get("display_name", "Unknown"),
+            loaded=info.get("loaded", False),
+            memory_usage_mb=info.get("memory_usage_mb", 0.0),
+            quality_tier=info.get("quality_tier"),
         )
-    except Exception as e:
-        return ModelStatusResponse(
-            state="error",
-            progress=None,
-            message=f"Failed to get status: {e}",
-            error=str(e),
-        )
+    except Exception:
+        return None
+
+
+def _get_recommended_model(total_ram_gb: float) -> str | None:
+    """Get the recommended model for the system's total RAM.
+
+    Args:
+        total_ram_gb: Total system RAM in GB.
+
+    Returns:
+        Model ID string, or None if unavailable.
+    """
+    try:
+        from models import get_recommended_model
+
+        spec = get_recommended_model(total_ram_gb)
+        return spec.id
+    except Exception:
+        return None
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -110,13 +118,15 @@ def get_health() -> HealthResponse:
     - System memory usage (total system)
     - JARVIS process memory usage (what this app is using)
     - Memory controller mode
-    - Model loading state
+    - Model loading state and details
+    - Recommended model for this system
     - Overall system health
     """
     # System memory stats
     memory = psutil.virtual_memory()
-    available_gb = memory.available / (1024**3)
-    used_gb = memory.used / (1024**3)
+    available_gb = memory.available / BYTES_PER_GB
+    used_gb = memory.used / BYTES_PER_GB
+    total_gb = memory.total / BYTES_PER_GB
 
     # JARVIS process memory
     jarvis_rss_mb, jarvis_vms_mb = _get_process_memory()
@@ -125,6 +135,10 @@ def get_health() -> HealthResponse:
     imessage_access = _check_imessage_access()
     memory_mode = _get_memory_mode(available_gb)
     model_loaded = _check_model_loaded()
+
+    # Get model information
+    model_info = _get_model_info()
+    recommended_model = _get_recommended_model(total_gb)
 
     # Determine overall status
     details: dict[str, str] = {}
@@ -154,6 +168,9 @@ def get_health() -> HealthResponse:
         details=details if details else None,
         jarvis_rss_mb=round(jarvis_rss_mb, 1),
         jarvis_vms_mb=round(jarvis_vms_mb, 1),
+        model=model_info,
+        recommended_model=recommended_model,
+        system_ram_gb=round(total_gb, 2),
     )
 
 
@@ -161,120 +178,3 @@ def get_health() -> HealthResponse:
 def root() -> dict[str, str]:
     """Root endpoint - simple health ping."""
     return {"status": "ok", "service": "jarvis-api"}
-
-
-@router.get("/model-status", response_model=ModelStatusResponse)
-def get_model_status() -> ModelStatusResponse:
-    """Get current model loading status.
-
-    Returns detailed information about the model's loading state,
-    progress, memory usage, and any errors.
-    """
-    return _get_model_status()
-
-
-@router.get("/model-status/stream")
-async def stream_model_status() -> StreamingResponse:
-    """Stream model status updates via Server-Sent Events.
-
-    Useful for displaying real-time loading progress in the UI.
-    Automatically closes when model reaches "loaded" or "error" state.
-    """
-
-    async def event_generator() -> AsyncGenerator[str, None]:
-        max_iterations = 120  # 60 seconds max (120 * 0.5s)
-        iteration = 0
-
-        while iteration < max_iterations:
-            status = _get_model_status()
-            yield f"data: {status.model_dump_json()}\n\n"
-
-            # Stop streaming when loading is complete or errored
-            if status.state in ("loaded", "error", "unloaded"):
-                # Send one final update and close
-                break
-
-            await asyncio.sleep(0.5)
-            iteration += 1
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Disable buffering in nginx
-        },
-    )
-
-
-def _preload_model_sync() -> tuple[bool, str]:
-    """Synchronously preload the model (runs in background)."""
-    try:
-        from models import get_generator
-
-        generator = get_generator()
-        success = generator.load()
-        if success:
-            return True, "Model loaded successfully"
-        return False, "Failed to load model"
-    except Exception as e:
-        return False, f"Error loading model: {e}"
-
-
-@router.post("/model-preload", response_model=PreloadResponse)
-async def preload_model(background_tasks: BackgroundTasks) -> PreloadResponse:
-    """Trigger model preloading.
-
-    Initiates model loading in the background and returns immediately.
-    Use /model-status or /model-status/stream to monitor progress.
-    """
-    status = _get_model_status()
-
-    # Already loaded
-    if status.state == "loaded":
-        return PreloadResponse(
-            success=True,
-            message="Model already loaded",
-            state="loaded",
-        )
-
-    # Already loading
-    if status.state == "loading":
-        return PreloadResponse(
-            success=True,
-            message="Model loading in progress",
-            state="loading",
-        )
-
-    # Start loading in background
-    background_tasks.add_task(_preload_model_sync)
-
-    return PreloadResponse(
-        success=True,
-        message="Model preload initiated",
-        state="loading",
-    )
-
-
-@router.post("/model-unload", response_model=PreloadResponse)
-def unload_model() -> PreloadResponse:
-    """Unload the model to free memory.
-
-    Useful when the model is not needed and memory should be reclaimed.
-    """
-    try:
-        from models import unload_generator
-
-        unload_generator()
-        return PreloadResponse(
-            success=True,
-            message="Model unloaded successfully",
-            state="unloaded",
-        )
-    except Exception as e:
-        return PreloadResponse(
-            success=False,
-            message=f"Failed to unload model: {e}",
-            state="error",
-        )
