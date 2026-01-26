@@ -11,7 +11,6 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import logging
 import platform
 import subprocess
@@ -20,7 +19,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -28,6 +26,11 @@ from rich.table import Table
 
 from contracts.health import Permission, PermissionStatus, SchemaInfo
 from contracts.memory import MemoryMode
+from jarvis.config import (
+    JarvisConfig,
+    load_config,
+    save_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,32 +73,6 @@ class SetupResult:
     checks: list[CheckResult] = field(default_factory=list)
     config_created: bool = False
     config_path: Path | None = None
-
-
-@dataclass
-class JarvisConfig:
-    """JARVIS configuration."""
-
-    model_path: str = DEFAULT_MODEL_PATH
-    memory_mode: str = "auto"
-    template_threshold: float = DEFAULT_TEMPLATE_THRESHOLD
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "model_path": self.model_path,
-            "memory_mode": self.memory_mode,
-            "template_threshold": self.template_threshold,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> JarvisConfig:
-        """Create from dictionary."""
-        return cls(
-            model_path=data.get("model_path", DEFAULT_MODEL_PATH),
-            memory_mode=data.get("memory_mode", "auto"),
-            template_threshold=data.get("template_threshold", DEFAULT_TEMPLATE_THRESHOLD),
-        )
 
 
 class PermissionMonitorImpl:
@@ -587,52 +564,52 @@ class SetupWizard:
     def _init_config(self, memory_mode: MemoryMode) -> tuple[bool, Path | None]:
         """Initialize JARVIS configuration.
 
+        Uses the unified config system from jarvis.config which handles
+        migration from older config versions automatically.
+
         Args:
             memory_mode: Recommended memory mode.
 
         Returns:
             Tuple of (config_created, config_path).
         """
-        # Check if config already exists
+        # Check if config already exists - load_config handles migration automatically
         if JARVIS_CONFIG_FILE.exists():
             try:
-                with JARVIS_CONFIG_FILE.open() as f:
-                    existing = json.load(f)
-                config = JarvisConfig.from_dict(existing)
+                config = load_config(JARVIS_CONFIG_FILE)
+                # Re-save to apply any migrations
+                if save_config(config, JARVIS_CONFIG_FILE):
+                    self._checks.append(
+                        CheckResult(
+                            name="Configuration",
+                            status=CheckStatus.PASS,
+                            message="Existing config preserved",
+                            details=str(JARVIS_CONFIG_FILE),
+                        )
+                    )
+                    return False, JARVIS_CONFIG_FILE
+            except Exception as e:
+                logger.warning(f"Error reading existing config: {e}")
+
+        # Create new config with defaults
+        try:
+            config = JarvisConfig(
+                model_path=DEFAULT_MODEL_PATH,
+                template_similarity_threshold=DEFAULT_TEMPLATE_THRESHOLD,
+            )
+
+            if save_config(config, JARVIS_CONFIG_FILE):
                 self._checks.append(
                     CheckResult(
                         name="Configuration",
                         status=CheckStatus.PASS,
-                        message="Existing config preserved",
+                        message="Config created",
                         details=str(JARVIS_CONFIG_FILE),
                     )
                 )
-                return False, JARVIS_CONFIG_FILE
-            except (json.JSONDecodeError, OSError) as e:
-                logger.warning(f"Error reading existing config: {e}")
-
-        # Create new config
-        try:
-            JARVIS_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-
-            config = JarvisConfig(
-                model_path=DEFAULT_MODEL_PATH,
-                memory_mode=memory_mode.value if memory_mode != MemoryMode.FULL else "auto",
-                template_threshold=DEFAULT_TEMPLATE_THRESHOLD,
-            )
-
-            with JARVIS_CONFIG_FILE.open("w") as f:
-                json.dump(config.to_dict(), f, indent=2)
-
-            self._checks.append(
-                CheckResult(
-                    name="Configuration",
-                    status=CheckStatus.PASS,
-                    message="Config created",
-                    details=str(JARVIS_CONFIG_FILE),
-                )
-            )
-            return True, JARVIS_CONFIG_FILE
+                return True, JARVIS_CONFIG_FILE
+            else:
+                raise OSError("save_config returned False")
 
         except OSError as e:
             self._checks.append(
