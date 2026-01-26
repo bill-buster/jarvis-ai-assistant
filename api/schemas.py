@@ -109,3 +109,62 @@ class SendMessageResponse(BaseModel):
 
     success: bool
     error: str | None = None
+
+
+class Suggestion(BaseModel):
+    """A single reply suggestion."""
+
+    text: str
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence score")
+
+
+class ContextInfo(BaseModel):
+    """Information about context used for generation."""
+
+    messages_used: int = Field(default=0, description="Number of messages used as context")
+    tokens_used: int = Field(default=0, description="Number of tokens used")
+    truncated: bool = Field(default=False, description="Whether context was truncated")
+
+
+class DraftReplyRequest(BaseModel):
+    """Request to generate reply drafts."""
+
+    chat_id: str = Field(..., description="Conversation ID")
+    last_message: str = Field(..., min_length=1, description="The last received message")
+    num_suggestions: int = Field(default=3, ge=1, le=5, description="Number of suggestions")
+    include_context: bool = Field(default=True, description="Include conversation context")
+
+
+class DraftReplyResponse(BaseModel):
+    """Response containing reply draft suggestions."""
+
+    suggestions: list[Suggestion]
+    context_used: ContextInfo | None = None
+    error: str | None = None
+    used_fallback: bool = False
+
+
+class SummaryRequest(BaseModel):
+    """Request to generate conversation summary."""
+
+    chat_id: str = Field(..., description="Conversation ID")
+    max_messages: int = Field(default=50, ge=1, le=200, description="Max messages to summarize")
+
+
+class SummaryResponse(BaseModel):
+    """Response containing conversation summary."""
+
+    summary: str
+    participant: str
+    message_count: int
+    error: str | None = None
+    used_fallback: bool = False
+
+
+class GenerationStatus(BaseModel):
+    """Status of the generation system."""
+
+    model_loaded: bool
+    can_generate: bool
+    reason: str | None = None
+    memory_mode: str

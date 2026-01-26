@@ -29,7 +29,8 @@ class GenerationResponse:
     model_name: str
     used_template: bool
     template_name: str | None
-    finish_reason: str  # "stop", "length", "template"
+    finish_reason: str  # "stop", "length", "template", "fallback", "error"
+    error: str | None = None  # Error message if finish_reason is "error" or "fallback"
 
 
 class Generator(Protocol):
