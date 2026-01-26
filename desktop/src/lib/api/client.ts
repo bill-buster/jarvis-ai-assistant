@@ -16,6 +16,8 @@ import type {
   SettingsUpdateRequest,
   SmartReplySuggestionsResponse,
   SummaryResponse,
+  TemplateAnalyticsDashboard,
+  TemplateAnalyticsSummary,
   TimeRange,
   TopicsResponse,
 } from "./types";
@@ -303,6 +305,30 @@ class ApiClient {
       `/stats/${encodeURIComponent(chatId)}/cache`,
       { method: "DELETE" }
     );
+  }
+
+  // Template Analytics endpoints
+  async getTemplateAnalytics(): Promise<TemplateAnalyticsSummary> {
+    return this.request<TemplateAnalyticsSummary>("/metrics/templates");
+  }
+
+  async getTemplateAnalyticsDashboard(): Promise<TemplateAnalyticsDashboard> {
+    return this.request<TemplateAnalyticsDashboard>("/metrics/templates/dashboard");
+  }
+
+  async resetTemplateAnalytics(): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      "/metrics/templates/reset",
+      { method: "POST" }
+    );
+  }
+
+  async exportTemplateAnalytics(): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/metrics/templates/export`);
+    if (!response.ok) {
+      throw new APIError("Export failed", response.status, null);
+    }
+    return response.blob();
   }
 }
 

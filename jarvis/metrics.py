@@ -570,13 +570,14 @@ def get_latency_histogram() -> LatencyHistogram:
 
 def reset_metrics() -> None:
     """Reset all global metrics instances."""
-    global _memory_sampler, _request_counter, _latency_histogram
+    global _memory_sampler, _request_counter, _latency_histogram, _template_analytics
     with _metrics_lock:
         if _memory_sampler:
             _memory_sampler.stop()
             _memory_sampler = None
         _request_counter = None
         _latency_histogram = None
+        _template_analytics = None
 
 
 def force_gc() -> dict[str, Any]:
@@ -598,6 +599,251 @@ def force_gc() -> dict[str, Any]:
         "rss_after_mb": round(after.rss_mb, 2),
         "rss_freed_mb": round(before.rss_mb - after.rss_mb, 2),
     }
+
+
+class TemplateAnalytics:
+    """Thread-safe analytics collector for template matching.
+
+    Tracks template usage statistics including hit rates, match counts,
+    and queries that missed templates.
+    """
+
+    MAX_MISSED_QUERIES = 100  # Maximum missed queries to retain
+    MAX_SIMILARITY_SAMPLES = 1000  # Maximum similarity scores per category
+
+    def __init__(self) -> None:
+        """Initialize the template analytics collector."""
+        self._lock = threading.Lock()
+        self._start_time = datetime.now(UTC)
+
+        # Core counters
+        self._total_queries = 0
+        self._template_hits = 0
+        self._model_fallbacks = 0
+
+        # Template match counts: template_name -> count
+        self._template_matches: dict[str, int] = defaultdict(int)
+
+        # Category similarity scores for averaging: category -> list of scores
+        self._category_similarities: dict[str, list[float]] = defaultdict(list)
+
+        # Missed queries (queries below threshold): list of (query_hash, similarity, timestamp)
+        self._missed_queries: list[dict[str, Any]] = []
+
+        # Cache hit tracking
+        self._cache_hits = 0
+        self._cache_misses = 0
+
+    def record_template_hit(
+        self,
+        template_name: str,
+        category: str,
+        similarity: float,
+    ) -> None:
+        """Record a successful template match.
+
+        Args:
+            template_name: Name of the matched template
+            category: Category/type of the template
+            similarity: Similarity score of the match
+        """
+        with self._lock:
+            self._total_queries += 1
+            self._template_hits += 1
+            self._template_matches[template_name] += 1
+
+            # Track similarity for category averaging
+            if len(self._category_similarities[category]) < self.MAX_SIMILARITY_SAMPLES:
+                self._category_similarities[category].append(similarity)
+
+    def record_model_fallback(
+        self,
+        query_hash: str,
+        best_similarity: float,
+        best_template: str | None = None,
+    ) -> None:
+        """Record a query that fell through to model generation.
+
+        Args:
+            query_hash: Hash of the query (for privacy)
+            best_similarity: Best similarity score achieved (below threshold)
+            best_template: Name of the best matching template (if any)
+        """
+        with self._lock:
+            self._total_queries += 1
+            self._model_fallbacks += 1
+
+            # Store missed query info
+            missed = {
+                "query_hash": query_hash,
+                "similarity": best_similarity,
+                "best_template": best_template,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+            self._missed_queries.append(missed)
+
+            # Trim to max size (keep most recent)
+            if len(self._missed_queries) > self.MAX_MISSED_QUERIES:
+                self._missed_queries = self._missed_queries[-self.MAX_MISSED_QUERIES :]
+
+    def record_cache_access(self, hit: bool) -> None:
+        """Record a cache access for hit rate tracking.
+
+        Args:
+            hit: True if cache hit, False if cache miss
+        """
+        with self._lock:
+            if hit:
+                self._cache_hits += 1
+            else:
+                self._cache_misses += 1
+
+    def get_hit_rate(self) -> float:
+        """Get the template hit rate.
+
+        Returns:
+            Percentage of queries that matched templates (0-100)
+        """
+        with self._lock:
+            if self._total_queries == 0:
+                return 0.0
+            return (self._template_hits / self._total_queries) * 100
+
+    def get_cache_hit_rate(self) -> float:
+        """Get the query embedding cache hit rate.
+
+        Returns:
+            Cache hit rate (0-1)
+        """
+        with self._lock:
+            total = self._cache_hits + self._cache_misses
+            if total == 0:
+                return 0.0
+            return self._cache_hits / total
+
+    def get_top_templates(self, limit: int = 20) -> list[dict[str, Any]]:
+        """Get the most frequently matched templates.
+
+        Args:
+            limit: Maximum number of templates to return
+
+        Returns:
+            List of template match info sorted by count
+        """
+        with self._lock:
+            sorted_templates = sorted(
+                self._template_matches.items(),
+                key=lambda x: x[1],
+                reverse=True,
+            )[:limit]
+            return [
+                {"template_name": name, "match_count": count}
+                for name, count in sorted_templates
+            ]
+
+    def get_missed_queries(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Get recent queries that missed templates.
+
+        Args:
+            limit: Maximum number of queries to return
+
+        Returns:
+            List of missed query info (most recent first)
+        """
+        with self._lock:
+            return list(reversed(self._missed_queries[-limit:]))
+
+    def get_category_averages(self) -> dict[str, float]:
+        """Get average similarity scores per template category.
+
+        Returns:
+            Dictionary mapping category to average similarity
+        """
+        with self._lock:
+            result = {}
+            for category, scores in self._category_similarities.items():
+                if scores:
+                    result[category] = sum(scores) / len(scores)
+            return result
+
+    def get_stats(self) -> dict[str, Any]:
+        """Get comprehensive template analytics.
+
+        Returns:
+            Dictionary with all template usage statistics
+        """
+        with self._lock:
+            elapsed = (datetime.now(UTC) - self._start_time).total_seconds()
+
+            return {
+                "total_queries": self._total_queries,
+                "template_hits": self._template_hits,
+                "model_fallbacks": self._model_fallbacks,
+                "hit_rate_percent": round(self.get_hit_rate(), 2),
+                "cache_hit_rate": round(self.get_cache_hit_rate(), 4),
+                "unique_templates_matched": len(self._template_matches),
+                "queries_per_second": (
+                    round(self._total_queries / elapsed, 4) if elapsed > 0 else 0.0
+                ),
+                "uptime_seconds": round(elapsed, 2),
+            }
+
+    def reset(self) -> None:
+        """Reset all analytics data."""
+        with self._lock:
+            self._start_time = datetime.now(UTC)
+            self._total_queries = 0
+            self._template_hits = 0
+            self._model_fallbacks = 0
+            self._template_matches.clear()
+            self._category_similarities.clear()
+            self._missed_queries.clear()
+            self._cache_hits = 0
+            self._cache_misses = 0
+
+    def export_raw(self) -> dict[str, Any]:
+        """Export all raw metrics data for analysis.
+
+        Returns:
+            Complete raw data including all stored metrics
+        """
+        with self._lock:
+            return {
+                "metadata": {
+                    "start_time": self._start_time.isoformat(),
+                    "export_time": datetime.now(UTC).isoformat(),
+                },
+                "counters": {
+                    "total_queries": self._total_queries,
+                    "template_hits": self._template_hits,
+                    "model_fallbacks": self._model_fallbacks,
+                    "cache_hits": self._cache_hits,
+                    "cache_misses": self._cache_misses,
+                },
+                "template_matches": dict(self._template_matches),
+                "category_similarities": {
+                    cat: scores for cat, scores in self._category_similarities.items()
+                },
+                "missed_queries": list(self._missed_queries),
+            }
+
+
+# Global template analytics instance (singleton pattern)
+_template_analytics: TemplateAnalytics | None = None
+
+
+def get_template_analytics() -> TemplateAnalytics:
+    """Get the global template analytics instance.
+
+    Returns:
+        Shared TemplateAnalytics instance
+    """
+    global _template_analytics
+    if _template_analytics is None:
+        with _metrics_lock:
+            if _template_analytics is None:
+                _template_analytics = TemplateAnalytics()
+    return _template_analytics
 
 
 class TTLCache:

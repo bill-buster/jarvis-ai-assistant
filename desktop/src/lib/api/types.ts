@@ -235,3 +235,54 @@ export interface ConversationStats {
   last_message_date: string | null;
   participants: string[];
 }
+
+// Template Analytics types
+export interface TemplateAnalyticsSummary {
+  total_queries: number;
+  template_hits: number;
+  model_fallbacks: number;
+  hit_rate_percent: number;
+  cache_hit_rate: number;
+  unique_templates_matched: number;
+  queries_per_second: number;
+  uptime_seconds: number;
+}
+
+export interface TopTemplateItem {
+  template_name: string;
+  match_count: number;
+}
+
+export interface MissedQueryItem {
+  query_hash: string;
+  similarity: number;
+  best_template: string | null;
+  timestamp: string;
+}
+
+export interface CategoryAverageItem {
+  category: string;
+  average_similarity: number;
+}
+
+export interface TemplateCoverage {
+  total_templates: number;
+  total_patterns: number;
+  responses_from_templates: number;
+  responses_from_model: number;
+  coverage_percent: number;
+}
+
+export interface PieChartData {
+  template_responses: number;
+  model_responses: number;
+}
+
+export interface TemplateAnalyticsDashboard {
+  summary: TemplateAnalyticsSummary;
+  top_templates: TopTemplateItem[];
+  missed_queries: MissedQueryItem[];
+  category_averages: CategoryAverageItem[];
+  coverage: TemplateCoverage;
+  pie_chart_data: PieChartData;
+}

@@ -7,6 +7,11 @@ Performance optimizations:
 - Pre-normalized pattern embeddings for O(1) cosine similarity
 - LRU cache for query embeddings (repeated queries)
 - Batch encoding for initial setup
+
+Analytics:
+- Tracks template hit/miss rates
+- Records queries that miss templates for optimization
+- Monitors cache efficiency
 """
 
 from __future__ import annotations
@@ -20,6 +25,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import numpy as np
+
+from jarvis.metrics import get_template_analytics
 
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
@@ -48,14 +55,23 @@ class EmbeddingCache(Generic[K, V]):
         self._hits = 0
         self._misses = 0
 
-    def get(self, key: K) -> V | None:
-        """Get embedding from cache."""
+    def get(self, key: K, track_analytics: bool = True) -> V | None:
+        """Get embedding from cache.
+
+        Args:
+            key: Cache key to look up
+            track_analytics: Whether to record this access in template analytics
+        """
         with self._lock:
             if key in self._cache:
                 self._cache.move_to_end(key)
                 self._hits += 1
+                if track_analytics:
+                    get_template_analytics().record_cache_access(hit=True)
                 return self._cache[key]
             self._misses += 1
+            if track_analytics:
+                get_template_analytics().record_cache_access(hit=False)
             return None
 
     def set(self, key: K, value: V) -> None:
@@ -1107,16 +1123,19 @@ class TemplateMatcher:
         self._query_cache.set(cache_key, embedding)
         return embedding
 
-    def match(self, query: str) -> TemplateMatch | None:
+    def match(self, query: str, track_analytics: bool = True) -> TemplateMatch | None:
         """Find best matching template for a query.
 
         Args:
             query: Input prompt to match against templates
+            track_analytics: Whether to record this query in template analytics
 
         Returns:
             TemplateMatch if similarity >= threshold, None otherwise.
             Returns None if sentence model fails to load (falls back to model generation).
         """
+        analytics = get_template_analytics() if track_analytics else None
+
         try:
             self._ensure_embeddings()
 
@@ -1154,10 +1173,35 @@ class TemplateMatcher:
                     template.name,
                     best_similarity,
                 )
+
+                # Record template hit in analytics
+                if analytics:
+                    category = self._extract_category(template.name)
+                    analytics.record_template_hit(
+                        template_name=template.name,
+                        category=category,
+                        similarity=best_similarity,
+                    )
+
                 return TemplateMatch(
                     template=template,
                     similarity=best_similarity,
                     matched_pattern=matched_pattern,
+                )
+
+            # Record model fallback in analytics
+            if analytics:
+                # Use hash of query for privacy
+                query_hash = hashlib.md5(query.encode(), usedforsecurity=False).hexdigest()[:12]
+                best_template_name = (
+                    self._pattern_to_template[best_idx][1].name
+                    if self._pattern_to_template
+                    else None
+                )
+                analytics.record_model_fallback(
+                    query_hash=query_hash,
+                    best_similarity=best_similarity,
+                    best_template=best_template_name,
                 )
 
             logger.debug(
@@ -1171,6 +1215,38 @@ class TemplateMatcher:
             # Fall back to model generation if sentence model unavailable
             logger.warning("Template matching unavailable, falling back to model generation")
             return None
+
+    @staticmethod
+    def _extract_category(template_name: str) -> str:
+        """Extract category from template name.
+
+        Template names follow patterns like 'quick_ok', 'greeting', 'summarize_conversation'.
+        This extracts a category for grouping analytics.
+
+        Args:
+            template_name: Name of the template
+
+        Returns:
+            Extracted category string
+        """
+        # Common prefixes that indicate categories
+        prefixes = [
+            "quick_",
+            "summarize_",
+            "find_",
+            "search_",
+            "messages_",
+            "group_",
+        ]
+
+        for prefix in prefixes:
+            if template_name.startswith(prefix):
+                return prefix.rstrip("_")
+
+        # For templates without known prefixes, use the full name as category
+        # or extract first word before underscore
+        parts = template_name.split("_")
+        return parts[0] if parts else template_name
 
     def clear_cache(self) -> None:
         """Clear cached embeddings.

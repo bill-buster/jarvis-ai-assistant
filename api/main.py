@@ -29,6 +29,7 @@ from api.routers import (
     settings_router,
     stats_router,
     suggestions_router,
+    template_analytics_router,
     topics_router,
 )
 from jarvis.metrics import get_latency_histogram, get_request_counter
@@ -121,6 +122,11 @@ API_TAGS_METADATA = [
         "description": "Conversation statistics and analytics. "
         "Get insights on messaging patterns, word frequency, activity by hour/day, "
         "response times, emoji usage, and attachment breakdowns.",
+    },
+    {
+        "name": "template-analytics",
+        "description": "Template matching analytics and optimization. "
+        "Monitor template hit rates, view top templates, and identify optimization opportunities.",
     },
 ]
 
@@ -244,6 +250,7 @@ app.include_router(suggestions_router)
 app.include_router(settings_router)
 app.include_router(stats_router)
 app.include_router(metrics_router)
+app.include_router(template_analytics_router)
 app.include_router(topics_router)
 
 # Register JARVIS exception handlers for standardized error responses

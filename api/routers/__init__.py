@@ -9,6 +9,7 @@ from .metrics import router as metrics_router
 from .settings import router as settings_router
 from .stats import router as stats_router
 from .suggestions import router as suggestions_router
+from .template_analytics import router as template_analytics_router
 from .topics import router as topics_router
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "settings_router",
     "stats_router",
     "suggestions_router",
+    "template_analytics_router",
     "topics_router",
 ]
