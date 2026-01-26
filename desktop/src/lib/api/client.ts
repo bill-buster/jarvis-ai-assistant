@@ -13,6 +13,8 @@ import type {
   ModelInfo,
   PDFExportRequest,
   PDFExportResponse,
+  QualityDashboardData,
+  QualitySummary,
   SearchFilters,
   SettingsResponse,
   SettingsUpdateRequest,
@@ -419,6 +421,31 @@ class ApiClient {
 
     const blob = await response.blob();
     return { blob, filename };
+  }
+
+  // Quality Metrics endpoints
+  async getQualitySummary(): Promise<QualitySummary> {
+    return this.request<QualitySummary>("/quality/summary");
+  }
+
+  async getQualityDashboard(
+    trendDays: number = 7,
+    topContactsLimit: number = 10
+  ): Promise<QualityDashboardData> {
+    const params = new URLSearchParams({
+      trend_days: trendDays.toString(),
+      top_contacts_limit: topContactsLimit.toString(),
+    });
+    return this.request<QualityDashboardData>(
+      `/quality/dashboard?${params.toString()}`
+    );
+  }
+
+  async resetQualityMetrics(): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      "/quality/reset",
+      { method: "POST" }
+    );
   }
 }
 

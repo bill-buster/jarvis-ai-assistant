@@ -28,6 +28,7 @@ from api.routers import (
     health_router,
     metrics_router,
     pdf_export_router,
+    quality_router,
     settings_router,
     stats_router,
     suggestions_router,
@@ -129,6 +130,12 @@ API_TAGS_METADATA = [
         "name": "template-analytics",
         "description": "Template matching analytics and optimization. "
         "Monitor template hit rates, view top templates, and identify optimization opportunities.",
+    },
+    {
+        "name": "quality",
+        "description": "Quality metrics dashboard for response generation. "
+        "Track template hit rates, HHEM scores, user acceptance, edit distance, and latency. "
+        "View metrics by contact, time of day, conversation type, and intent.",
     },
 ]
 
@@ -255,6 +262,7 @@ app.include_router(stats_router)
 app.include_router(metrics_router)
 app.include_router(template_analytics_router)
 app.include_router(topics_router)
+app.include_router(quality_router)
 
 # Register JARVIS exception handlers for standardized error responses
 register_exception_handlers(app)
