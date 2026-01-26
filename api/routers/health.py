@@ -1,6 +1,7 @@
 """Health check API endpoints.
 
 Provides system health status including memory, model, and permission state.
+Uses TTL caching for expensive operations.
 """
 
 import os
@@ -10,6 +11,7 @@ from fastapi import APIRouter
 
 from api.schemas import HealthResponse, ModelInfo
 from integrations.imessage import ChatDBReader
+from jarvis.metrics import get_health_cache, get_model_info_cache
 
 router = APIRouter(tags=["health"])
 
@@ -70,9 +72,16 @@ def _check_model_loaded() -> bool:
 def _get_model_info() -> ModelInfo | None:
     """Get information about the current model.
 
+    Uses TTL cache (60s) to avoid repeated expensive lookups.
+
     Returns:
         ModelInfo with current model details, or None if unavailable.
     """
+    cache = get_model_info_cache()
+    found, cached = cache.get("model_info")
+    if found:
+        return cached  # type: ignore[return-value]
+
     try:
         from models import get_generator
 
@@ -80,13 +89,15 @@ def _get_model_info() -> ModelInfo | None:
         loader = generator._loader
         info = loader.get_current_model_info()
 
-        return ModelInfo(
+        result = ModelInfo(
             id=info.get("id"),
             display_name=info.get("display_name", "Unknown"),
             loaded=info.get("loaded", False),
             memory_usage_mb=info.get("memory_usage_mb", 0.0),
             quality_tier=info.get("quality_tier"),
         )
+        cache.set("model_info", result)
+        return result
     except Exception:
         return None
 
@@ -113,6 +124,8 @@ def _get_recommended_model(total_ram_gb: float) -> str | None:
 def get_health() -> HealthResponse:
     """Get comprehensive system health status.
 
+    Uses TTL cache (5s) for fast repeated checks.
+
     Returns information about:
     - iMessage database access
     - System memory usage (total system)
@@ -122,6 +135,12 @@ def get_health() -> HealthResponse:
     - Recommended model for this system
     - Overall system health
     """
+    # Check cache first
+    cache = get_health_cache()
+    found, cached = cache.get("health_status")
+    if found:
+        return cached  # type: ignore[return-value]
+
     # System memory stats
     memory = psutil.virtual_memory()
     available_gb = memory.available / BYTES_PER_GB
@@ -157,7 +176,7 @@ def get_health() -> HealthResponse:
     else:
         status = "healthy"
 
-    return HealthResponse(
+    result = HealthResponse(
         status=status,
         imessage_access=imessage_access,
         memory_available_gb=round(available_gb, 2),
@@ -172,6 +191,9 @@ def get_health() -> HealthResponse:
         recommended_model=recommended_model,
         system_ram_gb=round(total_gb, 2),
     )
+
+    cache.set("health_status", result)
+    return result
 
 
 @router.get("/")

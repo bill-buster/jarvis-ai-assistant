@@ -1,6 +1,7 @@
 """Conversations API endpoints.
 
 Provides endpoints for listing conversations and retrieving messages.
+Uses TTL caching for frequently accessed data.
 """
 
 from datetime import datetime
@@ -16,6 +17,7 @@ from api.schemas import (
     SendMessageResponse,
 )
 from integrations.imessage import ChatDBReader, IMessageSender
+from jarvis.metrics import get_conversation_cache
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -29,11 +31,26 @@ def list_conversations(
 ) -> list[ConversationResponse]:
     """List recent conversations.
 
+    Uses TTL cache (30s) for repeated requests with same parameters.
     Returns conversations sorted by last message date (newest first).
     Use 'before' parameter with the last conversation's last_message_date for pagination.
     """
+    # Build cache key from parameters
+    since_str = since.isoformat() if since else "none"
+    before_str = before.isoformat() if before else "none"
+    cache_key = f"conversations:{limit}:{since_str}:{before_str}"
+
+    # Check cache
+    cache = get_conversation_cache()
+    found, cached = cache.get(cache_key)
+    if found:
+        return cached  # type: ignore[return-value]
+
     conversations = reader.get_conversations(limit=limit, since=since, before=before)
-    return [ConversationResponse.model_validate(c) for c in conversations]
+    result = [ConversationResponse.model_validate(c) for c in conversations]
+
+    cache.set(cache_key, result)
+    return result
 
 
 @router.get("/{chat_id}/messages", response_model=list[MessageResponse])

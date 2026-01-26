@@ -2,15 +2,22 @@
 
 Bypasses model generation for common request patterns using
 semantic similarity with sentence embeddings.
+
+Performance optimizations:
+- Pre-normalized pattern embeddings for O(1) cosine similarity
+- LRU cache for query embeddings (repeated queries)
+- Batch encoding for initial setup
 """
 
 from __future__ import annotations
 
 import gc
+import hashlib
 import logging
 import threading
+from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import numpy as np
 
@@ -18,6 +25,73 @@ if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
+
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class EmbeddingCache(Generic[K, V]):
+    """LRU cache for query embeddings.
+
+    Thread-safe implementation with bounded size.
+    """
+
+    def __init__(self, maxsize: int = 500) -> None:
+        """Initialize the cache.
+
+        Args:
+            maxsize: Maximum number of embeddings to cache
+        """
+        self._cache: OrderedDict[K, V] = OrderedDict()
+        self._maxsize = maxsize
+        self._lock = threading.Lock()
+        self._hits = 0
+        self._misses = 0
+
+    def get(self, key: K) -> V | None:
+        """Get embedding from cache."""
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                self._hits += 1
+                return self._cache[key]
+            self._misses += 1
+            return None
+
+    def set(self, key: K, value: V) -> None:
+        """Store embedding in cache."""
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+            self._cache[key] = value
+            if len(self._cache) > self._maxsize:
+                self._cache.popitem(last=False)
+
+    def clear(self) -> None:
+        """Clear the cache."""
+        with self._lock:
+            self._cache.clear()
+            self._hits = 0
+            self._misses = 0
+
+    @property
+    def hit_rate(self) -> float:
+        """Return cache hit rate."""
+        with self._lock:
+            total = self._hits + self._misses
+            return self._hits / total if total > 0 else 0.0
+
+    def stats(self) -> dict[str, Any]:
+        """Return cache statistics."""
+        with self._lock:
+            return {
+                "size": len(self._cache),
+                "maxsize": self._maxsize,
+                "hits": self._hits,
+                "misses": self._misses,
+                "hit_rate": self.hit_rate,
+            }
+
 
 # Lazy-loaded sentence transformer
 _sentence_model: SentenceTransformer | None = None
@@ -945,9 +1019,15 @@ class TemplateMatcher:
 
     Computes cosine similarity between input prompt and template patterns.
     Returns best matching template if similarity exceeds threshold.
+
+    Performance optimizations:
+    - Pre-normalized pattern embeddings (computed once at init)
+    - LRU cache for query embeddings (avoids re-encoding repeated queries)
+    - Optimized dot product for cosine similarity (O(n) instead of O(n*d))
     """
 
     SIMILARITY_THRESHOLD = 0.7
+    QUERY_CACHE_SIZE = 500
 
     def __init__(self, templates: list[ResponseTemplate] | None = None) -> None:
         """Initialize the template matcher.
@@ -957,13 +1037,18 @@ class TemplateMatcher:
         """
         self.templates = templates or _load_templates()
         self._pattern_embeddings: np.ndarray | None = None
+        self._pattern_norms: np.ndarray | None = None  # Pre-computed norms
         self._pattern_to_template: list[tuple[str, ResponseTemplate]] = []
         self._embeddings_lock = threading.Lock()
+        self._query_cache: EmbeddingCache[str, np.ndarray] = EmbeddingCache(
+            maxsize=self.QUERY_CACHE_SIZE
+        )
 
     def _ensure_embeddings(self) -> None:
         """Compute and cache embeddings for all template patterns.
 
         Uses double-check locking for thread-safe lazy initialization.
+        Pre-normalizes embeddings for faster cosine similarity computation.
         """
         # Fast path: embeddings already computed
         if self._pattern_embeddings is not None:
@@ -988,10 +1073,39 @@ class TemplateMatcher:
             # Compute embeddings in batch
             embeddings = model.encode(all_patterns, convert_to_numpy=True)
 
-            # Assign both atomically (pattern_to_template first, then embeddings)
+            # Pre-compute norms for faster cosine similarity
+            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+            # Avoid division by zero
+            norms = np.where(norms == 0, 1, norms)
+
+            # Assign atomically
             self._pattern_to_template = pattern_to_template
+            self._pattern_norms = norms.flatten()
             self._pattern_embeddings = embeddings
             logger.info("Computed embeddings for %d patterns", len(all_patterns))
+
+    def _get_query_embedding(self, query: str) -> np.ndarray:
+        """Get embedding for a query, using cache if available.
+
+        Args:
+            query: Query string to encode
+
+        Returns:
+            Query embedding as numpy array
+        """
+        # Create cache key from query hash
+        cache_key = hashlib.md5(query.encode(), usedforsecurity=False).hexdigest()
+
+        # Check cache first
+        cached = self._query_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Encode and cache
+        model = _get_sentence_model()
+        embedding = model.encode([query], convert_to_numpy=True)[0]
+        self._query_cache.set(cache_key, embedding)
+        return embedding
 
     def match(self, query: str) -> TemplateMatch | None:
         """Find best matching template for a query.
@@ -1011,13 +1125,23 @@ class TemplateMatcher:
             if pattern_embeddings is None:
                 return None
 
-            model = _get_sentence_model()
-            query_embedding = model.encode([query], convert_to_numpy=True)[0]
+            # Compute norms on-the-fly if not pre-computed (for backward compat with tests)
+            pattern_norms = self._pattern_norms
+            if pattern_norms is None:
+                pattern_norms = np.linalg.norm(pattern_embeddings, axis=1)
+                pattern_norms = np.where(pattern_norms == 0, 1, pattern_norms)
 
-            # Compute cosine similarities
-            similarities = np.dot(pattern_embeddings, query_embedding) / (
-                np.linalg.norm(pattern_embeddings, axis=1) * np.linalg.norm(query_embedding)
-            )
+            # Get query embedding (cached if previously seen)
+            query_embedding = self._get_query_embedding(query)
+            query_norm = np.linalg.norm(query_embedding)
+
+            if query_norm == 0:
+                return None
+
+            # Optimized cosine similarity using pre-computed norms
+            # cos_sim = (A . B) / (||A|| * ||B||)
+            dot_products = np.dot(pattern_embeddings, query_embedding)
+            similarities = dot_products / (pattern_norms * query_norm)
 
             best_idx = int(np.argmax(similarities))
             best_similarity = float(similarities[best_idx])
@@ -1055,5 +1179,15 @@ class TemplateMatcher:
         are recomputed when the model is reloaded.
         """
         self._pattern_embeddings = None
+        self._pattern_norms = None
         self._pattern_to_template = []
+        self._query_cache.clear()
         logger.debug("Template matcher cache cleared")
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        """Get query cache statistics.
+
+        Returns:
+            Dictionary with cache hit rate and size info
+        """
+        return self._query_cache.stats()

@@ -5,11 +5,19 @@ Handles:
 - Apple Core Data timestamp conversion
 - Phone number normalization
 - Attachment and reaction parsing
+
+Performance optimizations:
+- Pre-compiled regex patterns
+- LRU cache for attributedBody parsing
+- Frozen sets for O(1) lookups
 """
 
+import hashlib
 import logging
 import plistlib
 import re
+import threading
+from collections import OrderedDict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,6 +25,99 @@ from typing import Any
 from contracts.imessage import Attachment, Reaction
 
 logger = logging.getLogger(__name__)
+
+# Pre-compiled regex patterns for performance
+_PRINTABLE_PATTERN = re.compile(r"[\x20-\x7e\u00a0-\uffff]+")
+_PHONE_FORMATTING_PATTERN = re.compile(r"[\s\-\(\)\.]")
+
+# Frozen sets for O(1) lookup
+_SKIP_STRINGS = frozenset(
+    {
+        "streamtyped",
+        "NSAttributedString",
+        "NSObject",
+        "NSString",
+        "NSDictionary",
+        "NSNumber",
+        "NSValue",
+        "NSArray",
+        "NSMutableAttributedString",
+        "NSMutableString",
+        "__kIMMessagePartAttributeName",
+        "__kIMFileTransferGUIDAttributeName",
+        "__kIMDataDetectedAttributeName",
+    }
+)
+
+_METADATA_STRINGS = frozenset(
+    {
+        "$",
+        "NSMutableAttributedString",
+        "NSAttributedString",
+        "NSMutableString",
+        "NSString",
+        "NSDictionary",
+        "NSArray",
+    }
+)
+
+# Reaction type lookup tables (faster than conditionals)
+_TAPBACK_TYPES = {
+    2000: "love",
+    2001: "like",
+    2002: "dislike",
+    2003: "laugh",
+    2004: "emphasize",
+    2005: "question",
+}
+
+_REMOVED_TAPBACK_TYPES = {
+    3000: "removed_love",
+    3001: "removed_like",
+    3002: "removed_dislike",
+    3003: "removed_laugh",
+    3004: "removed_emphasize",
+    3005: "removed_question",
+}
+
+
+class _AttributedBodyCache:
+    """LRU cache for parsed attributedBody data.
+
+    Caches the result of parsing binary attributedBody blobs to avoid
+    repeated parsing of the same message content.
+    """
+
+    def __init__(self, maxsize: int = 1000) -> None:
+        self._cache: OrderedDict[str, str | None] = OrderedDict()
+        self._maxsize = maxsize
+        self._lock = threading.Lock()
+
+    def get(self, key: str) -> tuple[bool, str | None]:
+        """Get from cache. Returns (found, value)."""
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                return True, self._cache[key]
+            return False, None
+
+    def set(self, key: str, value: str | None) -> None:
+        """Store in cache."""
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+            self._cache[key] = value
+            if len(self._cache) > self._maxsize:
+                self._cache.popitem(last=False)
+
+    def clear(self) -> None:
+        """Clear the cache."""
+        with self._lock:
+            self._cache.clear()
+
+
+# Global cache instance
+_attributed_body_cache = _AttributedBodyCache()
 
 # Apple's Core Data epoch: 2001-01-01 00:00:00 UTC
 # Timestamps are in nanoseconds since this epoch
@@ -82,28 +183,12 @@ def _extract_from_typedstream(data: bytes) -> str | None:
 
         # Fallback: scan for readable UTF-8 sequences
         # Find the longest printable sequence that isn't a class name
-        skip_strings = {
-            "streamtyped",
-            "NSAttributedString",
-            "NSObject",
-            "NSString",
-            "NSDictionary",
-            "NSNumber",
-            "NSValue",
-            "NSArray",
-            "NSMutableAttributedString",
-            "NSMutableString",
-            "__kIMMessagePartAttributeName",
-            "__kIMFileTransferGUIDAttributeName",
-            "__kIMDataDetectedAttributeName",
-        }
-
         decoded = data.decode("utf-8", errors="ignore")
-        # Find sequences of printable characters (at least 1 char)
-        matches: list[str] = re.findall(r"[\x20-\x7e\u00a0-\uffff]+", decoded)
+        # Use pre-compiled pattern for performance
+        matches: list[str] = _PRINTABLE_PATTERN.findall(decoded)
         for match in matches:
             clean = match.strip()
-            if clean and clean not in skip_strings and not clean.startswith("$"):
+            if clean and clean not in _SKIP_STRINGS and not clean.startswith("$"):
                 # Skip if it looks like a class name or metadata
                 if not any(skip in clean for skip in ["NS", "kIM", "Attribute"]):
                     return clean
@@ -122,6 +207,8 @@ def parse_attributed_body(data: bytes | None) -> str | None:
     1. NSKeyedArchive (binary plist) - newer format
     2. Typedstream (legacy NSArchiver) - older format, starts with 'streamtyped'
 
+    Uses caching for repeated parsing of the same content.
+
     Args:
         data: Raw bytes from attributedBody column, or None
 
@@ -131,6 +218,26 @@ def parse_attributed_body(data: bytes | None) -> str | None:
     if data is None:
         return None
 
+    # Check cache first using hash of data
+    cache_key = hashlib.md5(data, usedforsecurity=False).hexdigest()
+    found, cached_result = _attributed_body_cache.get(cache_key)
+    if found:
+        return cached_result
+
+    result = _parse_attributed_body_impl(data)
+    _attributed_body_cache.set(cache_key, result)
+    return result
+
+
+def _parse_attributed_body_impl(data: bytes) -> str | None:
+    """Implementation of attributedBody parsing (uncached).
+
+    Args:
+        data: Raw bytes from attributedBody column
+
+    Returns:
+        Extracted text string, or None if parsing fails
+    """
     # Check for typedstream format (starts with \x04\x0bstreamtyped or similar)
     if b"streamtyped" in data[:20]:
         result = _extract_from_typedstream(data)
@@ -148,15 +255,8 @@ def parse_attributed_body(data: bytes | None) -> str | None:
             objects = plist.get("$objects", [])
             for obj in objects:
                 if isinstance(obj, str) and len(obj) > 0:
-                    # Skip metadata strings
-                    if obj.startswith("$") or obj in (
-                        "NSMutableAttributedString",
-                        "NSAttributedString",
-                        "NSMutableString",
-                        "NSString",
-                        "NSDictionary",
-                        "NSArray",
-                    ):
+                    # Skip metadata strings using frozen set for O(1) lookup
+                    if obj.startswith("$") or obj in _METADATA_STRINGS:
                         continue
                     return obj
 
@@ -297,44 +397,26 @@ def parse_reactions(reaction_rows: list[dict[str, Any]] | None) -> list[Reaction
 def _get_reaction_type(associated_message_type: int) -> str | None:
     """Convert associated_message_type to reaction type string.
 
+    Uses pre-defined lookup tables for O(1) performance.
+
     Args:
         associated_message_type: The numeric type from the message table
 
     Returns:
         Reaction type string, or None if not a valid reaction type
     """
-    # Standard tapback types (added reactions)
-    tapback_types = {
-        2000: "love",
-        2001: "like",
-        2002: "dislike",
-        2003: "laugh",
-        2004: "emphasize",
-        2005: "question",
-    }
-
-    # Removed tapback types (3000 series = removed reactions)
-    removed_tapback_types = {
-        3000: "removed_love",
-        3001: "removed_like",
-        3002: "removed_dislike",
-        3003: "removed_laugh",
-        3004: "removed_emphasize",
-        3005: "removed_question",
-    }
-
-    if associated_message_type in tapback_types:
-        return tapback_types[associated_message_type]
-    elif associated_message_type in removed_tapback_types:
-        return removed_tapback_types[associated_message_type]
-    else:
-        return None
+    # Use module-level lookup tables for O(1) access
+    return _TAPBACK_TYPES.get(
+        associated_message_type,
+        _REMOVED_TAPBACK_TYPES.get(associated_message_type),
+    )
 
 
 def normalize_phone_number(phone: str | None) -> str | None:
     """Normalize phone number format.
 
     Strips formatting characters and ensures consistent format.
+    Uses pre-compiled regex for performance.
 
     Args:
         phone: Raw phone number string
@@ -354,8 +436,8 @@ def normalize_phone_number(phone: str | None) -> str | None:
     # Check if number already has + prefix before stripping
     has_plus = phone.startswith("+")
 
-    # Remove common formatting characters (but not +)
-    cleaned = re.sub(r"[\s\-\(\)\.]", "", phone)
+    # Remove common formatting characters (but not +) using pre-compiled pattern
+    cleaned = _PHONE_FORMATTING_PATTERN.sub("", phone)
 
     # If already has + prefix, return cleaned number
     if has_plus or cleaned.startswith("+"):
