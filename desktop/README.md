@@ -101,3 +101,114 @@ Make sure you have:
 - Rust installed (`rustc --version`)
 - Node.js 18+ (`node --version`)
 - Xcode CLI tools (`xcode-select -p`)
+
+## Testing
+
+The desktop app includes comprehensive E2E tests using Playwright. Tests run against the Vite dev server with mocked API responses, so no backend is required.
+
+### Prerequisites
+
+Install Playwright browsers (first time only):
+```bash
+npx playwright install
+```
+
+### Running Tests
+
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run tests with UI mode (interactive debugging)
+npm run test:e2e:ui
+
+# Run tests in headed mode (see browser)
+npm run test:e2e:headed
+
+# Run tests with step-by-step debugging
+npm run test:e2e:debug
+```
+
+### Test Structure
+
+```
+tests/
+├── e2e/                          # E2E test files
+│   ├── fixtures.ts               # Shared test fixtures
+│   ├── test_app_launch.spec.ts   # App startup tests
+│   ├── test_conversation_list.spec.ts
+│   ├── test_message_view.spec.ts
+│   ├── test_health_status.spec.ts
+│   ├── test_settings.spec.ts
+│   ├── test_search.spec.ts
+│   └── test_ai_draft.spec.ts
+└── mocks/                        # API mock data and handlers
+    ├── api-data.ts               # Mock response data
+    ├── api-handlers.ts           # Request interceptors
+    └── index.ts                  # Mock exports
+```
+
+### Test Categories
+
+| Test File | Coverage |
+|-----------|----------|
+| `test_app_launch.spec.ts` | App opens without errors, sidebar navigation, connection status |
+| `test_conversation_list.spec.ts` | Conversations load and display, selection, group indicators |
+| `test_message_view.spec.ts` | Messages display, sent/received styling, timestamps |
+| `test_health_status.spec.ts` | Health metrics, status banner, refresh functionality |
+| `test_settings.spec.ts` | Settings load/save, model selection, sliders |
+| `test_search.spec.ts` | Search input, filtering behavior |
+| `test_ai_draft.spec.ts` | Draft panel, suggestion generation, selection |
+
+### API Mocking
+
+Tests mock all API calls to `localhost:8742` using Playwright's route interception. This means:
+
+- **No backend required** - Tests run entirely against mock data
+- **Deterministic results** - Same mock data every time
+- **Error scenario testing** - Can simulate API failures
+
+Mock data is defined in `tests/mocks/api-data.ts` and matches the types from `src/lib/api/types.ts`.
+
+### Writing New Tests
+
+1. Import fixtures from `./fixtures.ts`:
+   ```typescript
+   import { test, expect, waitForAppLoad } from "./fixtures";
+   ```
+
+2. Use `mockedPage` fixture for standard tests:
+   ```typescript
+   test("my test", async ({ mockedPage: page }) => {
+     await page.goto("/");
+     await waitForAppLoad(page);
+     // ... test code
+   });
+   ```
+
+3. Use `errorPage` fixture to test error handling:
+   ```typescript
+   test("handles errors", async ({ errorPage: page }) => {
+     await page.goto("/");
+     // API calls will return errors
+   });
+   ```
+
+4. Use `disconnectedPage` fixture for offline scenarios:
+   ```typescript
+   test("handles disconnection", async ({ disconnectedPage: page }) => {
+     await page.goto("/");
+     // All API calls will fail with connection refused
+   });
+   ```
+
+### Test Artifacts
+
+Test results are stored in:
+- `test-results/html-report/` - HTML test report
+- `test-results/artifacts/` - Screenshots, videos on failure
+
+View the HTML report:
+```bash
+npx playwright show-report test-results/html-report
+```
