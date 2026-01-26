@@ -4,6 +4,7 @@ from .batch import router as batch_router
 from .calendar import router as calendar_router
 from .contacts import router as contacts_router
 from .conversations import router as conversations_router
+from .custom_templates import router as custom_templates_router
 from .drafts import router as drafts_router
 from .export import router as export_router
 from .health import router as health_router
@@ -25,6 +26,7 @@ __all__ = [
     "calendar_router",
     "contacts_router",
     "conversations_router",
+    "custom_templates_router",
     "drafts_router",
     "export_router",
     "health_router",

@@ -27,6 +27,7 @@ from api.routers import (
     calendar_router,
     contacts_router,
     conversations_router,
+    custom_templates_router,
     drafts_router,
     export_router,
     health_router,
@@ -132,6 +133,12 @@ API_TAGS_METADATA = [
         "name": "settings",
         "description": "Application configuration management. "
         "Manage model selection, generation parameters, and behavior preferences.",
+    },
+    {
+        "name": "custom-templates",
+        "description": "User-defined template management. "
+        "Create, edit, test, and organize custom response templates. "
+        "Supports import/export for sharing template packs.",
     },
     {
         "name": "topics",
@@ -301,6 +308,7 @@ app.include_router(health_router)
 app.include_router(calendar_router)
 app.include_router(contacts_router)
 app.include_router(conversations_router)
+app.include_router(custom_templates_router)
 app.include_router(drafts_router)
 app.include_router(export_router)
 app.include_router(pdf_export_router)

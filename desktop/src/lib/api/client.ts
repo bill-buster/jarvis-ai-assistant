@@ -10,6 +10,16 @@ import type {
   ConversationInsights,
   ConversationStats,
   CreateEventResponse,
+  CustomTemplate,
+  CustomTemplateCreateRequest,
+  CustomTemplateExportResponse,
+  CustomTemplateImportRequest,
+  CustomTemplateImportResponse,
+  CustomTemplateListResponse,
+  CustomTemplateTestRequest,
+  CustomTemplateTestResponse,
+  CustomTemplateUpdateRequest,
+  CustomTemplateUsageStats,
   DetectedEvent,
   DownloadStatus,
   DraftReplyResponse,
@@ -492,6 +502,7 @@ class ApiClient {
     return { blob, filename };
   }
 
+<<<<<<< HEAD
   // Insights endpoints
   async getConversationInsights(
     chatId: string,
@@ -621,6 +632,46 @@ class ApiClient {
     });
   }
 
+  async unmarkMessageHandled(
+    chatId: string,
+    messageId: number
+  ): Promise<MarkHandledResponse> {
+    return this.request<MarkHandledResponse>("/priority/handled", {
+      method: "DELETE",
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+      }),
+    });
+  }
+
+  async markContactImportant(
+    identifier: string,
+    important: boolean = true
+  ): Promise<ImportantContactResponse> {
+    return this.request<ImportantContactResponse>(
+      "/priority/contacts/important",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          identifier,
+          important,
+        }),
+      }
+    );
+  }
+
+  async getPriorityStats(): Promise<PriorityStats> {
+    return this.request<PriorityStats>("/priority/stats");
+  }
+
+  async clearHandledItems(): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(
+      "/priority/clear-handled",
+      { method: "POST" }
+    );
+  }
+
   // Calendar endpoints
   async getCalendars(): Promise<Calendar[]> {
     return this.request<Calendar[]>("/calendars");
@@ -681,22 +732,6 @@ class ApiClient {
       }),
     });
   }
-      }),
-    });
-  }
-
-  async unmarkMessageHandled(
-    chatId: string,
-    messageId: number
-  ): Promise<MarkHandledResponse> {
-    return this.request<MarkHandledResponse>("/priority/handled", {
-      method: "DELETE",
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-      }),
-    });
-  }
 
   async createCalendarEvent(
     calendarId: string,
@@ -721,36 +756,6 @@ class ApiClient {
       }),
     });
   }
-      }),
-    });
-  }
-
-  async markContactImportant(
-    identifier: string,
-    important: boolean = true
-  ): Promise<ImportantContactResponse> {
-    return this.request<ImportantContactResponse>(
-      "/priority/contacts/important",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          identifier,
-          important,
-        }),
-      }
-    );
-  }
-
-  async getPriorityStats(): Promise<PriorityStats> {
-    return this.request<PriorityStats>("/priority/stats");
-  }
-
-  async clearHandledItems(): Promise<{ success: boolean; message: string }> {
-    return this.request<{ success: boolean; message: string }>(
-      "/priority/clear-handled",
-      { method: "POST" }
-    );
-  }
 
   async createEventFromDetected(
     calendarId: string,
@@ -764,6 +769,96 @@ class ApiClient {
       }),
     });
   }
+
+  // Custom Template endpoints
+  async getCustomTemplates(
+    category?: string,
+    tag?: string,
+    enabledOnly: boolean = false
+  ): Promise<CustomTemplateListResponse> {
+    const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    if (tag) params.set("tag", tag);
+    if (enabledOnly) params.set("enabled_only", "true");
+    const queryString = params.toString();
+    const url = queryString ? `/templates?${queryString}` : "/templates";
+    return this.request<CustomTemplateListResponse>(url);
+  }
+
+  async getCustomTemplate(templateId: string): Promise<CustomTemplate> {
+    return this.request<CustomTemplate>(
+      `/templates/${encodeURIComponent(templateId)}`
+    );
+  }
+
+  async createCustomTemplate(
+    template: CustomTemplateCreateRequest
+  ): Promise<CustomTemplate> {
+    return this.request<CustomTemplate>("/templates", {
+      method: "POST",
+      body: JSON.stringify(template),
+    });
+  }
+
+  async updateCustomTemplate(
+    templateId: string,
+    updates: CustomTemplateUpdateRequest
+  ): Promise<CustomTemplate> {
+    return this.request<CustomTemplate>(
+      `/templates/${encodeURIComponent(templateId)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      }
+    );
+  }
+
+  async deleteCustomTemplate(
+    templateId: string
+  ): Promise<{ status: string; template_id: string }> {
+    return this.request<{ status: string; template_id: string }>(
+      `/templates/${encodeURIComponent(templateId)}`,
+      { method: "DELETE" }
+    );
+  }
+
+  async testCustomTemplate(
+    templateId: string,
+    testData: CustomTemplateTestRequest
+  ): Promise<CustomTemplateTestResponse> {
+    return this.request<CustomTemplateTestResponse>(
+      `/templates/${encodeURIComponent(templateId)}/test`,
+      {
+        method: "POST",
+        body: JSON.stringify(testData),
+      }
+    );
+  }
+
+  async getCustomTemplateStats(
+    templateId: string
+  ): Promise<CustomTemplateUsageStats> {
+    return this.request<CustomTemplateUsageStats>(
+      `/templates/${encodeURIComponent(templateId)}/stats`
+    );
+  }
+
+  async exportCustomTemplates(
+    category?: string
+  ): Promise<CustomTemplateExportResponse> {
+    const url = category
+      ? `/templates/export?category=${encodeURIComponent(category)}`
+      : "/templates/export";
+    return this.request<CustomTemplateExportResponse>(url);
+  }
+
+  async importCustomTemplates(
+    data: CustomTemplateImportRequest
+  ): Promise<CustomTemplateImportResponse> {
+    return this.request<CustomTemplateImportResponse>("/templates/import", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 }
 
