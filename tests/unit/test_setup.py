@@ -5,6 +5,7 @@ model checking, and the overall setup flow. Filesystem and permissions are mocke
 """
 
 import json
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -688,3 +689,627 @@ class TestCheckStatusEnum:
         assert CheckStatus.WARN.value == "warn"
         assert CheckStatus.FAIL.value == "fail"
         assert CheckStatus.SKIP.value == "skip"
+
+
+class TestPermissionMonitorImplExtended:
+    """Additional tests for PermissionMonitorImpl coverage."""
+
+    def test_check_non_fda_permissions_granted(self, tmp_path, monkeypatch):
+        """Test non-FDA permissions (CONTACTS, CALENDAR, AUTOMATION) return granted=True."""
+        # Line 142: Non-FDA permissions return True by default
+        fake_db = tmp_path / "chat.db"
+        fake_db.write_bytes(b"data")
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", fake_db)
+
+        monitor = PermissionMonitorImpl()
+
+        # Test CONTACTS permission
+        status = monitor.check_permission(Permission.CONTACTS)
+        assert status.granted is True
+        assert status.permission == Permission.CONTACTS
+
+        # Test CALENDAR permission
+        status = monitor.check_permission(Permission.CALENDAR)
+        assert status.granted is True
+        assert status.permission == Permission.CALENDAR
+
+        # Test AUTOMATION permission
+        status = monitor.check_permission(Permission.AUTOMATION)
+        assert status.granted is True
+        assert status.permission == Permission.AUTOMATION
+
+    def test_wait_for_permission_granted_immediately(self, tmp_path, monkeypatch):
+        """Test wait_for_permission returns True when permission is granted immediately."""
+        # Lines 171-179: wait_for_permission
+        fake_db = tmp_path / "chat.db"
+        fake_db.write_bytes(b"data")
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", fake_db)
+
+        monitor = PermissionMonitorImpl()
+        result = monitor.wait_for_permission(Permission.FULL_DISK_ACCESS, timeout_seconds=1)
+        assert result is True
+
+    def test_wait_for_permission_timeout(self, tmp_path, monkeypatch):
+        """Test wait_for_permission returns False after timeout."""
+        # Lines 171-179: wait_for_permission timeout path
+        fake_db = tmp_path / "chat.db"
+        fake_db.write_bytes(b"data")
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", fake_db)
+
+        # Mock permission check to always return False (not granted)
+        monitor = PermissionMonitorImpl()
+        original_check = monitor.check_permission
+
+        def mock_check(permission):
+            status = original_check(permission)
+            # Force not granted
+            return PermissionStatus(
+                permission=status.permission,
+                granted=False,
+                last_checked=status.last_checked,
+                fix_instructions=status.fix_instructions,
+            )
+
+        monitor.check_permission = mock_check
+
+        # Short timeout to make test fast
+        result = monitor.wait_for_permission(Permission.FULL_DISK_ACCESS, timeout_seconds=1)
+        assert result is False
+
+    def test_check_full_disk_access_tcc_db_fallback(self, tmp_path, monkeypatch):
+        """Test FDA check falls back to TCC.db when chat.db doesn't exist."""
+        # Lines 205-210: TCC.db fallback path
+        # Make chat.db not exist
+        nonexistent_chat_db = tmp_path / "nonexistent" / "chat.db"
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", nonexistent_chat_db)
+
+        # Create a fake TCC.db
+        tcc_dir = tmp_path / "Library" / "Application Support" / "com.apple.TCC"
+        tcc_dir.mkdir(parents=True)
+        tcc_db = tcc_dir / "TCC.db"
+        tcc_db.write_bytes(b"tcc data")
+
+        # Patch Path.home to return tmp_path
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        monitor = PermissionMonitorImpl()
+        status = monitor.check_permission(Permission.FULL_DISK_ACCESS)
+        assert status.granted is True
+
+    def test_check_full_disk_access_tcc_db_permission_error(self, tmp_path, monkeypatch):
+        """Test FDA check when TCC.db exists but access denied."""
+        # Lines 209-210: TCC.db PermissionError/OSError path
+        nonexistent_chat_db = tmp_path / "nonexistent" / "chat.db"
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", nonexistent_chat_db)
+
+        # Create a fake TCC.db
+        tcc_dir = tmp_path / "Library" / "Application Support" / "com.apple.TCC"
+        tcc_dir.mkdir(parents=True)
+        tcc_db = tcc_dir / "TCC.db"
+        tcc_db.write_bytes(b"tcc data")
+
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        # Mock open to raise PermissionError for TCC.db
+        original_open = Path.open
+
+        def mock_open(self, *args, **kwargs):
+            if "TCC.db" in str(self):
+                raise PermissionError("Access denied to TCC.db")
+            return original_open(self, *args, **kwargs)
+
+        with patch.object(Path, "open", mock_open):
+            monitor = PermissionMonitorImpl()
+            status = monitor.check_permission(Permission.FULL_DISK_ACCESS)
+            assert status.granted is False
+
+    def test_check_full_disk_access_oserror(self, tmp_path, monkeypatch):
+        """Test FDA check when reading chat.db raises OSError."""
+        fake_db = tmp_path / "chat.db"
+        fake_db.write_bytes(b"data")
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", fake_db)
+
+        # Mock open to raise OSError
+        original_open = Path.open
+
+        def mock_open(self, *args, **kwargs):
+            if str(self) == str(fake_db):
+                raise OSError("I/O error reading chat.db")
+            return original_open(self, *args, **kwargs)
+
+        with patch.object(Path, "open", mock_open):
+            monitor = PermissionMonitorImpl()
+            status = monitor.check_permission(Permission.FULL_DISK_ACCESS)
+            assert status.granted is False
+
+
+class TestSchemaDetectorImplExtended:
+    """Additional tests for SchemaDetectorImpl coverage."""
+
+    def test_detect_missing_expected_v14_columns(self, tmp_path):
+        """Test schema detection when missing expected v14 columns."""
+        # Lines 274-276: Warning for missing expected v14 columns
+        import sqlite3
+
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # Create tables with minimal columns (missing expected v14 columns)
+        cursor.execute("""
+            CREATE TABLE message (
+                ROWID INTEGER PRIMARY KEY,
+                custom_column TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE chat (
+                ROWID INTEGER PRIMARY KEY
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE handle (
+                ROWID INTEGER PRIMARY KEY
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE chat_message_join (
+                chat_id INTEGER,
+                message_id INTEGER
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE chat_handle_join (
+                chat_id INTEGER,
+                handle_id INTEGER
+            )
+        """)
+        conn.commit()
+        conn.close()
+
+        detector = SchemaDetectorImpl()
+        with patch("logging.warning") as mock_warn:
+            info = detector.detect(str(db_path))
+
+        # Should still detect as v14 (fallback) but log a warning
+        assert info.version == "v14"
+        assert info.compatible is True
+        mock_warn.assert_called()
+
+    def test_detect_operational_error(self, tmp_path):
+        """Test schema detection when database query fails."""
+        # Lines 294-296: sqlite3.OperationalError handling
+        import sqlite3
+
+        db_path = tmp_path / "chat.db"
+        # Create a valid database file
+        db_path.write_bytes(b"data")
+
+        # Mock sqlite3.connect to raise OperationalError
+        with patch("sqlite3.connect", side_effect=sqlite3.OperationalError("database is locked")):
+            detector = SchemaDetectorImpl()
+            info = detector.detect(str(db_path))
+
+        assert info.version == "unknown"
+        assert info.tables == []
+        assert info.compatible is False
+        assert info.known_schema is False
+
+    def test_get_query_delegation(self, tmp_path):
+        """Test get_query delegates to queries module."""
+        # Lines 315-317: get_query delegation
+        detector = SchemaDetectorImpl()
+
+        with patch(
+            "integrations.imessage.queries.get_query", return_value="SELECT * FROM test"
+        ) as mock_get_query:
+            result = detector.get_query("test_query", "v14")
+
+        mock_get_query.assert_called_once_with("test_query", "v14")
+        assert result == "SELECT * FROM test"
+
+
+class TestSetupWizardExtended:
+    """Additional tests for SetupWizard coverage."""
+
+    @pytest.fixture
+    def mock_console(self):
+        """Create a mock console that captures output."""
+        console = MagicMock()
+        return console
+
+    def test_database_check_compatible_unknown_schema(self, mock_console, tmp_path, monkeypatch):
+        """Test database check with compatible but unknown schema version."""
+        # Lines 468-478: Unknown schema version warning path
+        db_path = tmp_path / "chat.db"
+        db_path.write_bytes(b"fake")
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", db_path)
+
+        # Create a mock that returns compatible but unknown schema
+        mock_detector = MagicMock(spec=SchemaDetectorImpl)
+        mock_detector.detect.return_value = SchemaInfo(
+            version="v99",  # Unknown version
+            tables=["message", "chat", "handle", "chat_message_join", "chat_handle_join"],
+            compatible=True,
+            migration_needed=False,
+            known_schema=False,  # Not a known schema
+        )
+
+        wizard = SetupWizard(
+            console=mock_console,
+            schema_detector=mock_detector,
+        )
+        wizard._check_database()
+
+        assert len(wizard._checks) == 1
+        assert wizard._checks[0].status == CheckStatus.WARN
+        assert "Unknown schema version" in wizard._checks[0].message
+        assert "v99" in wizard._checks[0].message
+
+    def test_database_check_incompatible_schema(self, mock_console, tmp_path, monkeypatch):
+        """Test database check with incompatible schema."""
+        # Lines 478-486: Incompatible schema path
+        db_path = tmp_path / "chat.db"
+        db_path.write_bytes(b"fake")
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", db_path)
+
+        mock_detector = MagicMock(spec=SchemaDetectorImpl)
+        mock_detector.detect.return_value = SchemaInfo(
+            version="unknown",
+            tables=["some_table"],
+            compatible=False,
+            migration_needed=False,
+            known_schema=False,
+        )
+
+        wizard = SetupWizard(
+            console=mock_console,
+            schema_detector=mock_detector,
+        )
+        wizard._check_database()
+
+        assert len(wizard._checks) == 1
+        assert wizard._checks[0].status == CheckStatus.FAIL
+        assert "Incompatible schema" in wizard._checks[0].message
+        assert wizard._checks[0].fix_instructions is not None
+
+    def test_memory_check_psutil_minimal_mode(self, mock_console, monkeypatch):
+        """Test memory check returns MINIMAL mode when memory is low."""
+        # Line 530: MemoryMode.MINIMAL case in psutil fallback
+        mock_mem = MagicMock()
+        mock_mem.available = 2 * 1024**3  # 2GB - should trigger MINIMAL mode
+
+        monkeypatch.setattr("psutil.virtual_memory", lambda: mock_mem)
+
+        with patch("core.memory.controller.get_memory_controller", side_effect=ImportError):
+            wizard = SetupWizard(console=mock_console)
+            mode = wizard._check_memory()
+
+        assert mode == MemoryMode.MINIMAL
+        assert len(wizard._checks) == 1
+        assert "MINIMAL" in wizard._checks[0].message
+
+    def test_model_check_generic_exception(self, mock_console):
+        """Test model check when any exception occurs."""
+        # Lines 560-562: Exception case in model check
+        with patch(
+            "huggingface_hub.try_to_load_from_cache",
+            side_effect=RuntimeError("Unexpected error"),
+        ):
+            wizard = SetupWizard(console=mock_console)
+            wizard._check_model()
+
+        assert len(wizard._checks) == 1
+        assert wizard._checks[0].status == CheckStatus.WARN
+        assert wizard._checks[0].fix_instructions is not None
+
+    def test_init_config_existing_invalid_json(self, mock_console, tmp_path, monkeypatch):
+        """Test init_config when existing config has invalid JSON."""
+        # Lines 611-612: json.JSONDecodeError handling
+        config_dir = tmp_path / ".jarvis"
+        config_file = config_dir / "config.json"
+        config_dir.mkdir()
+
+        # Create a file with invalid JSON
+        config_file.write_text("{ invalid json }")
+
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_DIR", config_dir)
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
+
+        wizard = SetupWizard(console=mock_console)
+        created, path = wizard._init_config(MemoryMode.FULL)
+
+        # Should create a new config because existing one was invalid
+        assert created is True
+        assert path == config_file
+
+        # Verify new config is valid
+        with config_file.open() as f:
+            config = json.load(f)
+        assert "model_path" in config
+
+    def test_init_config_existing_oserror(self, mock_console, tmp_path, monkeypatch):
+        """Test init_config when reading existing config raises OSError."""
+        # Lines 611-612: OSError handling when reading existing config
+        config_dir = tmp_path / ".jarvis"
+        config_file = config_dir / "config.json"
+        config_dir.mkdir()
+        config_file.write_text('{"model_path": "test"}')
+
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_DIR", config_dir)
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
+
+        # Mock open to raise OSError when reading
+        original_open = Path.open
+
+        def mock_open(self, mode="r", *args, **kwargs):
+            if str(self) == str(config_file) and "w" not in mode:
+                raise OSError("Cannot read config")
+            return original_open(self, mode, *args, **kwargs)
+
+        with patch.object(Path, "open", mock_open):
+            wizard = SetupWizard(console=mock_console)
+            created, path = wizard._init_config(MemoryMode.FULL)
+
+        # Should create a new config because reading existing one failed
+        assert created is True
+        assert path == config_file
+
+    def test_init_config_create_oserror(self, mock_console, tmp_path, monkeypatch):
+        """Test init_config when creating config raises OSError."""
+        # Lines 637-647: OSError when creating config
+        config_dir = tmp_path / ".jarvis"
+        config_file = config_dir / "config.json"
+
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_DIR", config_dir)
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
+
+        # Mock mkdir to succeed but open to raise OSError when writing
+        original_open = Path.open
+
+        def mock_open(self, mode="r", *args, **kwargs):
+            if str(self) == str(config_file) and "w" in mode:
+                raise OSError("Cannot write config")
+            return original_open(self, mode, *args, **kwargs)
+
+        with patch.object(Path, "open", mock_open):
+            wizard = SetupWizard(console=mock_console)
+            created, path = wizard._init_config(MemoryMode.FULL)
+
+        assert created is False
+        assert path is None
+        assert len(wizard._checks) == 1
+        assert wizard._checks[0].status == CheckStatus.FAIL
+        assert "Failed to create config" in wizard._checks[0].message
+
+    def test_print_health_report_with_failures(self, mock_console, tmp_path, monkeypatch):
+        """Test print_health_report with failed checks."""
+        # Lines 681-686, 705: Printing fix instructions for failures
+        mock_permission_monitor = MagicMock(spec=PermissionMonitorImpl)
+        mock_permission_monitor.check_permission.return_value = PermissionStatus(
+            permission=Permission.FULL_DISK_ACCESS,
+            granted=False,
+            last_checked=datetime.now().isoformat(),
+            fix_instructions="Grant FDA in System Settings",
+        )
+
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", tmp_path / "chat.db")
+        monkeypatch.setattr("platform.system", lambda: "Darwin")
+        monkeypatch.setattr("platform.mac_ver", lambda: ("14.0", ("", "", ""), "arm64"))
+
+        # Mock memory controller
+        mock_controller = MagicMock()
+        mock_controller.get_state.return_value = MagicMock(available_mb=8000)
+        mock_controller.get_mode.return_value = MemoryMode.FULL
+
+        with patch("core.memory.controller.get_memory_controller", return_value=mock_controller):
+            with patch("huggingface_hub.try_to_load_from_cache", return_value="/path"):
+                wizard = SetupWizard(
+                    console=mock_console,
+                    permission_monitor=mock_permission_monitor,
+                )
+                result = wizard.run(check_only=True)
+
+        # Should have called console.print with failure messages
+        assert result.success is False
+        # Verify the console received calls with failure-related content
+        print_calls = [str(call) for call in mock_console.print.call_args_list]
+        # Check that there were multiple print calls (health report)
+        assert len(print_calls) > 0
+
+    def test_init_config_lite_memory_mode(self, mock_console, tmp_path, monkeypatch):
+        """Test config creation with LITE memory mode."""
+        config_dir = tmp_path / ".jarvis"
+        config_file = config_dir / "config.json"
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_DIR", config_dir)
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
+
+        wizard = SetupWizard(console=mock_console)
+        created, path = wizard._init_config(MemoryMode.LITE)
+
+        assert created is True
+        with config_file.open() as f:
+            config = json.load(f)
+        # LITE mode should be written to config
+        assert config["memory_mode"] == "lite"
+
+
+class TestOpenSystemPreferencesExtended:
+    """Additional tests for open_system_preferences_fda coverage."""
+
+    def test_darwin_fallback_to_older_macos(self, monkeypatch):
+        """Test fallback to older macOS System Preferences pane."""
+        # Lines 733-742: Fallback for older macOS
+        monkeypatch.setattr("platform.system", lambda: "Darwin")
+
+        call_count = [0]
+
+        def mock_run(cmd, check=False):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call (new style) fails
+                raise subprocess.CalledProcessError(1, cmd)
+            # Second call (old style) succeeds
+            return MagicMock(returncode=0)
+
+        with patch("subprocess.run", mock_run):
+            result = open_system_preferences_fda()
+
+        assert result is True
+        assert call_count[0] == 2
+
+    def test_darwin_both_fail(self, monkeypatch):
+        """Test when both new and old System Preferences methods fail."""
+        # Lines 733-742: Both attempts fail
+        monkeypatch.setattr("platform.system", lambda: "Darwin")
+
+        def mock_run(cmd, check=False):
+            raise subprocess.CalledProcessError(1, cmd)
+
+        with patch("subprocess.run", mock_run):
+            result = open_system_preferences_fda()
+
+        assert result is False
+
+
+class TestMainFunction:
+    """Tests for main() function."""
+
+    def test_main_check_only(self, tmp_path, monkeypatch):
+        """Test main with --check flag."""
+        # Lines 764-808: main() function
+        config_dir = tmp_path / ".jarvis"
+        config_file = config_dir / "config.json"
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_DIR", config_dir)
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", tmp_path / "chat.db")
+        monkeypatch.setattr("platform.system", lambda: "Linux")
+
+        mock_mem = MagicMock()
+        mock_mem.available = 16 * 1024**3
+        monkeypatch.setattr("psutil.virtual_memory", lambda: mock_mem)
+
+        # Import main after patching
+        from jarvis.setup import main
+
+        with patch("sys.argv", ["setup", "--check"]):
+            with patch("core.memory.controller.get_memory_controller", side_effect=ImportError):
+                with patch("huggingface_hub.try_to_load_from_cache", return_value=None):
+                    exit_code = main()
+
+        # Should succeed (warnings but no failures on Linux)
+        assert exit_code == 0
+
+    def test_main_verbose(self, tmp_path, monkeypatch):
+        """Test main with --verbose flag."""
+        # Lines 794-797: verbose logging
+        config_dir = tmp_path / ".jarvis"
+        config_file = config_dir / "config.json"
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_DIR", config_dir)
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", tmp_path / "chat.db")
+        monkeypatch.setattr("platform.system", lambda: "Linux")
+
+        mock_mem = MagicMock()
+        mock_mem.available = 16 * 1024**3
+        monkeypatch.setattr("psutil.virtual_memory", lambda: mock_mem)
+
+        from jarvis.setup import main
+
+        with patch("sys.argv", ["setup", "--check", "--verbose"]):
+            with patch("core.memory.controller.get_memory_controller", side_effect=ImportError):
+                with patch("huggingface_hub.try_to_load_from_cache", return_value=None):
+                    with patch("logging.basicConfig") as mock_logging:
+                        main()
+
+        # Should have configured DEBUG logging
+        mock_logging.assert_called()
+
+    def test_main_open_preferences_success(self, monkeypatch):
+        """Test main with --open-preferences flag."""
+        # Lines 799-805: open-preferences
+        monkeypatch.setattr("platform.system", lambda: "Darwin")
+
+        from jarvis.setup import main
+
+        with patch("sys.argv", ["setup", "--open-preferences"]):
+            with patch("subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(returncode=0)
+                exit_code = main()
+
+        assert exit_code == 0
+
+    def test_main_open_preferences_failure(self, monkeypatch):
+        """Test main with --open-preferences flag when it fails."""
+        # Lines 803-805: open-preferences failure
+        monkeypatch.setattr("platform.system", lambda: "Linux")
+
+        from jarvis.setup import main
+
+        with patch("sys.argv", ["setup", "--open-preferences"]):
+            exit_code = main()
+
+        assert exit_code == 1
+
+    def test_main_full_setup_failure(self, tmp_path, monkeypatch):
+        """Test main returns 1 when setup has failures."""
+        # Line 808: return 1 on failure
+        config_dir = tmp_path / ".jarvis"
+        config_file = config_dir / "config.json"
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_DIR", config_dir)
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
+
+        # Don't create chat.db - database check will be WARN (not found)
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", tmp_path / "nonexistent" / "chat.db")
+
+        monkeypatch.setattr("platform.system", lambda: "Darwin")
+        monkeypatch.setattr("platform.mac_ver", lambda: ("14.0", ("", "", ""), "arm64"))
+
+        mock_mem = MagicMock()
+        mock_mem.available = 16 * 1024**3
+        monkeypatch.setattr("psutil.virtual_memory", lambda: mock_mem)
+
+        # Mock permission monitor to return denied (this causes FAIL status)
+        def mock_check_permission(self, permission):
+            return PermissionStatus(
+                permission=permission,
+                granted=False,
+                last_checked=datetime.now().isoformat(),
+                fix_instructions="Test instructions",
+            )
+
+        from jarvis.setup import main
+
+        with patch("sys.argv", ["setup"]):
+            with patch("core.memory.controller.get_memory_controller", side_effect=ImportError):
+                with patch("huggingface_hub.try_to_load_from_cache", return_value=None):
+                    with patch.object(
+                        PermissionMonitorImpl, "check_permission", mock_check_permission
+                    ):
+                        exit_code = main()
+
+        assert exit_code == 1
+
+    def test_main_default_run(self, tmp_path, monkeypatch):
+        """Test main with no arguments (full setup)."""
+        config_dir = tmp_path / ".jarvis"
+        config_file = config_dir / "config.json"
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_DIR", config_dir)
+        monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
+        monkeypatch.setattr("jarvis.setup.CHAT_DB_PATH", tmp_path / "chat.db")
+        monkeypatch.setattr("platform.system", lambda: "Linux")
+
+        mock_mem = MagicMock()
+        mock_mem.available = 16 * 1024**3
+        monkeypatch.setattr("psutil.virtual_memory", lambda: mock_mem)
+
+        from jarvis.setup import main
+
+        with patch("sys.argv", ["setup"]):
+            with patch("core.memory.controller.get_memory_controller", side_effect=ImportError):
+                with patch("huggingface_hub.try_to_load_from_cache", return_value=None):
+                    exit_code = main()
+
+        # Should create config file
+        assert config_file.exists()
+        assert exit_code == 0
