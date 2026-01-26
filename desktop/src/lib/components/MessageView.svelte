@@ -1,8 +1,50 @@
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import {
     conversationsStore,
     selectedConversation,
   } from "../stores/conversations";
+  import AIDraftPanel from "./AIDraftPanel.svelte";
+  import SummaryModal from "./SummaryModal.svelte";
+
+  // Panel visibility state
+  let showDraftPanel = $state(false);
+  let showSummaryModal = $state(false);
+
+  // Handle keyboard shortcuts
+  function handleKeydown(event: KeyboardEvent) {
+    // Check for Cmd (Mac) or Ctrl (Windows/Linux)
+    const isMod = event.metaKey || event.ctrlKey;
+
+    if (isMod && event.key === "d") {
+      event.preventDefault();
+      if ($selectedConversation) {
+        showDraftPanel = true;
+      }
+    } else if (isMod && event.key === "s") {
+      event.preventDefault();
+      if ($selectedConversation) {
+        showSummaryModal = true;
+      }
+    }
+  }
+
+  // Handle draft panel selection
+  function handleDraftSelect(text: string) {
+    // Copy the selected draft to clipboard
+    navigator.clipboard.writeText(text).catch(() => {
+      console.error("Failed to copy draft to clipboard");
+    });
+    showDraftPanel = false;
+  }
+
+  onMount(() => {
+    window.addEventListener("keydown", handleKeydown);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("keydown", handleKeydown);
+  });
 
   function formatTime(dateStr: string): string {
     return new Date(dateStr).toLocaleTimeString([], {
@@ -67,6 +109,33 @@
         <h2>{$selectedConversation.display_name || $selectedConversation.participants.join(", ")}</h2>
         <p>{$selectedConversation.message_count} messages</p>
       </div>
+      <div class="header-actions">
+        <button
+          class="action-btn"
+          onclick={() => showSummaryModal = true}
+          title="Summarize conversation (Cmd+S)"
+          aria-label="Summarize conversation"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="21" y1="10" x2="3" y2="10"></line>
+            <line x1="21" y1="6" x2="3" y2="6"></line>
+            <line x1="21" y1="14" x2="3" y2="14"></line>
+            <line x1="21" y1="18" x2="3" y2="18"></line>
+          </svg>
+        </button>
+        <button
+          class="action-btn primary"
+          onclick={() => showDraftPanel = true}
+          title="Generate AI reply (Cmd+D)"
+          aria-label="Generate AI reply"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <span>AI Draft</span>
+        </button>
+      </div>
     </div>
 
     <div class="messages">
@@ -123,6 +192,23 @@
     </div>
   {/if}
 </div>
+
+<!-- AI Draft Panel -->
+{#if showDraftPanel && $selectedConversation}
+  <AIDraftPanel
+    chatId={$selectedConversation.chat_id}
+    onSelect={handleDraftSelect}
+    onClose={() => showDraftPanel = false}
+  />
+{/if}
+
+<!-- Summary Modal -->
+{#if showSummaryModal && $selectedConversation}
+  <SummaryModal
+    chatId={$selectedConversation.chat_id}
+    onClose={() => showSummaryModal = false}
+  />
+{/if}
 
 <style>
   .message-view {
@@ -196,6 +282,47 @@
   .header .info p {
     font-size: 12px;
     color: var(--text-secondary);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 13px;
+  }
+
+  .action-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+  }
+
+  .action-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .action-btn.primary {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+  }
+
+  .action-btn.primary:hover {
+    background: #0a82e0;
   }
 
   .messages {

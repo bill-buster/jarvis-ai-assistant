@@ -89,6 +89,25 @@
     }
   }
 
+  function exportAsText() {
+    if (!summary) return;
+
+    const text = formatSummaryForClipboard();
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    // Generate filename with current date
+    const date = new Date().toISOString().split("T")[0];
+    link.download = `conversation-summary-${date}.txt`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   // Fetch on mount
   onMount(() => {
     fetchSummary();
@@ -159,6 +178,19 @@
         disabled={loading}
       >
         Regenerate
+      </button>
+      <button
+        class="btn secondary export-btn"
+        on:click={exportAsText}
+        disabled={loading || !summary}
+        title="Save as text file"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Export
       </button>
       <button
         class="btn primary"
@@ -393,5 +425,16 @@
 
   .btn.secondary:hover:not(:disabled) {
     background: var(--bg-active);
+  }
+
+  .export-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .export-btn svg {
+    width: 16px;
+    height: 16px;
   }
 </style>

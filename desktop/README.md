@@ -78,6 +78,33 @@ Desktop App (Tauri)     →  Python API (FastAPI)  →  JARVIS Backend
 - **Dashboard**: Overview of conversations and system stats
 - **Messages**: Browse conversations and view messages
 - **Health**: System status, memory usage, permissions
+- **AI Draft Replies**: Generate contextual reply suggestions using AI
+- **Conversation Summary**: AI-powered conversation summarization with key points
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+D` (Mac) / `Ctrl+D` (Win/Linux) | Open AI Draft panel |
+| `Cmd+S` (Mac) / `Ctrl+S` (Win/Linux) | Open Summary modal |
+| `Escape` | Close any open modal/panel |
+
+## AI Features
+
+### AI Draft Replies
+Generate AI-powered reply suggestions based on conversation context:
+- Multiple suggestions ranked by confidence
+- Copy individual suggestions to clipboard
+- Regenerate for different options
+- Shows participants and message count used for context
+
+### Conversation Summary
+Get an AI-generated summary of any conversation:
+- Brief summary of the conversation
+- Key points extracted as bullet list
+- Date range covered
+- Export summary as text file
+- Copy to clipboard
 
 ## Troubleshooting
 

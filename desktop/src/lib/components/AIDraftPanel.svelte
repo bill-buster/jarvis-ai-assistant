@@ -18,6 +18,7 @@
   let contextUsed: DraftReplyResponse["context_used"] | null = $state(null);
   let selectedIndex: number | null = $state(null);
   let errorMessage = $state("");
+  let copiedIndex: number | null = $state(null);
 
   // AbortController for cancelling in-flight requests
   let abortController: AbortController | null = null;
@@ -72,6 +73,21 @@
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
       handleClose();
+    }
+  }
+
+  async function copyToClipboard(index: number) {
+    const text = suggestions[index]?.text;
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      copiedIndex = index;
+      setTimeout(() => {
+        copiedIndex = null;
+      }, 2000);
+    } catch {
+      errorMessage = "Failed to copy to clipboard";
     }
   }
 </script>
@@ -133,26 +149,50 @@
           <div class="results-header">
             <h3>Suggestions</h3>
             {#if contextUsed}
-              <span class="context-info">
-                Based on last {contextUsed.num_messages} messages
-              </span>
+              <div class="context-info">
+                <span>Based on last {contextUsed.num_messages} messages</span>
+                {#if contextUsed.participants && contextUsed.participants.length > 0}
+                  <span class="participants">
+                    with {contextUsed.participants.slice(0, 3).join(", ")}{contextUsed.participants.length > 3 ? ` +${contextUsed.participants.length - 3} more` : ""}
+                  </span>
+                {/if}
+              </div>
             {/if}
           </div>
 
           <div class="suggestions-list">
             {#each suggestions as suggestion, index}
-              <label class="suggestion-item" class:selected={selectedIndex === index}>
-                <input
-                  type="radio"
-                  name="suggestion"
-                  checked={selectedIndex === index}
-                  onchange={() => (selectedIndex = index)}
-                />
-                <span class="suggestion-text">{suggestion.text}</span>
-                <span class="confidence-badge">
-                  {Math.round(suggestion.confidence * 100)}%
-                </span>
-              </label>
+              <div class="suggestion-wrapper">
+                <label class="suggestion-item" class:selected={selectedIndex === index}>
+                  <input
+                    type="radio"
+                    name="suggestion"
+                    checked={selectedIndex === index}
+                    onchange={() => (selectedIndex = index)}
+                  />
+                  <span class="suggestion-text">{suggestion.text}</span>
+                  <span class="confidence-badge">
+                    {Math.round(suggestion.confidence * 100)}%
+                  </span>
+                </label>
+                <button
+                  class="copy-btn"
+                  onclick={(e) => { e.stopPropagation(); copyToClipboard(index); }}
+                  title="Copy to clipboard"
+                  aria-label="Copy suggestion to clipboard"
+                >
+                  {#if copiedIndex === index}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  {:else}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  {/if}
+                </button>
+              </div>
             {/each}
           </div>
 
@@ -391,6 +431,15 @@
   .context-info {
     font-size: 12px;
     color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .participants {
+    font-size: 11px;
+    opacity: 0.8;
   }
 
   .suggestions-list {
@@ -398,6 +447,36 @@
     flex-direction: column;
     gap: 8px;
     margin-bottom: 20px;
+  }
+
+  .suggestion-wrapper {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .copy-btn {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .copy-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+  }
+
+  .copy-btn svg {
+    width: 16px;
+    height: 16px;
   }
 
   .suggestion-item {

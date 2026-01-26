@@ -6,14 +6,31 @@ import type {
   ActivateResponse,
   Conversation,
   DownloadStatus,
+  DraftReplyResponse,
   HealthResponse,
   Message,
   ModelInfo,
   SettingsResponse,
   SettingsUpdateRequest,
+  SummaryResponse,
 } from "./types";
 
 const API_BASE = "http://localhost:8742";
+
+/**
+ * Custom API error with additional details
+ */
+export class APIError extends Error {
+  status: number;
+  detail: string | null;
+
+  constructor(message: string, status: number, detail: string | null = null) {
+    super(message);
+    this.name = "APIError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
 
 class ApiClient {
   private baseUrl: string;
@@ -40,7 +57,11 @@ class ApiClient {
         error: "Request failed",
         detail: response.statusText,
       }));
-      throw new Error(error.detail || error.error || "Request failed");
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
     }
 
     return response.json();
@@ -113,7 +134,81 @@ class ApiClient {
       }
     );
   }
+
+  // Draft reply endpoints
+  async getDraftReplies(
+    chatId: string,
+    instruction?: string,
+    numSuggestions: number = 3,
+    signal?: AbortSignal
+  ): Promise<DraftReplyResponse> {
+    const body = {
+      chat_id: chatId,
+      instruction: instruction || null,
+      num_suggestions: numSuggestions,
+      context_messages: 20,
+    };
+
+    const response = await fetch(`${this.baseUrl}/drafts/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
+    }
+
+    return response.json();
+  }
+
+  // Summary endpoints
+  async getSummary(
+    chatId: string,
+    numMessages: number = 50,
+    signal?: AbortSignal
+  ): Promise<SummaryResponse> {
+    const body = {
+      chat_id: chatId,
+      num_messages: numMessages,
+    };
+
+    const response = await fetch(`${this.baseUrl}/drafts/summarize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
+    }
+
+    const data = await response.json();
+    // Add message_count for UI display
+    return { ...data, message_count: numMessages };
+  }
 }
 
 // Export singleton instance
 export const api = new ApiClient();
+
+// Alias for alternate naming
+export const apiClient = api;

@@ -118,6 +118,35 @@ export interface ActivateResponse {
   error: string | null;
 }
 
+// Draft and Summary types
+export interface DraftSuggestion {
+  text: string;
+  confidence: number;
+}
+
+export interface ContextInfo {
+  num_messages: number;
+  participants: string[];
+  last_message: string | null;
+}
+
+export interface DraftReplyResponse {
+  suggestions: DraftSuggestion[];
+  context_used: ContextInfo;
+}
+
+export interface DateRange {
+  start: string;
+  end: string;
+}
+
+export interface SummaryResponse {
+  summary: string;
+  key_points: string[];
+  date_range: DateRange;
+  message_count?: number;
+}
+
 // Error types
 export interface ApiError {
   error: string;
