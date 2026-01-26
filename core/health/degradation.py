@@ -142,6 +142,28 @@ class GracefulDegradationController:
                 result = callable_func(*args, **kwargs)
                 circuit.record_success()
                 return result
+            except TypeError as e:
+                # TypeError usually indicates a programming error (wrong arguments),
+                # not a transient failure. Re-raise to surface the bug.
+                error_msg = str(e)
+                if "argument" in error_msg or "positional" in error_msg or "keyword" in error_msg:
+                    logger.error(
+                        "Feature '%s' callable signature mismatch: %s",
+                        feature_name,
+                        error_msg,
+                    )
+                    raise
+                # Other TypeErrors might be from the callable's logic, treat as failure
+                circuit.record_failure()
+                logger.warning(
+                    "Feature '%s' primary execution failed with TypeError: %s",
+                    feature_name,
+                    error_msg,
+                )
+                new_state = circuit.state
+                if new_state == CircuitState.OPEN:
+                    return self._execute_fallback(policy, *args, **kwargs)
+                return self._execute_degraded(policy, *args, **kwargs)
             except Exception as e:
                 circuit.record_failure()
                 logger.warning(

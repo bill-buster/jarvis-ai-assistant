@@ -5,10 +5,11 @@ Implements the iMessageReader protocol from contracts/imessage.py.
 
 import logging
 import sqlite3
+from collections import OrderedDict
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Generic, Self, TypeVar
 
 from contracts.imessage import Attachment, Conversation, Message, Reaction
 
@@ -24,11 +25,65 @@ from .queries import detect_schema_version, get_query
 
 logger = logging.getLogger(__name__)
 
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class LRUCache(Generic[K, V]):
+    """Simple LRU cache with bounded size.
+
+    Uses OrderedDict to maintain insertion/access order.
+    Oldest entries are evicted when maxsize is exceeded.
+    """
+
+    def __init__(self, maxsize: int = 1000) -> None:
+        """Initialize the LRU cache.
+
+        Args:
+            maxsize: Maximum number of items to store (default 1000)
+        """
+        self._cache: OrderedDict[K, V] = OrderedDict()
+        self._maxsize = maxsize
+
+    def get(self, key: K) -> V | None:
+        """Get a value from the cache, returning None if not found.
+
+        Moves the accessed item to the end (most recently used).
+        """
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return self._cache[key]
+        return None
+
+    def set(self, key: K, value: V) -> None:
+        """Set a value in the cache, evicting oldest if at capacity."""
+        if key in self._cache:
+            self._cache.move_to_end(key)
+        self._cache[key] = value
+        if len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
+
+    def __contains__(self, key: K) -> bool:
+        """Check if key is in cache."""
+        return key in self._cache
+
+    def clear(self) -> None:
+        """Clear all items from the cache."""
+        self._cache.clear()
+
+    def __len__(self) -> int:
+        """Return the number of items in the cache."""
+        return len(self._cache)
+
+
 # Path to macOS AddressBook database for contact name resolution
 ADDRESSBOOK_DB_PATH = Path.home() / "Library" / "Application Support" / "AddressBook" / "Sources"
 
 # Default path to iMessage database
 CHAT_DB_PATH = Path.home() / "Library" / "Messages" / "chat.db"
+
+# Database connection timeout (handles SQLITE_BUSY from concurrent iMessage app access)
+DB_TIMEOUT_SECONDS = 5.0
 
 
 class ChatDBReader:
@@ -70,8 +125,8 @@ class ChatDBReader:
         self._schema_version: str | None = None
         # Cache for contact name lookups (phone/email -> name)
         self._contacts_cache: dict[str, str] | None = None
-        # Cache for GUID to ROWID mappings
-        self._guid_to_rowid_cache: dict[str, int] = {}
+        # LRU cache for GUID to ROWID mappings (bounded to prevent memory leaks)
+        self._guid_to_rowid_cache: LRUCache[str, int] = LRUCache(maxsize=10000)
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get a read-only database connection.
@@ -91,7 +146,7 @@ class ChatDBReader:
             self._connection = sqlite3.connect(
                 uri,
                 uri=True,
-                timeout=5.0,  # Handle SQLITE_BUSY from iMessage app
+                timeout=DB_TIMEOUT_SECONDS,
                 check_same_thread=False,  # Safe for async contexts
             )
             self._connection.row_factory = sqlite3.Row
@@ -116,7 +171,7 @@ class ChatDBReader:
             self._connection = None
             self._schema_version = None
             self._contacts_cache = None
-            self._guid_to_rowid_cache = {}
+            self._guid_to_rowid_cache.clear()
 
     def _get_attachments_for_message(self, message_id: int) -> list[Attachment]:
         """Fetch attachments for a specific message.
@@ -178,9 +233,10 @@ class ChatDBReader:
         Returns:
             Message ROWID, or None if not found
         """
-        # Check cache first
-        if guid in self._guid_to_rowid_cache:
-            return self._guid_to_rowid_cache[guid]
+        # Check cache first (LRU cache with bounded size)
+        cached = self._guid_to_rowid_cache.get(guid)
+        if cached is not None:
+            return cached
 
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -192,7 +248,7 @@ class ChatDBReader:
             row = cursor.fetchone()
             if row:
                 rowid: int = int(row["id"])
-                self._guid_to_rowid_cache[guid] = rowid
+                self._guid_to_rowid_cache.set(guid, rowid)
                 return rowid
             return None
         except sqlite3.OperationalError as e:
@@ -219,6 +275,8 @@ class ChatDBReader:
 
         # Normalize the identifier for lookup
         normalized = normalize_phone_number(identifier)
+        if normalized is None:
+            return None
         # Cache is guaranteed to be initialized after _load_contacts_cache
         if self._contacts_cache is None:
             return None
@@ -261,7 +319,7 @@ class ChatDBReader:
 
         try:
             uri = f"file:{db_path}?mode=ro"
-            conn = sqlite3.connect(uri, uri=True, timeout=2.0)
+            conn = sqlite3.connect(uri, uri=True, timeout=DB_TIMEOUT_SECONDS)
             conn.row_factory = sqlite3.Row
 
             # Query for phone numbers and emails with associated names
@@ -421,7 +479,9 @@ class ChatDBReader:
             # Parse participants
             participants_str = row["participants"] or ""
             participants = [
-                normalize_phone_number(p.strip()) for p in participants_str.split(",") if p.strip()
+                normalized
+                for p in participants_str.split(",")
+                if p.strip() and (normalized := normalize_phone_number(p.strip())) is not None
             ]
 
             # Determine if group chat
@@ -521,10 +581,15 @@ class ChatDBReader:
         # Normalize sender if provided
         normalized_sender: str | None = None
         if sender is not None:
-            normalized_sender = normalize_phone_number(sender) if sender != "me" else "me"
-            # Add sender param twice for the OR condition in the query
-            params.append(normalized_sender)
-            params.append(normalized_sender)
+            normalized_sender = sender if sender == "me" else normalize_phone_number(sender)
+            # If normalization returned None (invalid input), skip the filter
+            if normalized_sender is not None:
+                # Add sender param twice for the OR condition in the query
+                params.append(normalized_sender)
+                params.append(normalized_sender)
+            else:
+                # Treat as no sender filter if normalization failed
+                sender = None
 
         if after is not None:
             params.append(datetime_to_apple_timestamp(after))
@@ -635,9 +700,9 @@ class ChatDBReader:
         message_id = row["id"]
 
         # Get sender and resolve name from contacts
-        sender = normalize_phone_number(row["sender"])
+        sender = normalize_phone_number(row["sender"]) or row["sender"]
         sender_name = None
-        if not row["is_from_me"]:
+        if not row["is_from_me"] and sender:
             sender_name = self._resolve_contact_name(sender)
 
         # Parse reply_to_id from thread_originator_guid

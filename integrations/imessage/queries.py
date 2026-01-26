@@ -7,7 +7,10 @@ flags that control query construction. User input is NEVER interpolated into
 query strings - all user values are passed as parameterized query arguments.
 """
 
+import logging
 import sqlite3
+
+logger = logging.getLogger(__name__)
 
 
 def detect_schema_version(conn: sqlite3.Connection) -> str:
@@ -209,6 +212,11 @@ def get_query(
     """
     # Fall back to v14 if version unknown
     if version not in QUERIES:
+        logger.warning(
+            "Unknown schema version '%s', falling back to v14 queries. "
+            "Some queries may fail or return incorrect results.",
+            version,
+        )
         version = "v14"
 
     query = QUERIES[version][name]

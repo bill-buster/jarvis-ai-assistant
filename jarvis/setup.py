@@ -182,6 +182,9 @@ class PermissionMonitorImpl:
         """Check if Full Disk Access is granted.
 
         Attempts to read from protected locations to verify FDA.
+        This is a low-level permission check for setup/onboarding.
+        For runtime iMessage access checks, use the ChatDBReader integration
+        via jarvis.cli._check_imessage_access() which tests the full stack.
 
         Returns:
             True if FDA is granted.
@@ -259,11 +262,21 @@ class SchemaDetectorImpl:
 
             conn.close()
 
-            # Determine version
+            # Determine version based on column presence
             version = "v14"
             if "thread_originator_guid" in message_columns:
                 if "service_name" in chat_columns:
                     version = "v15"
+                # else: Has thread_originator_guid but not service_name - use v14
+            else:
+                # No thread_originator_guid - could be v14 or unknown older version
+                # Check for expected v14 columns to validate
+                expected_v14_columns = {"text", "date", "is_from_me", "handle_id"}
+                if not expected_v14_columns.issubset(message_columns):
+                    logging.warning(
+                        "Could not reliably detect schema version (missing expected columns), "
+                        "defaulting to v14. Some queries may fail."
+                    )
 
             # Check compatibility
             required = {"message", "chat", "handle", "chat_message_join", "chat_handle_join"}

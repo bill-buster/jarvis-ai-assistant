@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import gc
 import logging
+import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -587,24 +588,40 @@ class TemplateMatcher:
         self.templates = templates or _load_templates()
         self._pattern_embeddings: np.ndarray | None = None
         self._pattern_to_template: list[tuple[str, ResponseTemplate]] = []
+        self._embeddings_lock = threading.Lock()
 
     def _ensure_embeddings(self) -> None:
-        """Compute and cache embeddings for all template patterns."""
+        """Compute and cache embeddings for all template patterns.
+
+        Uses double-check locking for thread-safe lazy initialization.
+        """
+        # Fast path: embeddings already computed
         if self._pattern_embeddings is not None:
             return
 
-        model = _get_sentence_model()
+        # Slow path: acquire lock and double-check
+        with self._embeddings_lock:
+            # Double-check after acquiring lock
+            if self._pattern_embeddings is not None:
+                return
 
-        # Collect all patterns with their templates
-        all_patterns = []
-        for template in self.templates:
-            for pattern in template.patterns:
-                all_patterns.append(pattern)
-                self._pattern_to_template.append((pattern, template))
+            model = _get_sentence_model()
 
-        # Compute embeddings in batch
-        self._pattern_embeddings = model.encode(all_patterns, convert_to_numpy=True)
-        logger.info("Computed embeddings for %d patterns", len(all_patterns))
+            # Collect all patterns with their templates
+            all_patterns = []
+            pattern_to_template: list[tuple[str, ResponseTemplate]] = []
+            for template in self.templates:
+                for pattern in template.patterns:
+                    all_patterns.append(pattern)
+                    pattern_to_template.append((pattern, template))
+
+            # Compute embeddings in batch
+            embeddings = model.encode(all_patterns, convert_to_numpy=True)
+
+            # Assign both atomically (pattern_to_template first, then embeddings)
+            self._pattern_to_template = pattern_to_template
+            self._pattern_embeddings = embeddings
+            logger.info("Computed embeddings for %d patterns", len(all_patterns))
 
     def match(self, query: str) -> TemplateMatch | None:
         """Find best matching template for a query.
@@ -637,9 +654,9 @@ class TemplateMatcher:
 
             if best_similarity >= self.SIMILARITY_THRESHOLD:
                 matched_pattern, template = self._pattern_to_template[best_idx]
-                logger.info(
-                    "Template match: '%s' -> %s (similarity: %.3f)",
-                    query[:50],
+                # Log template match without user query content (privacy)
+                logger.debug(
+                    "Template match: %s (similarity: %.3f)",
                     template.name,
                     best_similarity,
                 )
@@ -650,9 +667,9 @@ class TemplateMatcher:
                 )
 
             logger.debug(
-                "No template match for '%s' (best similarity: %.3f)",
-                query[:50],
+                "No template match (best similarity: %.3f, threshold: %.3f)",
                 best_similarity,
+                self.SIMILARITY_THRESHOLD,
             )
             return None
 

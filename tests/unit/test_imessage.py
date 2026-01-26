@@ -106,10 +106,10 @@ class TestNormalizePhoneNumber:
         result = normalize_phone_number("  user@example.com  ")
         assert result == "user@example.com"
 
-    def test_none_returns_empty(self):
-        """Return empty string for None input."""
+    def test_none_returns_none(self):
+        """Return None for None input."""
         result = normalize_phone_number(None)
-        assert result == ""
+        assert result is None
 
     def test_international_format_preserved(self):
         """Numbers with + prefix are preserved."""

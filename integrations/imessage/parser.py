@@ -196,7 +196,7 @@ def parse_reactions(reaction_rows: list[dict[str, Any]] | None) -> list[Reaction
         if row.get("is_from_me"):
             sender = "me"
         else:
-            sender = normalize_phone_number(row.get("sender"))
+            sender = normalize_phone_number(row.get("sender")) or row.get("sender") or "unknown"
 
         reaction = Reaction(
             type=reaction_type,
@@ -246,7 +246,7 @@ def _get_reaction_type(associated_message_type: int) -> str | None:
         return None
 
 
-def normalize_phone_number(phone: str | None) -> str:
+def normalize_phone_number(phone: str | None) -> str | None:
     """Normalize phone number format.
 
     Strips formatting characters and ensures consistent format.
@@ -255,10 +255,10 @@ def normalize_phone_number(phone: str | None) -> str:
         phone: Raw phone number string
 
     Returns:
-        Normalized phone number, or original string if not a phone number
+        Normalized phone number, None if input is None, or original string if not a phone number
     """
     if phone is None:
-        return ""
+        return None
 
     phone = phone.strip()
 

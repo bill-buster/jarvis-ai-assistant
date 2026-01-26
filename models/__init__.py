@@ -29,6 +29,7 @@ __all__ = [
     "TemplateMatch",
     "get_generator",
     "reset_generator",
+    "unload_generator",
     "is_sentence_model_loaded",
     "unload_sentence_model",
 ]
@@ -55,16 +56,28 @@ def get_generator() -> MLXGenerator:
     return _generator
 
 
+def unload_generator() -> None:
+    """Unload the model from the current generator without resetting the singleton.
+
+    Use this to free memory while keeping the generator instance.
+    The model will be reloaded on the next generation request.
+    """
+    global _generator
+    with _generator_lock:
+        if _generator is not None:
+            _generator.unload()
+
+
 def reset_generator() -> None:
-    """Reset the singleton generator instance.
+    """Reset the singleton generator instance and unload any loaded model.
 
     Use this to:
     - Clear state between tests
     - Switch to a different model configuration
-    - Force reinitialization of the generator
+    - Force complete reinitialization of the generator
 
-    Note: This does NOT unload any loaded models. Call generator.unload()
-    first if you want to free memory.
+    This function DOES unload any loaded models to prevent memory leaks.
+    A new generator instance will be created on the next get_generator() call.
     """
     global _generator
     with _generator_lock:

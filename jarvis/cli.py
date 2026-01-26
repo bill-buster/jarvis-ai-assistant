@@ -99,7 +99,11 @@ def initialize_system() -> tuple[bool, list[str]]:
 
 
 def _check_imessage_access() -> bool:
-    """Check if iMessage database is accessible.
+    """Check if iMessage database is accessible via the integration layer.
+
+    This is a high-level check that verifies the entire integration stack works,
+    not just permission status. For permission-only checks during setup,
+    use core.health.get_permission_monitor() instead.
 
     Returns:
         True if accessible, False otherwise.
@@ -109,7 +113,17 @@ def _check_imessage_access() -> bool:
 
         with ChatDBReader() as reader:
             return reader.check_access()
-    except Exception:
+    except PermissionError:
+        logger.debug("Permission denied accessing iMessage database")
+        return False
+    except FileNotFoundError:
+        logger.debug("iMessage database not found")
+        return False
+    except ImportError:
+        logger.debug("iMessage integration module not available")
+        return False
+    except Exception as e:
+        logger.debug("Error checking iMessage access: %s", e)
         return False
 
 
@@ -129,8 +143,10 @@ def _template_only_response(prompt: str) -> str:
         match = matcher.match(prompt)
         if match:
             return match.template.response
-    except Exception:
-        pass
+    except ImportError:
+        logger.debug("Template matching module not available")
+    except Exception as e:
+        logger.debug("Template matching failed: %s", e)
     return "I'm operating in limited mode. Please try a simpler query."
 
 
@@ -572,16 +588,19 @@ def cleanup() -> None:
         # Reset singletons to free resources
         reset_memory_controller()
         reset_degradation_controller()
+    except Exception as e:
+        logger.debug("Error resetting controllers during cleanup: %s", e)
 
-        # Unload models
-        try:
-            from models import reset_generator
+    # Unload models (separate try block so we attempt all cleanup steps)
+    try:
+        from models import reset_generator
 
-            reset_generator()
-        except Exception:
-            pass
-    except Exception:
+        reset_generator()
+    except ImportError:
+        # Models module not available, nothing to clean up
         pass
+    except Exception as e:
+        logger.debug("Error resetting generator during cleanup: %s", e)
 
 
 def run() -> NoReturn:
