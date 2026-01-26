@@ -11,12 +11,14 @@
 
   let currentView: "messages" | "dashboard" | "health" = "messages";
 
-  onMount(async () => {
+  onMount(() => {
     // Check API connection on start
-    await checkApiConnection();
+    checkApiConnection();
 
     // Listen for navigation events from tray menu
-    const unlisten = await listen<string>("navigate", (event) => {
+    let unlisten: (() => void) | undefined;
+
+    listen<string>("navigate", (event) => {
       if (
         event.payload === "health" ||
         event.payload === "dashboard" ||
@@ -27,11 +29,13 @@
           clearSelection();
         }
       }
+    }).then((fn) => {
+      unlisten = fn;
     });
 
     // Cleanup on unmount
     return () => {
-      unlisten();
+      if (unlisten) unlisten();
     };
   });
 </script>
@@ -40,7 +44,7 @@
   <Sidebar bind:currentView />
 
   {#if currentView === "dashboard"}
-    <Dashboard on:navigate={(e) => currentView = e.detail} />
+    <Dashboard on:navigate={(e) => currentView = e.detail as typeof currentView} />
   {:else if currentView === "health"}
     <HealthStatus />
   {:else}
