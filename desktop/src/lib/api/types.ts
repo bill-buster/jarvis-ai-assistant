@@ -1,8 +1,8 @@
 /**
- * API type definitions for the JARVIS desktop client.
+ * TypeScript types for JARVIS API responses.
+ * These mirror the Pydantic schemas in api/schemas.py
  */
 
-// Attachment metadata
 export interface Attachment {
   filename: string;
   file_path: string | null;
@@ -10,22 +10,20 @@ export interface Attachment {
   file_size: number | null;
 }
 
-// Tapback reaction
 export interface Reaction {
   type: string;
   sender: string;
   sender_name: string | null;
-  date: string;
+  date: string; // ISO datetime
 }
 
-// Message response
 export interface Message {
   id: number;
   chat_id: string;
   sender: string;
   sender_name: string | null;
   text: string;
-  date: string;
+  date: string; // ISO datetime
   is_from_me: boolean;
   attachments: Attachment[];
   reply_to_id: number | null;
@@ -35,7 +33,6 @@ export interface Message {
   is_system_message: boolean;
 }
 
-// Conversation summary
 export interface Conversation {
   chat_id: string;
   participants: string[];
@@ -46,7 +43,6 @@ export interface Conversation {
   last_message_text: string | null;
 }
 
-// Health status
 export interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy";
   imessage_access: boolean;
@@ -60,63 +56,36 @@ export interface HealthStatus {
   jarvis_vms_mb: number;
 }
 
-// Quick reply suggestion
-export interface Suggestion {
-  text: string;
-  score: number;
+export interface ErrorResponse {
+  error: string;
+  detail: string;
+  code: string | null;
 }
 
-// Suggestion response
-export interface SuggestionResponse {
-  suggestions: Suggestion[];
-}
-
-// Send message request
 export interface SendMessageRequest {
   text: string;
-  recipient?: string;
+  recipient?: string | null;
   is_group?: boolean;
 }
 
-// Send attachment request
-export interface SendAttachmentRequest {
-  file_path: string;
-  recipient?: string;
-  is_group?: boolean;
-}
-
-// Send message response
 export interface SendMessageResponse {
   success: boolean;
   error: string | null;
 }
 
-// Error response
-export interface ErrorResponse {
-  error: string;
-  detail: string;
-  code?: string;
+// Summary-related types
+export interface SummaryRequest {
+  chat_id: string;
+  message_count?: number; // Number of recent messages to summarize
 }
 
-// AI Draft reply response
-export interface DraftReplyResponse {
-  suggestions: Array<{
-    text: string;
-    confidence: number;
-  }>;
-  context_used: {
-    num_messages: number;
-    participants: string[];
-    last_message: string;
-  };
-}
-
-// Conversation summary response
 export interface SummaryResponse {
   summary: string;
   key_points: string[];
+  message_count: number;
   date_range: {
-    start: string;
-    end: string;
+    start: string; // ISO datetime
+    end: string; // ISO datetime
   };
+  generation_time_ms?: number;
 }

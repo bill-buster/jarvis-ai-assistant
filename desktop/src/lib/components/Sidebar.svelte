@@ -1,112 +1,93 @@
 <script lang="ts">
-  interface Props {
-    currentView: "messages" | "dashboard" | "health";
-  }
+  import { isApiConnected } from "../stores/health";
 
-  let { currentView = $bindable() }: Props = $props();
+  export let currentView: "messages" | "dashboard" | "health" = "messages";
+
+  const navItems = [
+    { id: "messages" as const, icon: "💬", label: "Messages" },
+    { id: "dashboard" as const, icon: "📊", label: "Dashboard" },
+    { id: "health" as const, icon: "❤️", label: "Health" },
+  ];
 </script>
 
 <nav class="sidebar">
   <div class="logo">
-    <span class="logo-icon">J</span>
+    <span class="logo-icon">🤖</span>
     <span class="logo-text">JARVIS</span>
   </div>
 
-  <ul class="nav-list">
-    <li>
+  <div class="nav-items">
+    {#each navItems as item}
       <button
         class="nav-item"
-        class:active={currentView === "messages"}
-        onclick={() => (currentView = "messages")}
+        class:active={currentView === item.id}
+        on:click={() => (currentView = item.id)}
       >
-        <span class="nav-icon">💬</span>
-        <span class="nav-label">Messages</span>
+        <span class="nav-icon">{item.icon}</span>
+        <span class="nav-label">{item.label}</span>
       </button>
-    </li>
-    <li>
-      <button
-        class="nav-item"
-        class:active={currentView === "dashboard"}
-        onclick={() => (currentView = "dashboard")}
-      >
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">Dashboard</span>
-      </button>
-    </li>
-    <li>
-      <button
-        class="nav-item"
-        class:active={currentView === "health"}
-        onclick={() => (currentView = "health")}
-      >
-        <span class="nav-icon">❤️</span>
-        <span class="nav-label">Health</span>
-      </button>
-    </li>
-  </ul>
+    {/each}
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="connection-status" class:connected={$isApiConnected}>
+      <span class="status-dot"></span>
+      <span class="status-text">
+        {$isApiConnected ? "Connected" : "Disconnected"}
+      </span>
+    </div>
+  </div>
 </nav>
 
 <style>
   .sidebar {
-    width: 64px;
+    width: 72px;
     background: var(--bg-secondary);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px 0;
-    flex-shrink: 0;
+    padding: 16px 0;
   }
 
   .logo {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 4px;
     margin-bottom: 24px;
   }
 
   .logo-icon {
-    font-size: 24px;
-    font-weight: bold;
-    color: var(--accent-color);
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg-hover);
-    border-radius: 10px;
+    font-size: 28px;
   }
 
   .logo-text {
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 600;
     color: var(--text-secondary);
-    margin-top: 4px;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
   }
 
-  .nav-list {
-    list-style: none;
+  .nav-items {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%;
-    padding: 0 8px;
+    flex: 1;
   }
 
   .nav-item {
-    width: 100%;
-    padding: 10px 0;
-    background: none;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    transition: background-color 0.15s ease;
+    padding: 10px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 56px;
   }
 
   .nav-item:hover {
@@ -118,16 +99,43 @@
   }
 
   .nav-icon {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   .nav-label {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-secondary);
-    font-weight: 500;
   }
 
   .nav-item.active .nav-label {
     color: var(--text-primary);
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 16px;
+  }
+
+  .connection-status {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--error-color);
+  }
+
+  .connection-status.connected .status-dot {
+    background: #30d158;
+  }
+
+  .status-text {
+    font-size: 9px;
+    color: var(--text-secondary);
   }
 </style>

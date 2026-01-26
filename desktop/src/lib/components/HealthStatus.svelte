@@ -1,272 +1,347 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { fetchHealth, getHealthStore } from "../stores/health";
+  import {
+    healthStatus,
+    healthError,
+    isApiConnected,
+    refreshHealth,
+  } from "../stores/health";
 
-  const store = getHealthStore();
+  let refreshing = false;
 
-  onMount(() => {
-    fetchHealth();
-  });
+  async function handleRefresh() {
+    refreshing = true;
+    await refreshHealth();
+    refreshing = false;
+  }
 
   function getStatusColor(status: string | undefined): string {
     switch (status) {
       case "healthy":
-        return "#34c759";
+        return "#30d158";
       case "degraded":
         return "#ff9f0a";
       case "unhealthy":
-        return "#ff3b30";
+        return "#ff5f57";
       default:
         return "#8e8e93";
     }
   }
 
-  function getStatusIcon(status: string | undefined): string {
-    switch (status) {
-      case "healthy":
-        return "✅";
-      case "degraded":
-        return "⚠️";
-      case "unhealthy":
-        return "❌";
+  function getMemoryModeDescription(mode: string): string {
+    switch (mode) {
+      case "FULL":
+        return "Full capabilities enabled";
+      case "LITE":
+        return "Reduced memory usage mode";
+      case "MINIMAL":
+        return "Minimal memory footprint";
       default:
-        return "❓";
+        return mode;
     }
   }
+
+  onMount(() => {
+    refreshHealth();
+  });
 </script>
 
-<main class="health-status">
-  <header class="health-header">
+<div class="health-status">
+  <div class="health-header">
     <h1>System Health</h1>
-    <button class="refresh-btn" onclick={() => fetchHealth()}>
-      {#if store.loading}
-        ⏳
-      {:else}
-        ↻
-      {/if}
+    <button
+      class="refresh-btn"
+      on:click={handleRefresh}
+      disabled={refreshing}
+    >
+      <span class:spinning={refreshing}>↻</span>
+      Refresh
     </button>
-  </header>
+  </div>
 
-  {#if store.loading && !store.health}
-    <div class="loading">Loading health status...</div>
-  {:else if store.error && !store.health}
-    <div class="error">
-      <span class="error-icon">❌</span>
-      <span>{store.error}</span>
-      <button class="retry-btn" onclick={() => fetchHealth()}>Retry</button>
-    </div>
-  {:else if store.health}
-    <div class="status-overview">
-      <div
-        class="status-badge"
-        style="--status-color: {getStatusColor(store.health.status)}"
-      >
-        <span class="status-icon">{getStatusIcon(store.health.status)}</span>
-        <span class="status-text">{store.health.status}</span>
+  <div class="health-content">
+    {#if !$isApiConnected}
+      <div class="disconnected-state">
+        <span class="disconnected-icon">⚠️</span>
+        <h2>API Disconnected</h2>
+        <p>Unable to connect to JARVIS API server</p>
+        <button on:click={handleRefresh}>Retry Connection</button>
       </div>
-    </div>
-
-    <div class="health-grid">
-      <div class="health-card">
-        <div class="card-header">
-          <span class="card-icon">📱</span>
-          <h3>iMessage Access</h3>
-        </div>
-        <div class="card-value" class:success={store.health.imessage_access}>
-          {store.health.imessage_access ? "Connected" : "Not Connected"}
-        </div>
-        {#if !store.health.imessage_access}
-          <div class="card-hint">
-            Grant Full Disk Access in System Settings
-          </div>
-        {/if}
+    {:else if $healthError}
+      <div class="error-state">
+        <span class="error-icon">❌</span>
+        <h2>Error</h2>
+        <p>{$healthError}</p>
+        <button on:click={handleRefresh}>Retry</button>
       </div>
-
-      <div class="health-card">
-        <div class="card-header">
-          <span class="card-icon">🧠</span>
-          <h3>Memory Mode</h3>
-        </div>
-        <div class="card-value">{store.health.memory_mode}</div>
-        <div class="card-hint">
-          {store.health.memory_mode === "FULL"
-            ? "Full model capabilities"
-            : store.health.memory_mode === "LITE"
-              ? "Reduced memory usage"
-              : "Minimal operation mode"}
+    {:else if $healthStatus}
+      <div class="status-overview">
+        <div
+          class="status-indicator"
+          style="--status-color: {getStatusColor($healthStatus.status)}"
+        >
+          <span class="status-dot"></span>
+          <span class="status-text">{$healthStatus.status}</span>
         </div>
       </div>
 
-      <div class="health-card">
-        <div class="card-header">
-          <span class="card-icon">🤖</span>
-          <h3>AI Model</h3>
-        </div>
-        <div class="card-value" class:success={store.health.model_loaded}>
-          {store.health.model_loaded ? "Loaded" : "Not Loaded"}
-        </div>
-        <div class="card-hint">
-          {store.health.model_loaded
-            ? "Ready for generation"
-            : "Will load on first use"}
-        </div>
-      </div>
-
-      <div class="health-card">
-        <div class="card-header">
-          <span class="card-icon">📊</span>
-          <h3>System Memory</h3>
-        </div>
-        <div class="memory-details">
-          <div class="memory-bar-container">
-            <div
-              class="memory-bar"
-              style="width: {Math.min(
-                100,
-                (store.health.memory_used_gb /
-                  (store.health.memory_used_gb + store.health.memory_available_gb)) *
-                  100
-              )}%"
-            ></div>
-          </div>
-          <div class="memory-values">
-            <span>Used: {store.health.memory_used_gb.toFixed(1)} GB</span>
-            <span>Available: {store.health.memory_available_gb.toFixed(1)} GB</span>
+      <div class="health-grid">
+        <div class="health-card">
+          <h3>Memory</h3>
+          <div class="card-content">
+            <div class="metric">
+              <span class="metric-label">Available</span>
+              <span class="metric-value">
+                {$healthStatus.memory_available_gb.toFixed(1)} GB
+              </span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Used</span>
+              <span class="metric-value">
+                {$healthStatus.memory_used_gb.toFixed(1)} GB
+              </span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Mode</span>
+              <span class="metric-value mode">
+                {$healthStatus.memory_mode}
+              </span>
+            </div>
+            <p class="metric-description">
+              {getMemoryModeDescription($healthStatus.memory_mode)}
+            </p>
           </div>
         </div>
-      </div>
 
-      <div class="health-card">
-        <div class="card-header">
-          <span class="card-icon">⚡</span>
+        <div class="health-card">
           <h3>JARVIS Process</h3>
-        </div>
-        <div class="process-details">
-          <div class="process-stat">
-            <span class="stat-label">RAM (RSS)</span>
-            <span class="stat-value">{store.health.jarvis_rss_mb.toFixed(0)} MB</span>
+          <div class="card-content">
+            <div class="metric">
+              <span class="metric-label">RSS (RAM)</span>
+              <span class="metric-value">
+                {$healthStatus.jarvis_rss_mb.toFixed(0)} MB
+              </span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">VMS (Virtual)</span>
+              <span class="metric-value">
+                {$healthStatus.jarvis_vms_mb.toFixed(0)} MB
+              </span>
+            </div>
           </div>
-          <div class="process-stat">
-            <span class="stat-label">Virtual</span>
-            <span class="stat-value">{store.health.jarvis_vms_mb.toFixed(0)} MB</span>
+        </div>
+
+        <div class="health-card">
+          <h3>Permissions</h3>
+          <div class="card-content">
+            <div class="permission-item">
+              <span
+                class="permission-status"
+                class:granted={$healthStatus.imessage_access}
+              >
+                {$healthStatus.imessage_access ? "✓" : "✗"}
+              </span>
+              <span>iMessage Access</span>
+            </div>
+            <div class="permission-item">
+              <span
+                class="permission-status"
+                class:granted={$healthStatus.permissions_ok}
+              >
+                {$healthStatus.permissions_ok ? "✓" : "✗"}
+              </span>
+              <span>Full Disk Access</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="health-card">
+          <h3>Model Status</h3>
+          <div class="card-content">
+            <div class="model-status">
+              <span
+                class="model-indicator"
+                class:loaded={$healthStatus.model_loaded}
+              ></span>
+              <span>
+                {$healthStatus.model_loaded ? "Model Loaded" : "Model Not Loaded"}
+              </span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    {#if store.health.details && Object.keys(store.health.details).length > 0}
-      <section class="details-section">
-        <h2>Details</h2>
-        <ul class="details-list">
-          {#each Object.entries(store.health.details) as [key, value]}
-            <li>
-              <span class="detail-key">{key}:</span>
-              <span class="detail-value">{value}</span>
-            </li>
-          {/each}
-        </ul>
-      </section>
+      {#if $healthStatus.details && Object.keys($healthStatus.details).length > 0}
+        <div class="details-section">
+          <h3>Details</h3>
+          <div class="details-list">
+            {#each Object.entries($healthStatus.details) as [key, value]}
+              <div class="detail-item">
+                <span class="detail-key">{key}</span>
+                <span class="detail-value">{value}</span>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    {:else}
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Loading health status...</p>
+      </div>
     {/if}
-  {:else}
-    <div class="empty">No health data available</div>
-  {/if}
-</main>
+  </div>
+</div>
 
 <style>
   .health-status {
     flex: 1;
-    padding: 32px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     background: var(--bg-primary);
+    overflow-y: auto;
   }
 
   .health-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .health-header h1 {
-    font-size: 28px;
+    margin: 0;
+    font-size: 24px;
     font-weight: 600;
+    color: var(--text-primary);
   }
 
   .refresh-btn {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 18px;
-    color: var(--text-primary);
-    transition: all 0.15s ease;
-  }
-
-  .refresh-btn:hover {
-    background: var(--bg-hover);
-  }
-
-  .loading,
-  .empty {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-secondary);
-  }
-
-  .error {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 20px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--error-color);
-    border-radius: 8px;
-    color: var(--error-color);
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
   }
 
-  .retry-btn {
-    margin-left: auto;
-    background: var(--error-color);
-    color: white;
+  .refresh-btn:hover:not(:disabled) {
+    background: var(--bg-active);
+  }
+
+  .refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .refresh-btn span.spinning {
+    animation: spin 1s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .health-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .disconnected-state,
+  .error-state,
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .disconnected-icon,
+  .error-icon {
+    font-size: 48px;
+  }
+
+  .disconnected-state h2,
+  .error-state h2 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--text-primary);
+  }
+
+  .disconnected-state p,
+  .error-state p {
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .disconnected-state button,
+  .error-state button {
+    margin-top: 12px;
+    padding: 8px 20px;
+    background: var(--accent-color);
     border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
     cursor: pointer;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
   }
 
   .status-overview {
     display: flex;
     justify-content: center;
-    margin-bottom: 32px;
   }
 
-  .status-badge {
+  .status-indicator {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 16px 32px;
     background: var(--bg-secondary);
-    border: 2px solid var(--status-color);
-    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
   }
 
-  .status-icon {
-    font-size: 32px;
+  .status-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--status-color);
   }
 
   .status-text {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 600;
+    color: var(--text-primary);
     text-transform: capitalize;
-    color: var(--status-color);
   }
 
   .health-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
-    margin-bottom: 32px;
   }
 
   .health-card {
@@ -276,114 +351,132 @@
     padding: 20px;
   }
 
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .card-icon {
-    font-size: 20px;
-  }
-
-  .card-header h3 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-secondary);
-  }
-
-  .card-value {
-    font-size: 20px;
+  .health-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
     font-weight: 600;
     color: var(--text-primary);
   }
 
-  .card-value.success {
-    color: #34c759;
-  }
-
-  .card-hint {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 8px;
-  }
-
-  .memory-details {
-    margin-top: 8px;
-  }
-
-  .memory-bar-container {
-    height: 8px;
-    background: var(--bg-hover);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 8px;
-  }
-
-  .memory-bar {
-    height: 100%;
-    background: var(--accent-color);
-    border-radius: 4px;
-  }
-
-  .memory-values {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  .process-details {
-    display: flex;
-    gap: 24px;
-  }
-
-  .process-stat {
+  .card-content {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 12px;
   }
 
-  .stat-label {
-    font-size: 12px;
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .metric-label {
+    font-size: 14px;
     color: var(--text-secondary);
   }
 
-  .stat-value {
-    font-size: 18px;
-    font-weight: 600;
+  .metric-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
   }
 
-  .details-section h2 {
-    font-size: 18px;
+  .metric-value.mode {
+    background: var(--bg-hover);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .metric-description {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 4px 0 0 0;
+  }
+
+  .permission-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  .permission-status {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--error-color);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .permission-status.granted {
+    background: #30d158;
+  }
+
+  .model-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  .model-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+  }
+
+  .model-indicator.loaded {
+    background: #30d158;
+  }
+
+  .details-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .details-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
     font-weight: 600;
-    margin-bottom: 16px;
+    color: var(--text-primary);
   }
 
   .details-list {
-    list-style: none;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
-  .details-list li {
+  .detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 8px 0;
     border-bottom: 1px solid var(--border-color);
   }
 
-  .details-list li:last-child {
+  .detail-item:last-child {
     border-bottom: none;
   }
 
   .detail-key {
-    font-weight: 500;
-    margin-right: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
   }
 
   .detail-value {
-    color: var(--text-secondary);
+    font-size: 13px;
+    color: var(--text-primary);
   }
 </style>

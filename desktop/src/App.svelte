@@ -15,10 +15,9 @@
     // Check API connection on start
     checkApiConnection();
 
-    // Store unlisten function for cleanup
+    // Listen for navigation events from tray menu
     let unlisten: (() => void) | undefined;
 
-    // Listen for navigation events from tray menu
     listen<string>("navigate", (event) => {
       if (
         event.payload === "health" ||
@@ -36,7 +35,7 @@
 
     // Cleanup on unmount
     return () => {
-      unlisten?.();
+      if (unlisten) unlisten();
     };
   });
 </script>
@@ -45,7 +44,7 @@
   <Sidebar bind:currentView />
 
   {#if currentView === "dashboard"}
-    <Dashboard on:navigate={(e) => currentView = e.detail} />
+    <Dashboard on:navigate={(e) => currentView = e.detail as typeof currentView} />
   {:else if currentView === "health"}
     <HealthStatus />
   {:else}

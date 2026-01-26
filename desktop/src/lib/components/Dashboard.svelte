@@ -1,132 +1,130 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import { getConversationsStore } from "../stores/conversations";
-  import { getHealthStore } from "../stores/health";
+  import { conversations } from "../stores/conversations";
+  import { healthStatus, isApiConnected } from "../stores/health";
 
-  const dispatch = createEventDispatcher<{ navigate: "messages" | "health" }>();
+  const dispatch = createEventDispatcher<{ navigate: string }>();
 
-  const conversationsStore = getConversationsStore();
-  const healthStore = getHealthStore();
+  $: totalConversations = $conversations.length;
+  $: groupChats = $conversations.filter((c) => c.is_group).length;
+  $: directChats = totalConversations - groupChats;
 </script>
 
-<main class="dashboard">
-  <header class="dashboard-header">
+<div class="dashboard">
+  <div class="dashboard-header">
     <h1>Dashboard</h1>
-    <p class="subtitle">JARVIS AI Assistant Overview</p>
-  </header>
-
-  <div class="stats-grid">
-    <button class="stat-card" onclick={() => dispatch("navigate", "messages")}>
-      <div class="stat-icon">💬</div>
-      <div class="stat-content">
-        <div class="stat-value">{conversationsStore.conversations.length}</div>
-        <div class="stat-label">Conversations</div>
-      </div>
-    </button>
-
-    <button class="stat-card" onclick={() => dispatch("navigate", "health")}>
-      <div class="stat-icon">
-        {#if healthStore.health?.status === "healthy"}
-          ✅
-        {:else if healthStore.health?.status === "degraded"}
-          ⚠️
-        {:else}
-          ❌
-        {/if}
-      </div>
-      <div class="stat-content">
-        <div class="stat-value">
-          {healthStore.health?.status || "Unknown"}
-        </div>
-        <div class="stat-label">System Health</div>
-      </div>
-    </button>
-
-    <div class="stat-card">
-      <div class="stat-icon">🧠</div>
-      <div class="stat-content">
-        <div class="stat-value">
-          {healthStore.health?.memory_mode || "N/A"}
-        </div>
-        <div class="stat-label">Memory Mode</div>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-icon">📱</div>
-      <div class="stat-content">
-        <div class="stat-value">
-          {healthStore.health?.imessage_access ? "Connected" : "Disconnected"}
-        </div>
-        <div class="stat-label">iMessage</div>
-      </div>
-    </div>
   </div>
 
-  <section class="quick-actions">
-    <h2>Quick Actions</h2>
-    <div class="action-buttons">
-      <button class="action-btn" onclick={() => dispatch("navigate", "messages")}>
-        <span class="action-icon">✉️</span>
-        <span>View Messages</span>
+  <div class="dashboard-content">
+    <div class="stats-grid">
+      <button
+        class="stat-card clickable"
+        on:click={() => dispatch("navigate", "messages")}
+      >
+        <span class="stat-icon">💬</span>
+        <div class="stat-info">
+          <span class="stat-value">{totalConversations}</span>
+          <span class="stat-label">Conversations</span>
+        </div>
       </button>
-      <button class="action-btn" onclick={() => dispatch("navigate", "health")}>
-        <span class="action-icon">📊</span>
-        <span>System Health</span>
+
+      <div class="stat-card">
+        <span class="stat-icon">👤</span>
+        <div class="stat-info">
+          <span class="stat-value">{directChats}</span>
+          <span class="stat-label">Direct Chats</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-icon">👥</span>
+        <div class="stat-info">
+          <span class="stat-value">{groupChats}</span>
+          <span class="stat-label">Group Chats</span>
+        </div>
+      </div>
+
+      <button
+        class="stat-card clickable"
+        class:healthy={$healthStatus?.status === "healthy"}
+        class:degraded={$healthStatus?.status === "degraded"}
+        class:unhealthy={$healthStatus?.status === "unhealthy"}
+        on:click={() => dispatch("navigate", "health")}
+      >
+        <span class="stat-icon">❤️</span>
+        <div class="stat-info">
+          <span class="stat-value">
+            {$isApiConnected ? $healthStatus?.status || "Unknown" : "Offline"}
+          </span>
+          <span class="stat-label">System Health</span>
+        </div>
       </button>
     </div>
-  </section>
 
-  {#if healthStore.health}
-    <section class="memory-info">
-      <h2>Memory Usage</h2>
-      <div class="memory-bar-container">
-        <div
-          class="memory-bar"
-          style="width: {Math.min(
-            100,
-            (healthStore.health.memory_used_gb /
-              (healthStore.health.memory_used_gb + healthStore.health.memory_available_gb)) *
-              100
-          )}%"
-        ></div>
+    {#if $healthStatus}
+      <div class="info-section">
+        <h2>System Info</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Memory Mode</span>
+            <span class="info-value">{$healthStatus.memory_mode}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Available Memory</span>
+            <span class="info-value">
+              {$healthStatus.memory_available_gb.toFixed(1)} GB
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Model Loaded</span>
+            <span class="info-value">
+              {$healthStatus.model_loaded ? "Yes" : "No"}
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">iMessage Access</span>
+            <span class="info-value">
+              {$healthStatus.imessage_access ? "Granted" : "Denied"}
+            </span>
+          </div>
+        </div>
       </div>
-      <div class="memory-stats">
-        <span>Used: {healthStore.health.memory_used_gb.toFixed(1)} GB</span>
-        <span>Available: {healthStore.health.memory_available_gb.toFixed(1)} GB</span>
-      </div>
-    </section>
-  {/if}
-</main>
+    {/if}
+  </div>
+</div>
 
 <style>
   .dashboard {
     flex: 1;
-    padding: 32px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     background: var(--bg-primary);
+    overflow-y: auto;
   }
 
   .dashboard-header {
-    margin-bottom: 32px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .dashboard-header h1 {
-    font-size: 28px;
+    margin: 0;
+    font-size: 24px;
     font-weight: 600;
-    margin-bottom: 8px;
+    color: var(--text-primary);
   }
 
-  .subtitle {
-    color: var(--text-secondary);
-    font-size: 14px;
+  .dashboard-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
   }
 
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
-    margin-bottom: 32px;
   }
 
   .stat-card {
@@ -137,93 +135,84 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    cursor: pointer;
-    transition: all 0.15s ease;
     text-align: left;
   }
 
-  .stat-card:hover {
+  .stat-card.clickable {
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .stat-card.clickable:hover {
     background: var(--bg-hover);
-    transform: translateY(-2px);
+    border-color: var(--accent-color);
+  }
+
+  .stat-card.healthy {
+    border-color: #30d158;
+  }
+
+  .stat-card.degraded {
+    border-color: #ff9f0a;
+  }
+
+  .stat-card.unhealthy {
+    border-color: var(--error-color);
   }
 
   .stat-icon {
     font-size: 32px;
   }
 
+  .stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
   .stat-value {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 600;
+    color: var(--text-primary);
     text-transform: capitalize;
   }
 
   .stat-label {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-secondary);
-    margin-top: 2px;
   }
 
-  .quick-actions {
-    margin-bottom: 32px;
-  }
-
-  .quick-actions h2 {
+  .info-section h2 {
     font-size: 18px;
     font-weight: 600;
-    margin-bottom: 16px;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
   }
 
-  .action-buttons {
-    display: flex;
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
   }
 
-  .action-btn {
+  .info-item {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 12px 20px;
+    padding: 12px 16px;
     display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    color: var(--text-primary);
-    transition: all 0.15s ease;
+    flex-direction: column;
+    gap: 4px;
   }
 
-  .action-btn:hover {
-    background: var(--bg-hover);
-  }
-
-  .action-icon {
-    font-size: 18px;
-  }
-
-  .memory-info h2 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 16px;
-  }
-
-  .memory-bar-container {
-    height: 8px;
-    background: var(--bg-secondary);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 8px;
-  }
-
-  .memory-bar {
-    height: 100%;
-    background: var(--accent-color);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-  }
-
-  .memory-stats {
-    display: flex;
-    justify-content: space-between;
+  .info-label {
     font-size: 12px;
     color: var(--text-secondary);
+  }
+
+  .info-value {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
   }
 </style>

@@ -1,237 +1,158 @@
 /**
- * API client for communicating with the JARVIS backend.
+ * API client for JARVIS backend.
+ * Communicates with the FastAPI server at localhost:8742
  */
 
 import type {
   Conversation,
-  DraftReplyResponse,
-  HealthStatus,
   Message,
+  HealthStatus,
+  SummaryRequest,
+  SummaryResponse,
   SendMessageRequest,
   SendMessageResponse,
-  SuggestionResponse,
-  SummaryResponse,
+  ErrorResponse,
 } from "./types";
 
-// Allow configuration via environment variable, with fallback to localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = "http://localhost:8742";
+const DEFAULT_TIMEOUT = 30000; // 30 seconds
 
-class APIError extends Error {
+class ApiError extends Error {
   constructor(
     message: string,
-    public status: number,
+    public statusCode: number,
     public detail?: string
   ) {
     super(message);
-    this.name = "APIError";
+    this.name = "ApiError";
+  }
+}
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeout: number = DEFAULT_TIMEOUT
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new APIError(
-      errorData.error || `HTTP ${response.status}`,
+    let errorDetail: string | undefined;
+    try {
+      const errorData: ErrorResponse = await response.json();
+      errorDetail = errorData.detail || errorData.error;
+    } catch {
+      errorDetail = response.statusText;
+    }
+    throw new ApiError(
+      `API request failed: ${response.status}`,
       response.status,
-      errorData.detail
+      errorDetail
     );
   }
   return response.json();
 }
 
-/**
- * JARVIS API Client
- */
-export class JarvisClient {
-  private baseUrl: string;
-
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl;
-  }
-
-  // Health endpoints
-
-  async getHealth(): Promise<HealthStatus> {
-    const response = await fetch(`${this.baseUrl}/health`);
-    return handleResponse<HealthStatus>(response);
-  }
-
-  async ping(): Promise<{ status: string; service: string }> {
-    const response = await fetch(`${this.baseUrl}/`);
-    return handleResponse<{ status: string; service: string }>(response);
-  }
-
-  // Conversation endpoints
-
-  async getConversations(options?: {
-    limit?: number;
-    since?: string;
-    before?: string;
-  }): Promise<Conversation[]> {
-    const params = new URLSearchParams();
-    if (options?.limit) params.set("limit", options.limit.toString());
-    if (options?.since) params.set("since", options.since);
-    if (options?.before) params.set("before", options.before);
-
-    const url = `${this.baseUrl}/conversations${params.toString() ? `?${params}` : ""}`;
-    const response = await fetch(url);
+export const api = {
+  /**
+   * Get list of conversations
+   */
+  async getConversations(limit: number = 50): Promise<Conversation[]> {
+    const response = await fetchWithTimeout(
+      `${API_BASE}/conversations?limit=${limit}`
+    );
     return handleResponse<Conversation[]>(response);
-  }
+  },
 
-  async getMessages(
+  /**
+   * Get messages for a specific conversation
+   */
+  async getMessages(chatId: string, limit: number = 100): Promise<Message[]> {
+    const response = await fetchWithTimeout(
+      `${API_BASE}/conversations/${encodeURIComponent(chatId)}/messages?limit=${limit}`
+    );
+    return handleResponse<Message[]>(response);
+  },
+
+  /**
+   * Get system health status
+   */
+  async getHealth(): Promise<HealthStatus> {
+    const response = await fetchWithTimeout(`${API_BASE}/health`);
+    return handleResponse<HealthStatus>(response);
+  },
+
+  /**
+   * Generate a summary for a conversation
+   */
+  async getSummary(
     chatId: string,
-    options?: {
-      limit?: number;
-      before?: string;
-    }
-  ): Promise<Message[]> {
-    const params = new URLSearchParams();
-    if (options?.limit) params.set("limit", options.limit.toString());
-    if (options?.before) params.set("before", options.before);
+    messageCount: number = 50
+  ): Promise<SummaryResponse> {
+    const request: SummaryRequest = {
+      chat_id: chatId,
+      message_count: messageCount,
+    };
 
-    const url = `${this.baseUrl}/conversations/${encodeURIComponent(chatId)}/messages${params.toString() ? `?${params}` : ""}`;
-    const response = await fetch(url);
-    return handleResponse<Message[]>(response);
-  }
+    const response = await fetchWithTimeout(
+      `${API_BASE}/drafts/summarize`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+      },
+      DEFAULT_TIMEOUT
+    );
 
-  async searchMessages(
-    query: string,
-    options?: {
-      limit?: number;
-      sender?: string;
-      after?: string;
-      before?: string;
-      chatId?: string;
-      hasAttachments?: boolean;
-    }
-  ): Promise<Message[]> {
-    const params = new URLSearchParams();
-    params.set("q", query);
-    if (options?.limit) params.set("limit", options.limit.toString());
-    if (options?.sender) params.set("sender", options.sender);
-    if (options?.after) params.set("after", options.after);
-    if (options?.before) params.set("before", options.before);
-    if (options?.chatId) params.set("chat_id", options.chatId);
-    if (options?.hasAttachments !== undefined) {
-      params.set("has_attachments", options.hasAttachments.toString());
-    }
+    return handleResponse<SummaryResponse>(response);
+  },
 
-    const url = `${this.baseUrl}/conversations/search?${params}`;
-    const response = await fetch(url);
-    return handleResponse<Message[]>(response);
-  }
-
+  /**
+   * Send a message to a conversation
+   */
   async sendMessage(
     chatId: string,
     request: SendMessageRequest
   ): Promise<SendMessageResponse> {
-    const response = await fetch(
-      `${this.baseUrl}/conversations/${encodeURIComponent(chatId)}/send`,
+    const response = await fetchWithTimeout(
+      `${API_BASE}/conversations/${encodeURIComponent(chatId)}/send`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(request),
       }
     );
     return handleResponse<SendMessageResponse>(response);
-  }
-
-  async sendAttachment(
-    chatId: string,
-    filePath: string,
-    options?: { recipient?: string; isGroup?: boolean }
-  ): Promise<SendMessageResponse> {
-    const response = await fetch(
-      `${this.baseUrl}/conversations/${encodeURIComponent(chatId)}/send-attachment`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_path: filePath,
-          recipient: options?.recipient,
-          is_group: options?.isGroup,
-        }),
-      }
-    );
-    return handleResponse<SendMessageResponse>(response);
-  }
-
-  // Suggestion endpoints
-
-  async getSuggestions(
-    lastMessage: string,
-    numSuggestions: number = 3
-  ): Promise<SuggestionResponse> {
-    const response = await fetch(`${this.baseUrl}/suggestions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        last_message: lastMessage,
-        num_suggestions: numSuggestions,
-      }),
-    });
-    return handleResponse<SuggestionResponse>(response);
-  }
-
-  // AI-powered endpoints
+  },
 
   /**
-   * Get AI-generated draft replies for a conversation.
-   *
-   * @param chatId - The conversation ID
-   * @param instruction - Optional instruction for what kind of reply to generate
-   * @param numSuggestions - Number of suggestions to generate (default: 3)
-   * @param signal - Optional AbortSignal to cancel the request
+   * Check if API is reachable
    */
-  async getDraftReplies(
-    chatId: string,
-    instruction?: string,
-    numSuggestions: number = 3,
-    signal?: AbortSignal
-  ): Promise<DraftReplyResponse> {
-    const response = await fetch(
-      `${this.baseUrl}/conversations/${encodeURIComponent(chatId)}/draft-replies`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instruction: instruction || null,
-          num_suggestions: numSuggestions,
-        }),
-        signal,
-      }
-    );
-    return handleResponse<DraftReplyResponse>(response);
-  }
+  async ping(): Promise<boolean> {
+    try {
+      const response = await fetchWithTimeout(`${API_BASE}/health`, {}, 5000);
+      return response.ok;
+    } catch {
+      return false;
+    }
+  },
+};
 
-  /**
-   * Get an AI-generated summary of a conversation.
-   *
-   * @param chatId - The conversation ID
-   * @param numMessages - Number of recent messages to summarize (default: 50)
-   * @param signal - Optional AbortSignal to cancel the request
-   */
-  async getSummary(
-    chatId: string,
-    numMessages: number = 50,
-    signal?: AbortSignal
-  ): Promise<SummaryResponse> {
-    const response = await fetch(
-      `${this.baseUrl}/conversations/${encodeURIComponent(chatId)}/summary`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          num_messages: numMessages,
-        }),
-        signal,
-      }
-    );
-    return handleResponse<SummaryResponse>(response);
-  }
-}
-
-// Default client instance
-export const apiClient = new JarvisClient();
-
-export { APIError };
+export { ApiError };
+export default api;
