@@ -6,10 +6,11 @@
   import MessageView from "./lib/components/MessageView.svelte";
   import Dashboard from "./lib/components/Dashboard.svelte";
   import HealthStatus from "./lib/components/HealthStatus.svelte";
+  import Settings from "./lib/components/Settings.svelte";
   import { checkApiConnection } from "./lib/stores/health";
   import { clearSelection } from "./lib/stores/conversations";
 
-  let currentView: "messages" | "dashboard" | "health" = "messages";
+  let currentView: "messages" | "dashboard" | "health" | "settings" = "messages";
 
   onMount(async () => {
     // Check API connection on start
@@ -20,7 +21,8 @@
       if (
         event.payload === "health" ||
         event.payload === "dashboard" ||
-        event.payload === "messages"
+        event.payload === "messages" ||
+        event.payload === "settings"
       ) {
         currentView = event.payload;
         if (event.payload !== "messages") {
@@ -43,6 +45,8 @@
     <Dashboard on:navigate={(e) => currentView = e.detail} />
   {:else if currentView === "health"}
     <HealthStatus />
+  {:else if currentView === "settings"}
+    <Settings />
   {:else}
     <ConversationList />
     <MessageView />

@@ -10,7 +10,7 @@ Usage:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import conversations_router, health_router, suggestions_router
+from api.routers import conversations_router, health_router, settings_router, suggestions_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -40,3 +40,4 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(conversations_router)
 app.include_router(suggestions_router)
+app.include_router(settings_router)
