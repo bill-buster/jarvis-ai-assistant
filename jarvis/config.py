@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 CONFIG_PATH = Path.home() / ".jarvis" / "config.json"
 
 # Current config schema version for migration tracking
-CONFIG_VERSION = 3
+CONFIG_VERSION = 4
 
 
 class MemoryThresholds(BaseModel):
@@ -100,6 +100,22 @@ class ModelSettings(BaseModel):
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
 
 
+class TaskQueueConfig(BaseModel):
+    """Task queue configuration for background operations.
+
+    Attributes:
+        max_completed_tasks: Maximum completed tasks to keep in memory.
+        worker_poll_interval: Seconds between queue polls when idle.
+        max_retries: Default maximum retry attempts for failed tasks.
+        auto_start_worker: Automatically start the worker when queue is used.
+    """
+
+    max_completed_tasks: int = Field(default=100, ge=10, le=1000)
+    worker_poll_interval: float = Field(default=1.0, ge=0.1, le=10.0)
+    max_retries: int = Field(default=3, ge=0, le=10)
+    auto_start_worker: bool = True
+
+
 class JarvisConfig(BaseModel):
     """JARVIS configuration schema.
 
@@ -113,6 +129,7 @@ class JarvisConfig(BaseModel):
         search: Search preferences.
         chat: Chat preferences.
         model: Model configuration for text generation.
+        task_queue: Task queue configuration for background operations.
     """
 
     config_version: int = CONFIG_VERSION
@@ -124,6 +141,7 @@ class JarvisConfig(BaseModel):
     search: SearchConfig = Field(default_factory=SearchConfig)
     chat: ChatConfig = Field(default_factory=ChatConfig)
     model: ModelSettings = Field(default_factory=ModelSettings)
+    task_queue: TaskQueueConfig = Field(default_factory=TaskQueueConfig)
 
 
 # Module-level singleton with thread safety
@@ -138,6 +156,7 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
     Handles migration from:
     - v1 (no version field) to v2 (with ui/search/chat sections)
     - v2 to v3 (with model section)
+    - v3 to v4 (with task_queue section)
 
     Args:
         data: Raw config data loaded from file.
@@ -184,6 +203,15 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
                 data["model"]["model_id"] = path_to_id[model_path]
 
         version = 3
+
+    if version < 4:
+        logger.info(f"Migrating config from version {version} to {CONFIG_VERSION}")
+
+        # Add task_queue section if missing
+        if "task_queue" not in data:
+            data["task_queue"] = {}
+
+        version = 4
 
     # Update version
     data["config_version"] = CONFIG_VERSION

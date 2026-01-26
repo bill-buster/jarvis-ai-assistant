@@ -69,6 +69,13 @@ class ErrorCode(str, Enum):
     RES_DISK_FULL = "RES_DISK_FULL"
     RES_DISK_ACCESS = "RES_DISK_ACCESS"
 
+    # Task errors (TSK_*)
+    TSK_NOT_FOUND = "TSK_NOT_FOUND"
+    TSK_INVALID_STATUS = "TSK_INVALID_STATUS"
+    TSK_EXECUTION_FAILED = "TSK_EXECUTION_FAILED"
+    TSK_CANCELLED = "TSK_CANCELLED"
+    TSK_QUEUE_FULL = "TSK_QUEUE_FULL"
+
     # Generic errors
     UNKNOWN = "UNKNOWN"
 
@@ -600,7 +607,106 @@ class DiskResourceError(ResourceError):
         )
 
 
+# Task Errors
+
+
+class TaskError(JarvisError):
+    """Base class for task-related errors.
+
+    Raised when task queue operations fail.
+    """
+
+    default_message = "Task error"
+    default_code = ErrorCode.TSK_EXECUTION_FAILED
+
+    def __init__(
+        self,
+        message: str | None = None,
+        *,
+        task_id: str | None = None,
+        task_type: str | None = None,
+        code: ErrorCode | None = None,
+        details: dict[str, Any] | None = None,
+        cause: Exception | None = None,
+    ) -> None:
+        """Initialize a task error.
+
+        Args:
+            message: Human-readable error message.
+            task_id: ID of the task that caused the error.
+            task_type: Type of the task.
+            code: Error code for programmatic handling.
+            details: Additional context as key-value pairs.
+            cause: Original exception that caused this error.
+        """
+        details = details or {}
+        if task_id:
+            details["task_id"] = task_id
+        if task_type:
+            details["task_type"] = task_type
+        super().__init__(message, code=code, details=details, cause=cause)
+
+
+class TaskNotFoundError(TaskError):
+    """Raised when a task is not found.
+
+    Examples:
+        - Task ID does not exist
+        - Task was deleted
+    """
+
+    default_message = "Task not found"
+    default_code = ErrorCode.TSK_NOT_FOUND
+
+
+class TaskExecutionError(TaskError):
+    """Raised when task execution fails.
+
+    Examples:
+        - Handler raised an exception
+        - Required resources unavailable
+        - Timeout during execution
+    """
+
+    default_message = "Task execution failed"
+    default_code = ErrorCode.TSK_EXECUTION_FAILED
+
+
 # Convenience functions for common error scenarios
+
+
+def task_not_found(task_id: str) -> TaskNotFoundError:
+    """Create a TaskNotFoundError for a missing task.
+
+    Args:
+        task_id: The task ID that was not found.
+
+    Returns:
+        TaskNotFoundError with appropriate details.
+    """
+    return TaskNotFoundError(
+        f"Task not found: {task_id}",
+        task_id=task_id,
+    )
+
+
+def task_invalid_status(task_id: str, current_status: str, required_status: str) -> TaskError:
+    """Create a TaskError for invalid task status.
+
+    Args:
+        task_id: The task ID.
+        current_status: Current status of the task.
+        required_status: Required status for the operation.
+
+    Returns:
+        TaskError with status details.
+    """
+    return TaskError(
+        f"Task {task_id} has status '{current_status}', but requires '{required_status}'",
+        task_id=task_id,
+        code=ErrorCode.TSK_INVALID_STATUS,
+        details={"current_status": current_status, "required_status": required_status},
+    )
 
 
 def model_not_found(model_path: str) -> ModelLoadError:
@@ -736,6 +842,10 @@ __all__ = [
     "ResourceError",
     "MemoryResourceError",
     "DiskResourceError",
+    # Task errors
+    "TaskError",
+    "TaskNotFoundError",
+    "TaskExecutionError",
     # Convenience functions
     "model_not_found",
     "model_out_of_memory",
@@ -743,4 +853,6 @@ __all__ = [
     "imessage_db_not_found",
     "validation_required",
     "validation_type_error",
+    "task_not_found",
+    "task_invalid_status",
 ]

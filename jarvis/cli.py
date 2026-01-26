@@ -1033,6 +1033,320 @@ def cmd_export(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_batch(args: argparse.Namespace) -> int:
+    """Handle batch operations.
+
+    Args:
+        args: Parsed arguments with subcommand and options.
+
+    Returns:
+        Exit code.
+    """
+    from rich.progress import BarColumn, Progress, TaskID, TextColumn, TimeElapsedColumn
+
+    from jarvis.tasks import (
+        TaskStatus,
+        TaskType,
+        get_task_queue,
+        get_worker,
+        start_worker,
+    )
+
+    subcommand = args.batch_command
+    if subcommand is None:
+        console.print("[red]Error: Please specify a batch subcommand[/red]")
+        console.print("Available subcommands: export, summarize")
+        return 1
+
+    # Ensure worker is running
+    worker = get_worker()
+    if not worker.is_running:
+        start_worker()
+
+    queue = get_task_queue()
+
+    if subcommand == "export":
+        # Get chat IDs
+        if args.all:
+            # Export all conversations
+            console.print("[bold]Exporting all conversations...[/bold]")
+            if not _check_imessage_access():
+                console.print(
+                    "[red]Cannot access iMessage. Grant Full Disk Access in "
+                    "System Settings > Privacy & Security.[/red]"
+                )
+                return 1
+
+            from integrations.imessage import ChatDBReader
+
+            with ChatDBReader() as reader:
+                conversations = reader.get_conversations(limit=args.limit or 50)
+                chat_ids = [c.chat_id for c in conversations]
+
+            if not chat_ids:
+                console.print("[yellow]No conversations found.[/yellow]")
+                return 1
+
+            console.print(f"Found {len(chat_ids)} conversations")
+        elif args.chats:
+            chat_ids = [c.strip() for c in args.chats.split(",")]
+        else:
+            console.print("[red]Error: Specify --all or --chats[/red]")
+            return 1
+
+        # Create the task
+        task = queue.enqueue(
+            task_type=TaskType.BATCH_EXPORT,
+            params={
+                "chat_ids": chat_ids,
+                "format": args.format or "json",
+                "output_dir": args.output_dir,
+            },
+        )
+        console.print(f"[green]Task created: {task.id}[/green]")
+
+    elif subcommand == "summarize":
+        # Get chat IDs for summarization
+        if args.recent:
+            # Summarize recent conversations
+            console.print(f"[bold]Summarizing {args.recent} recent conversations...[/bold]")
+            if not _check_imessage_access():
+                console.print(
+                    "[red]Cannot access iMessage. Grant Full Disk Access in "
+                    "System Settings > Privacy & Security.[/red]"
+                )
+                return 1
+
+            from integrations.imessage import ChatDBReader
+
+            with ChatDBReader() as reader:
+                conversations = reader.get_conversations(limit=args.recent)
+                chat_ids = [c.chat_id for c in conversations]
+
+            if not chat_ids:
+                console.print("[yellow]No conversations found.[/yellow]")
+                return 1
+
+            console.print(f"Found {len(chat_ids)} conversations")
+        elif args.chats:
+            chat_ids = [c.strip() for c in args.chats.split(",")]
+        else:
+            console.print("[red]Error: Specify --recent or --chats[/red]")
+            return 1
+
+        # Create the task
+        task = queue.enqueue(
+            task_type=TaskType.BATCH_SUMMARIZE,
+            params={
+                "chat_ids": chat_ids,
+                "num_messages": args.messages or 50,
+            },
+        )
+        console.print(f"[green]Task created: {task.id}[/green]")
+
+    else:
+        console.print(f"[red]Unknown batch subcommand: {subcommand}[/red]")
+        return 1
+
+    # Monitor progress if requested
+    if not args.no_wait:
+        console.print("[dim]Waiting for task to complete (use --no-wait to skip)...[/dim]")
+
+        with Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeElapsedColumn(),
+            console=console,
+        ) as progress:
+            progress_task: TaskID = progress.add_task(
+                f"[cyan]{subcommand.capitalize()}...", total=100
+            )
+
+            import time
+
+            while True:
+                task = queue.get(task.id)
+                if task is None:
+                    console.print("[red]Task not found[/red]")
+                    return 1
+
+                progress.update(
+                    progress_task,
+                    completed=task.progress.percent,
+                    description=f"[cyan]{task.progress.message or subcommand.capitalize()}",
+                )
+
+                if task.is_terminal:
+                    break
+
+                time.sleep(0.5)
+
+        # Show final status
+        if task.status == TaskStatus.COMPLETED:
+            console.print("\n[green]Task completed successfully![/green]")
+            if task.result:
+                console.print(
+                    f"Processed: {task.result.items_processed}, Failed: {task.result.items_failed}"
+                )
+        elif task.status == TaskStatus.FAILED:
+            console.print(f"\n[red]Task failed: {task.error_message}[/red]")
+            return 1
+        else:
+            console.print(f"\n[yellow]Task status: {task.status.value}[/yellow]")
+
+    else:
+        console.print(f"\nTask ID: {task.id}")
+        console.print("Use 'jarvis tasks status <id>' to check progress")
+
+    return 0
+
+
+def cmd_tasks(args: argparse.Namespace) -> int:
+    """Handle task management commands.
+
+    Args:
+        args: Parsed arguments with subcommand.
+
+    Returns:
+        Exit code.
+    """
+    from jarvis.tasks import TaskStatus, get_task_queue
+
+    subcommand = args.tasks_command
+    if subcommand is None:
+        console.print("[red]Error: Please specify a tasks subcommand[/red]")
+        console.print("Available subcommands: list, status, cancel")
+        return 1
+
+    queue = get_task_queue()
+
+    if subcommand == "list":
+        # List all tasks
+        status_filter = None
+        if args.status:
+            try:
+                status_filter = TaskStatus(args.status)
+            except ValueError:
+                console.print(f"[red]Invalid status: {args.status}[/red]")
+                console.print("Valid statuses: pending, running, completed, failed, cancelled")
+                return 1
+
+        tasks = queue.get_all(status=status_filter, limit=args.limit or 20)
+
+        if not tasks:
+            console.print("[dim]No tasks found[/dim]")
+            return 0
+
+        table = Table(title="Tasks")
+        table.add_column("ID", style="dim", max_width=12)
+        table.add_column("Type")
+        table.add_column("Status")
+        table.add_column("Progress")
+        table.add_column("Created")
+
+        status_colors = {
+            TaskStatus.PENDING: "yellow",
+            TaskStatus.RUNNING: "blue",
+            TaskStatus.COMPLETED: "green",
+            TaskStatus.FAILED: "red",
+            TaskStatus.CANCELLED: "dim",
+        }
+
+        for task in tasks:
+            status_color = status_colors.get(task.status, "white")
+            created = task.created_at.strftime("%Y-%m-%d %H:%M")
+            progress = f"{task.progress.percent:.0f}%"
+
+            table.add_row(
+                task.id[:12],
+                task.task_type.value,
+                f"[{status_color}]{task.status.value}[/{status_color}]",
+                progress,
+                created,
+            )
+
+        console.print(table)
+
+        # Show summary
+        stats = queue.get_stats()
+        console.print(f"\n[dim]Total: {stats['total']} tasks[/dim]")
+
+    elif subcommand == "status":
+        if not args.task_id:
+            console.print("[red]Error: Please provide a task ID[/red]")
+            return 1
+
+        task = queue.get(args.task_id)
+        if task is None:
+            console.print(f"[red]Task not found: {args.task_id}[/red]")
+            return 1
+
+        # Show detailed status
+        console.print(Panel(f"[bold]Task: {task.id}[/bold]", title="Task Details"))
+
+        info_table = Table(show_header=False, box=None)
+        info_table.add_column("Field", style="bold")
+        info_table.add_column("Value")
+
+        status_colors = {
+            TaskStatus.PENDING: "yellow",
+            TaskStatus.RUNNING: "blue",
+            TaskStatus.COMPLETED: "green",
+            TaskStatus.FAILED: "red",
+            TaskStatus.CANCELLED: "dim",
+        }
+        status_color = status_colors.get(task.status, "white")
+
+        info_table.add_row("Type", task.task_type.value)
+        info_table.add_row("Status", f"[{status_color}]{task.status.value}[/{status_color}]")
+        info_table.add_row("Progress", f"{task.progress.percent:.1f}% - {task.progress.message}")
+        info_table.add_row("Created", task.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+
+        if task.started_at:
+            info_table.add_row("Started", task.started_at.strftime("%Y-%m-%d %H:%M:%S"))
+        if task.completed_at:
+            info_table.add_row("Completed", task.completed_at.strftime("%Y-%m-%d %H:%M:%S"))
+        if task.duration_seconds:
+            info_table.add_row("Duration", f"{task.duration_seconds:.2f}s")
+        if task.error_message:
+            info_table.add_row("Error", f"[red]{task.error_message}[/red]")
+        if task.result:
+            info_table.add_row(
+                "Result",
+                f"Processed: {task.result.items_processed}, Failed: {task.result.items_failed}",
+            )
+
+        console.print(info_table)
+
+    elif subcommand == "cancel":
+        if not args.task_id:
+            console.print("[red]Error: Please provide a task ID[/red]")
+            return 1
+
+        task = queue.get(args.task_id)
+        if task is None:
+            console.print(f"[red]Task not found: {args.task_id}[/red]")
+            return 1
+
+        if task.status != TaskStatus.PENDING:
+            console.print(f"[yellow]Cannot cancel task with status '{task.status.value}'[/yellow]")
+            return 1
+
+        success = queue.cancel(args.task_id)
+        if success:
+            console.print(f"[green]Task cancelled: {args.task_id}[/green]")
+        else:
+            console.print("[red]Failed to cancel task[/red]")
+            return 1
+
+    else:
+        console.print(f"[red]Unknown tasks subcommand: {subcommand}[/red]")
+        return 1
+
+    return 0
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     """Start the API server.
 
@@ -1478,6 +1792,183 @@ Output:
         help="Include attachment info in export (CSV only)",
     )
     export_parser.set_defaults(func=cmd_export)
+
+    # Batch command
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="Run batch operations on multiple conversations",
+        description=(
+            "Run batch operations for bulk processing.\n\n"
+            "Supports:\n"
+            "  - Export multiple conversations\n"
+            "  - Summarize multiple conversations\n\n"
+            "Operations run as background tasks with progress tracking."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis batch export --all
+      Export all conversations (up to 50)
+
+  jarvis batch export --all --limit 100 --format csv
+      Export up to 100 conversations as CSV
+
+  jarvis batch export --chats chat1,chat2,chat3
+      Export specific conversations
+
+  jarvis batch summarize --recent 10
+      Summarize 10 most recent conversations
+
+  jarvis batch summarize --chats chat1,chat2 --messages 100
+      Summarize specific conversations with 100 messages each
+        """,
+    )
+    batch_subparsers = batch_parser.add_subparsers(dest="batch_command")
+
+    # batch export subcommand
+    batch_export_parser = batch_subparsers.add_parser(
+        "export",
+        help="Export multiple conversations",
+    )
+    batch_export_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Export all conversations",
+    )
+    batch_export_parser.add_argument(
+        "--chats",
+        metavar="<ids>",
+        help="Comma-separated list of chat IDs to export",
+    )
+    batch_export_parser.add_argument(
+        "-l",
+        "--limit",
+        type=int,
+        metavar="<n>",
+        help="Maximum conversations to export when using --all (default: 50)",
+    )
+    batch_export_parser.add_argument(
+        "-f",
+        "--format",
+        choices=["json", "csv", "txt"],
+        default="json",
+        help="Export format (default: json)",
+    )
+    batch_export_parser.add_argument(
+        "-o",
+        "--output-dir",
+        dest="output_dir",
+        metavar="<dir>",
+        help="Output directory for export files",
+    )
+    batch_export_parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Don't wait for completion (return task ID immediately)",
+    )
+
+    # batch summarize subcommand
+    batch_summarize_parser = batch_subparsers.add_parser(
+        "summarize",
+        help="Summarize multiple conversations",
+    )
+    batch_summarize_parser.add_argument(
+        "--recent",
+        type=int,
+        metavar="<n>",
+        help="Summarize N most recent conversations",
+    )
+    batch_summarize_parser.add_argument(
+        "--chats",
+        metavar="<ids>",
+        help="Comma-separated list of chat IDs to summarize",
+    )
+    batch_summarize_parser.add_argument(
+        "-m",
+        "--messages",
+        type=int,
+        metavar="<n>",
+        help="Number of messages to include in each summary (default: 50)",
+    )
+    batch_summarize_parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Don't wait for completion (return task ID immediately)",
+    )
+
+    batch_parser.set_defaults(func=cmd_batch)
+
+    # Tasks command
+    tasks_parser = subparsers.add_parser(
+        "tasks",
+        help="Manage background tasks",
+        description=(
+            "Manage and monitor background tasks.\n\n"
+            "Commands:\n"
+            "  list     - List all tasks\n"
+            "  status   - Get detailed task status\n"
+            "  cancel   - Cancel a pending task"
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis tasks list
+      List all tasks
+
+  jarvis tasks list --status running
+      List only running tasks
+
+  jarvis tasks status abc123
+      Get detailed status for task abc123
+
+  jarvis tasks cancel abc123
+      Cancel pending task abc123
+        """,
+    )
+    tasks_subparsers = tasks_parser.add_subparsers(dest="tasks_command")
+
+    # tasks list subcommand
+    tasks_list_parser = tasks_subparsers.add_parser(
+        "list",
+        help="List all tasks",
+    )
+    tasks_list_parser.add_argument(
+        "--status",
+        choices=["pending", "running", "completed", "failed", "cancelled"],
+        help="Filter by status",
+    )
+    tasks_list_parser.add_argument(
+        "-l",
+        "--limit",
+        type=int,
+        default=20,
+        metavar="<n>",
+        help="Maximum tasks to show (default: 20)",
+    )
+
+    # tasks status subcommand
+    tasks_status_parser = tasks_subparsers.add_parser(
+        "status",
+        help="Get detailed task status",
+    )
+    tasks_status_parser.add_argument(
+        "task_id",
+        metavar="<id>",
+        help="Task ID to check",
+    )
+
+    # tasks cancel subcommand
+    tasks_cancel_parser = tasks_subparsers.add_parser(
+        "cancel",
+        help="Cancel a pending task",
+    )
+    tasks_cancel_parser.add_argument(
+        "task_id",
+        metavar="<id>",
+        help="Task ID to cancel",
+    )
+
+    tasks_parser.set_defaults(func=cmd_tasks)
 
     # Serve command
     serve_parser = subparsers.add_parser(

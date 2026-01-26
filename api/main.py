@@ -21,6 +21,7 @@ from fastapi.openapi.utils import get_openapi
 
 from api.errors import register_exception_handlers
 from api.routers import (
+    batch_router,
     contacts_router,
     conversations_router,
     drafts_router,
@@ -31,6 +32,7 @@ from api.routers import (
     settings_router,
     stats_router,
     suggestions_router,
+    tasks_router,
     template_analytics_router,
     topics_router,
 )
@@ -129,6 +131,16 @@ API_TAGS_METADATA = [
         "name": "template-analytics",
         "description": "Template matching analytics and optimization. "
         "Monitor template hit rates, view top templates, and identify optimization opportunities.",
+    },
+    {
+        "name": "tasks",
+        "description": "Background task management. "
+        "Create, monitor, and manage background tasks for batch operations.",
+    },
+    {
+        "name": "batch",
+        "description": "Batch operations for bulk processing. "
+        "Export, summarize, and generate replies for multiple conversations at once.",
     },
 ]
 
@@ -255,6 +267,8 @@ app.include_router(stats_router)
 app.include_router(metrics_router)
 app.include_router(template_analytics_router)
 app.include_router(topics_router)
+app.include_router(tasks_router)
+app.include_router(batch_router)
 
 # Register JARVIS exception handlers for standardized error responses
 register_exception_handlers(app)

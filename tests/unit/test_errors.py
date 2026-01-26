@@ -47,9 +47,10 @@ class TestErrorCode:
         for code in ErrorCode:
             if code == ErrorCode.UNKNOWN:
                 continue
-            # Should have a prefix like CFG_, MDL_, MSG_, VAL_, RES_
+            # Should have a prefix like CFG_, MDL_, MSG_, VAL_, RES_, TSK_
             assert any(
-                code.value.startswith(prefix) for prefix in ["CFG_", "MDL_", "MSG_", "VAL_", "RES_"]
+                code.value.startswith(prefix)
+                for prefix in ["CFG_", "MDL_", "MSG_", "VAL_", "RES_", "TSK_"]
             )
 
 
