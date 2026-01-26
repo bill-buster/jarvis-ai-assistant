@@ -1,6 +1,27 @@
+#!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
 """JARVIS CLI - Command-line interface for the JARVIS AI assistant.
 
 Provides commands for chat, iMessage search, health monitoring, and benchmarking.
+
+Usage:
+    jarvis chat                      Start interactive chat
+    jarvis search-messages "query"   Search iMessage conversations
+    jarvis reply John                Generate reply suggestions
+    jarvis summarize Sarah           Summarize a conversation
+    jarvis health                    Show system health status
+    jarvis benchmark memory          Run performance benchmarks
+    jarvis serve                     Start the API server
+    jarvis --examples                Show detailed usage examples
+
+For comprehensive documentation, see docs/CLI_GUIDE.md
+
+Shell Completion:
+    To enable shell completion, install argcomplete and run:
+
+    Bash:  eval "$(register-python-argcomplete jarvis)"
+    Zsh:   eval "$(register-python-argcomplete jarvis)"
+    Fish:  register-python-argcomplete --shell fish jarvis | source
 """
 
 import argparse
@@ -8,6 +29,14 @@ import logging
 import sys
 from datetime import UTC, datetime
 from typing import Any, NoReturn
+
+# Optional argcomplete support for shell completion
+try:
+    import argcomplete
+
+    ARGCOMPLETE_AVAILABLE = True
+except ImportError:
+    ARGCOMPLETE_AVAILABLE = False
 
 from rich.console import Console
 from rich.panel import Panel
@@ -946,6 +975,29 @@ def cmd_serve(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_examples(args: argparse.Namespace) -> int:
+    """Display detailed usage examples.
+
+    Args:
+        args: Parsed arguments.
+
+    Returns:
+        Exit code.
+    """
+    from jarvis.cli_examples import get_examples_text
+
+    console.print(get_examples_text())
+    return 0
+
+
+class HelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """Custom help formatter with improved argument formatting."""
+
+    def __init__(self, prog: str) -> None:
+        """Initialize formatter with wider help text."""
+        super().__init__(prog, max_help_position=30, width=100)
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create the argument parser with all subcommands.
 
@@ -954,19 +1006,32 @@ def create_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         prog="jarvis",
-        description="JARVIS - Local-first AI assistant for macOS",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=(
+            "JARVIS - Local-first AI assistant for macOS\n\n"
+            "An intelligent iMessage management system powered by MLX-based language models.\n"
+            "Runs entirely on Apple Silicon with no cloud data transmission."
+        ),
+        formatter_class=HelpFormatter,
         epilog="""
-Examples:
-  jarvis chat                      Start interactive chat
-  jarvis reply John                Generate reply suggestions for John
-  jarvis reply Sarah -i "say yes" Reply with specific instruction
-  jarvis summarize Mom             Summarize conversation with Mom
-  jarvis summarize Dad -n 100      Summarize last 100 messages
+Quick Start:
+  jarvis chat                      Start interactive chat session
   jarvis search-messages "dinner"  Search for messages about dinner
-  jarvis health                    Show system health status
-  jarvis benchmark memory          Run memory benchmark
-  jarvis serve                     Start the API server
+  jarvis reply John                Generate reply suggestions for John
+  jarvis summarize Mom             Get summary of conversation with Mom
+  jarvis health                    Check system health status
+
+Advanced Commands:
+  jarvis reply Sarah -i "say yes"  Reply with specific instruction
+  jarvis summarize Dad -n 100      Include last 100 messages in summary
+  jarvis serve --port 3000         Start API server on port 3000
+  jarvis benchmark memory          Run memory profiling benchmark
+
+For detailed documentation, run: jarvis --examples
+Or see: docs/CLI_GUIDE.md
+
+Permissions:
+  iMessage access requires Full Disk Access permission.
+  Grant in: System Settings > Privacy & Security > Full Disk Access
         """,
     )
 
@@ -974,155 +1039,355 @@ Examples:
         "-v",
         "--verbose",
         action="store_true",
-        help="Enable verbose logging",
+        help="enable debug logging for troubleshooting",
     )
 
     parser.add_argument(
         "--version",
         action="store_true",
-        help="Show version and exit",
+        help="show version information and exit",
     )
 
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    parser.add_argument(
+        "--examples",
+        action="store_true",
+        help="show detailed usage examples for all commands",
+    )
+
+    subparsers = parser.add_subparsers(
+        dest="command",
+        title="commands",
+        description="Use 'jarvis <command> --help' for more information on a specific command.",
+        metavar="<command>",
+    )
 
     # Chat command
     chat_parser = subparsers.add_parser(
         "chat",
-        help="Interactive chat mode",
+        help="start interactive chat mode",
+        description=(
+            "Start an interactive chat session with JARVIS.\n\n"
+            "The assistant uses intent-aware routing to understand your requests:\n"
+            "  - Ask to reply to someone: 'reply to John'\n"
+            "  - Request summaries: 'summarize my chat with Sarah'\n"
+            "  - Search messages: 'find messages about dinner'\n"
+            "  - General questions: anything else!\n\n"
+            "Type 'quit', 'exit', or 'q' to leave chat mode.\n"
+            "Press Ctrl+C to interrupt and exit."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis chat                      Start interactive chat
+  jarvis -v chat                   Chat with debug logging enabled
+
+Interactive Commands:
+  You: reply to John               Generate reply suggestions
+  You: summarize chat with Mom     Get conversation summary
+  You: find messages about dinner  Search messages
+  You: quit                        Exit chat mode
+        """,
     )
     chat_parser.set_defaults(func=cmd_chat)
 
     # Reply command
     reply_parser = subparsers.add_parser(
         "reply",
-        help="Generate reply suggestions for a conversation",
+        help="generate reply suggestions for a conversation",
+        description=(
+            "Generate intelligent reply suggestions for a conversation.\n\n"
+            "Analyzes the conversation context and the last message received\n"
+            "to suggest appropriate responses. Generates 3 different suggestions\n"
+            "with varying tones for you to choose from.\n\n"
+            "Requires Full Disk Access for iMessage access."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis reply John                Generate reply suggestions for John
+  jarvis reply Sarah -i "say yes"  Reply agreeing to something
+  jarvis reply Mom -i "decline politely"
+                                   Reply declining a request
+  jarvis reply Boss --instruction "confirm attendance"
+                                   Reply confirming something
+
+Tips:
+  - The person name is matched against your iMessage conversations
+  - Use partial names if full names don't match
+  - Instructions help guide the tone and content of suggestions
+        """,
     )
     reply_parser.add_argument(
         "person",
-        help="Name of person to reply to",
+        metavar="<person>",
+        help="name of the person to reply to (matched against conversations)",
     )
     reply_parser.add_argument(
         "-i",
         "--instruction",
-        help="Optional instruction (e.g., 'say yes but ask about timing')",
+        metavar="<text>",
+        help="optional instruction to guide the reply tone/content",
     )
     reply_parser.set_defaults(func=cmd_reply)
 
     # Summarize command
     summarize_parser = subparsers.add_parser(
         "summarize",
-        help="Summarize a conversation",
+        help="summarize a conversation",
+        description=(
+            "Generate a summary of a conversation with a specific person.\n\n"
+            "Analyzes recent messages to identify key topics, decisions,\n"
+            "and important information from the conversation.\n\n"
+            "Requires Full Disk Access for iMessage access."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis summarize John            Summarize last 50 messages with John
+  jarvis summarize Sarah -n 100    Include last 100 messages
+  jarvis summarize Mom --messages 20
+                                   Quick summary of recent messages
+
+Output includes:
+  - Date range of messages analyzed
+  - Total message count
+  - Key topics and decisions
+  - Action items (if any)
+        """,
     )
     summarize_parser.add_argument(
         "person",
-        help="Name of person/conversation to summarize",
+        metavar="<person>",
+        help="name of the person/conversation to summarize",
     )
     summarize_parser.add_argument(
         "-n",
         "--messages",
         type=int,
         default=50,
-        help="Number of messages to include (default: 50)",
+        metavar="<count>",
+        help="number of messages to include (default: 50)",
     )
     summarize_parser.set_defaults(func=cmd_summarize)
 
     # Search messages command
     search_parser = subparsers.add_parser(
         "search-messages",
-        help="Search iMessage conversations",
+        help="search iMessage conversations",
+        description=(
+            "Search through your iMessage conversations with powerful filtering.\n\n"
+            "Supports full-text search across all conversations with optional\n"
+            "filters for date range, sender, and attachments.\n\n"
+            "Date formats: YYYY-MM-DD or 'YYYY-MM-DD HH:MM'\n\n"
+            "Requires Full Disk Access for iMessage access."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis search-messages "dinner"
+      Search for messages containing "dinner"
+
+  jarvis search-messages "meeting" --limit 50
+      Get up to 50 results
+
+  jarvis search-messages "project" --sender "John"
+      Search messages from John about "project"
+
+  jarvis search-messages "photo" --has-attachment
+      Find messages with attachments mentioning "photo"
+
+  jarvis search-messages "birthday" --start-date 2024-06-01
+      Search messages after June 1, 2024
+
+  jarvis search-messages "I'll be there" --sender me
+      Search your own messages
+
+  jarvis search-messages "meeting" --start-date 2024-01-01 --end-date 2024-01-31
+      Search within a specific date range
+
+Date Formats:
+  YYYY-MM-DD              e.g., 2024-01-15
+  YYYY-MM-DD HH:MM        e.g., "2024-01-15 14:30" (quote for spaces)
+        """,
     )
     search_parser.add_argument(
         "query",
-        help="Search query string",
+        metavar="<query>",
+        help="search query string",
     )
     search_parser.add_argument(
         "-l",
         "--limit",
         type=int,
         default=20,
-        help="Maximum number of results (default: 20)",
+        metavar="<n>",
+        help="maximum number of results (default: 20)",
     )
     search_parser.add_argument(
         "--start-date",
         dest="start_date",
-        help="Filter messages after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM)",
+        metavar="<date>",
+        help="filter messages after this date (YYYY-MM-DD)",
     )
     search_parser.add_argument(
         "--end-date",
         dest="end_date",
-        help="Filter messages before this date (YYYY-MM-DD or YYYY-MM-DD HH:MM)",
+        metavar="<date>",
+        help="filter messages before this date (YYYY-MM-DD)",
     )
     search_parser.add_argument(
         "--sender",
-        help="Filter by sender phone number or email (use 'me' for your own messages)",
+        metavar="<name>",
+        help="filter by sender (use 'me' for your own messages)",
     )
     search_parser.add_argument(
         "--has-attachment",
         dest="has_attachment",
         action="store_true",
         default=None,
-        help="Show only messages with attachments",
+        help="show only messages with attachments",
     )
     search_parser.add_argument(
         "--no-attachment",
         dest="has_attachment",
         action="store_false",
-        help="Show only messages without attachments",
+        help="show only messages without attachments",
     )
     search_parser.set_defaults(func=cmd_search_messages)
 
     # Health command
     health_parser = subparsers.add_parser(
         "health",
-        help="Show system health status",
+        help="show system health status",
+        description=(
+            "Display comprehensive system health information.\n\n"
+            "Shows:\n"
+            "  - Memory status (available, used, operating mode)\n"
+            "  - Feature availability (chat, iMessage access)\n"
+            "  - Model status (loaded, memory usage)\n"
+            "  - Permission status for iMessage\n\n"
+            "Use this to diagnose issues or verify system readiness."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis health                    Show all health information
+  jarvis -v health                 Include debug information
+
+Operating Modes:
+  FULL      - All features available (8GB+ RAM)
+  LITE      - Reduced context windows (4-8GB RAM)
+  MINIMAL   - Basic functionality only (<4GB RAM)
+
+Feature States:
+  HEALTHY   - Feature is working normally
+  DEGRADED  - Feature works with reduced capability
+  FAILED    - Feature is unavailable
+        """,
     )
     health_parser.set_defaults(func=cmd_health)
 
     # Benchmark command
     bench_parser = subparsers.add_parser(
         "benchmark",
-        help="Run benchmarks",
+        help="run performance benchmarks",
+        description=(
+            "Run various performance benchmarks to evaluate system capabilities.\n\n"
+            "Available benchmark types:\n"
+            "  memory   - Profile model memory usage\n"
+            "             Gate: Pass <5.5GB, Fail >6.5GB\n\n"
+            "  latency  - Measure response times (cold/warm/hot start)\n"
+            "             Gate: Pass warm <3s, cold <15s\n\n"
+            "  hhem     - Evaluate hallucination scores using HHEM model\n"
+            "             Gate: Pass mean >=0.5\n\n"
+            "Note: Memory and latency benchmarks require Apple Silicon (MLX)."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis benchmark memory          Run memory profiling benchmark
+  jarvis benchmark latency         Measure response latencies
+  jarvis benchmark hhem            Evaluate hallucination rates
+  jarvis benchmark memory -o results.json
+                                   Save results to JSON file
+
+Output:
+  Results are displayed in the terminal and optionally saved to JSON.
+  JSON output includes detailed metrics for automated analysis.
+        """,
     )
     bench_parser.add_argument(
         "type",
         choices=["memory", "latency", "hhem"],
-        help="Benchmark type to run",
+        metavar="<type>",
+        help="benchmark type: memory, latency, or hhem",
     )
     bench_parser.add_argument(
         "-o",
         "--output",
-        help="Output file for results (JSON)",
+        metavar="<file>",
+        help="output file for results (JSON format)",
     )
     bench_parser.set_defaults(func=cmd_benchmark)
 
     # Version command (also accessible via --version)
     version_parser = subparsers.add_parser(
         "version",
-        help="Show version information",
+        help="show version information",
+        description="Display JARVIS version information.",
+        formatter_class=HelpFormatter,
     )
     version_parser.set_defaults(func=cmd_version)
 
     # Serve command
     serve_parser = subparsers.add_parser(
         "serve",
-        help="Start the API server",
+        help="start the API server",
+        description=(
+            "Start the FastAPI REST server for external integration.\n\n"
+            "The API server provides endpoints for:\n"
+            "  - Chat functionality\n"
+            "  - Message search\n"
+            "  - Health monitoring\n\n"
+            "Used by the Tauri desktop application and can be used\n"
+            "for custom integrations.\n\n"
+            "API documentation is available at /docs when running."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis serve                     Start on localhost:8000
+  jarvis serve --host 0.0.0.0      Listen on all interfaces
+  jarvis serve -p 3000             Use port 3000
+  jarvis serve --reload            Enable auto-reload for development
+  jarvis serve --host 0.0.0.0 --port 8080
+                                   Production setup
+
+API Endpoints (when running):
+  GET  /health            Health check
+  POST /chat              Send chat messages
+  GET  /messages/search   Search messages
+  GET  /docs              Interactive API documentation
+        """,
     )
     serve_parser.add_argument(
         "--host",
         default="127.0.0.1",
-        help="Host to bind to (default: 127.0.0.1)",
+        metavar="<addr>",
+        help="host address to bind to (default: 127.0.0.1)",
     )
     serve_parser.add_argument(
         "-p",
         "--port",
         type=int,
         default=8000,
-        help="Port to bind to (default: 8000)",
+        metavar="<port>",
+        help="port number to bind to (default: 8000)",
     )
     serve_parser.add_argument(
         "--reload",
         action="store_true",
-        help="Enable auto-reload for development",
+        help="enable auto-reload for development",
     )
     serve_parser.set_defaults(func=cmd_serve)
 
@@ -1139,11 +1404,20 @@ def main(argv: list[str] | None = None) -> int:
         Exit code.
     """
     parser = create_parser()
+
+    # Enable shell completion if argcomplete is available
+    if ARGCOMPLETE_AVAILABLE:
+        argcomplete.autocomplete(parser)
+
     args = parser.parse_args(argv)
 
     # Handle --version flag
     if args.version:
         return cmd_version(args)
+
+    # Handle --examples flag
+    if args.examples:
+        return cmd_examples(args)
 
     # Setup logging
     setup_logging(args.verbose)
@@ -1152,6 +1426,11 @@ def main(argv: list[str] | None = None) -> int:
     success, warnings = initialize_system()
     if not success:
         console.print("[red]Failed to initialize JARVIS system.[/red]")
+        console.print("\n[dim]Troubleshooting tips:[/dim]")
+        console.print("  1. Run 'python -m jarvis.setup' to validate environment")
+        console.print("  2. Check system requirements (Apple Silicon, Python 3.11+)")
+        console.print("  3. Run 'jarvis -v <command>' for debug logging")
+        console.print("  4. See docs/CLI_GUIDE.md for detailed troubleshooting")
         return 1
 
     # Show warnings

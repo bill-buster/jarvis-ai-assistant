@@ -231,7 +231,7 @@ git worktree list
 
 ## CLI Usage
 
-JARVIS provides a command-line interface for interacting with the assistant.
+JARVIS provides a command-line interface for interacting with the assistant. For comprehensive documentation, see [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md).
 
 ### Running JARVIS
 
@@ -241,18 +241,30 @@ jarvis --help
 
 # Via module (development)
 python -m jarvis --help
+
+# Show detailed examples
+jarvis --examples
 ```
 
 ### Available Commands
 
 ```bash
-# Interactive chat mode
+# Interactive chat mode (with intent-aware routing)
 jarvis chat
 
 # Search iMessage conversations
 jarvis search-messages "meeting tomorrow"
 jarvis search-messages "dinner" --limit 50
-jarvis search-messages "project" --sender "John" --after 2024-01-01
+jarvis search-messages "project" --sender "John" --start-date 2024-01-01
+jarvis search-messages "photo" --has-attachment
+
+# Generate reply suggestions (advanced)
+jarvis reply John
+jarvis reply Sarah -i "say yes but ask about timing"
+
+# Summarize conversations (advanced)
+jarvis summarize Mom
+jarvis summarize Dad -n 100
 
 # Show system health status
 jarvis health
@@ -263,22 +275,43 @@ jarvis benchmark latency
 jarvis benchmark hhem
 jarvis benchmark memory --output results.json
 
+# Start API server (for Tauri desktop app)
+jarvis serve
+jarvis serve --host 0.0.0.0 --port 8080
+
 # Version information
 jarvis version
 jarvis --version
 ```
 
-### Options
+### Global Options
 
 ```bash
 jarvis -v, --verbose    # Enable debug logging
 jarvis --version        # Show version and exit
+jarvis --examples       # Show detailed usage examples
 ```
 
 ### Permissions Required
 
 - **iMessage**: Requires Full Disk Access
   - Grant in System Settings > Privacy & Security > Full Disk Access
+
+### Shell Completion
+
+JARVIS supports shell completion via argcomplete:
+
+```bash
+# Bash (add to ~/.bashrc)
+eval "$(register-python-argcomplete jarvis)"
+
+# Zsh (add to ~/.zshrc)
+autoload -U bashcompinit && bashcompinit
+eval "$(register-python-argcomplete jarvis)"
+
+# Fish (create ~/.config/fish/completions/jarvis.fish)
+register-python-argcomplete --shell fish jarvis | source
+```
 
 ---
 
