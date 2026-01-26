@@ -13,6 +13,7 @@
   import AIDraftPanel from "./AIDraftPanel.svelte";
   import SummaryModal from "./SummaryModal.svelte";
   import SmartReplyChips from "./SmartReplyChips.svelte";
+  import ConversationStats from "./ConversationStats.svelte";
 
   // Panel visibility state
   let showDraftPanel = $state(false);
@@ -152,6 +153,7 @@
   function handleNewMessagesClick() {
     scrollToBottom();
   }
+  let showStatsModal = $state(false);
 
   // Handle keyboard shortcuts
   function handleKeydown(event: KeyboardEvent) {
@@ -279,6 +281,18 @@
         <p>{$selectedConversation.message_count} messages</p>
       </div>
       <div class="header-actions">
+        <button
+          class="action-btn"
+          onclick={() => showStatsModal = true}
+          title="View conversation statistics"
+          aria-label="View statistics"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </button>
         <button
           class="action-btn"
           onclick={() => showSummaryModal = true}
@@ -429,6 +443,14 @@
   <SummaryModal
     chatId={$selectedConversation.chat_id}
     onClose={() => showSummaryModal = false}
+  />
+{/if}
+
+<!-- Stats Modal -->
+{#if showStatsModal && $selectedConversation}
+  <ConversationStats
+    chatId={$selectedConversation.chat_id}
+    onClose={() => showStatsModal = false}
   />
 {/if}
 

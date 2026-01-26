@@ -5,6 +5,7 @@
 import type {
   ActivateResponse,
   Conversation,
+  ConversationStats,
   DownloadStatus,
   DraftReplyResponse,
   HealthResponse,
@@ -15,6 +16,7 @@ import type {
   SettingsUpdateRequest,
   SmartReplySuggestionsResponse,
   SummaryResponse,
+  TimeRange,
   TopicsResponse,
 } from "./types";
 
@@ -279,6 +281,28 @@ class ApiClient {
     const data = await response.json();
     // Add message_count for UI display
     return { ...data, message_count: numMessages };
+  }
+
+  // Statistics endpoints
+  async getConversationStats(
+    chatId: string,
+    timeRange: TimeRange = "month",
+    limit: number = 500
+  ): Promise<ConversationStats> {
+    const params = new URLSearchParams({
+      time_range: timeRange,
+      limit: limit.toString(),
+    });
+    return this.request<ConversationStats>(
+      `/stats/${encodeURIComponent(chatId)}?${params.toString()}`
+    );
+  }
+
+  async invalidateStatsCache(chatId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      `/stats/${encodeURIComponent(chatId)}/cache`,
+      { method: "DELETE" }
+    );
   }
 }
 
