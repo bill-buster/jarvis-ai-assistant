@@ -397,8 +397,8 @@ class TestIntentType:
         assert IntentType.GENERAL.value == "general"
 
     def test_intent_type_count(self) -> None:
-        """Test that we have exactly 5 intent types."""
-        assert len(IntentType) == 5
+        """Test that we have exactly 8 intent types (5 base + 3 group)."""
+        assert len(IntentType) == 8
 
 
 class TestIntentExamples:

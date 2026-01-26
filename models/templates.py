@@ -148,11 +148,23 @@ def is_sentence_model_loaded() -> bool:
 
 @dataclass
 class ResponseTemplate:
-    """A template for common response patterns."""
+    """A template for common response patterns.
+
+    Attributes:
+        name: Unique identifier for the template
+        patterns: Example prompts that match this template
+        response: The response to return
+        is_group_template: Whether this is a group chat specific template
+        min_group_size: Minimum group size for this template (None = any size)
+        max_group_size: Maximum group size for this template (None = any size)
+    """
 
     name: str
     patterns: list[str]  # Example prompts that match this template
     response: str  # The response to return
+    is_group_template: bool = False
+    min_group_size: int | None = None  # None means no minimum
+    max_group_size: int | None = None  # None means no maximum
 
 
 @dataclass
@@ -1003,6 +1015,446 @@ def _get_minimal_fallback_templates() -> list[ResponseTemplate]:
                 "starting from the earliest message."
             ),
         ),
+        # ============================================================================
+        # GROUP CHAT TEMPLATES
+        # ============================================================================
+        # --- Event Planning ---
+        ResponseTemplate(
+            name="group_event_when_works",
+            patterns=[
+                "when works for everyone",
+                "what time works for everyone",
+                "when is everyone free",
+                "when are you all available",
+                "what works for the group",
+                "when can everyone make it",
+                "what day works for all",
+            ],
+            response="I'm flexible! What times are you all thinking?",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_event_day_proposal",
+            patterns=[
+                "I can do Saturday",
+                "Saturday works for me",
+                "I'm free on Sunday",
+                "Friday works",
+                "I can make it on",
+                "that day works for me",
+                "I'm available then",
+            ],
+            response="That works for me too!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_event_conflict",
+            patterns=[
+                "that doesn't work for me",
+                "I can't do that day",
+                "I have a conflict",
+                "that time doesn't work",
+                "I'm busy then",
+                "can we do a different day",
+                "any other options",
+            ],
+            response="No worries! What other times work for you?",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_event_locked_in",
+            patterns=[
+                "let's do Saturday then",
+                "Saturday it is",
+                "let's lock that in",
+                "sounds like a plan",
+                "we're all set then",
+                "it's a date",
+                "perfect, see everyone then",
+            ],
+            response="Sounds good! See everyone there!",
+            is_group_template=True,
+        ),
+        # --- RSVP Coordination ---
+        ResponseTemplate(
+            name="group_rsvp_yes",
+            patterns=[
+                "count me in",
+                "I'm in",
+                "I'll be there",
+                "yes I'm coming",
+                "definitely coming",
+                "I'm down",
+                "sign me up",
+                "add me to the list",
+            ],
+            response="Awesome, see you there!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_rsvp_plus_one",
+            patterns=[
+                "I'll be there +1",
+                "count me plus one",
+                "I'm bringing someone",
+                "can I bring a friend",
+                "I'll be there with my partner",
+                "plus one for me",
+                "bringing my +1",
+            ],
+            response="Great, the more the merrier!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_rsvp_no",
+            patterns=[
+                "can't make it",
+                "I won't be able to come",
+                "count me out",
+                "I have to skip this one",
+                "I can't come",
+                "unfortunately I can't make it",
+                "sorry I can't be there",
+            ],
+            response="No worries, we'll miss you! Maybe next time.",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_rsvp_maybe",
+            patterns=[
+                "I might be able to come",
+                "I'll try to make it",
+                "tentative yes",
+                "put me down as a maybe",
+                "I'll let you know",
+                "not sure yet",
+                "I'll confirm later",
+            ],
+            response="Sounds good, just let us know when you can!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_rsvp_headcount",
+            patterns=[
+                "who's coming",
+                "how many people so far",
+                "what's the headcount",
+                "who's confirmed",
+                "how many are coming",
+                "who all is going",
+                "what's the count",
+            ],
+            response="Let me check - I think we have a few confirmed so far!",
+            is_group_template=True,
+            min_group_size=3,
+        ),
+        # --- Poll Responses ---
+        ResponseTemplate(
+            name="group_poll_vote_a",
+            patterns=[
+                "I vote for option A",
+                "option A",
+                "I prefer A",
+                "A for me",
+                "going with A",
+                "my vote is A",
+                "definitely A",
+            ],
+            response="Got it, A it is for me too!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_poll_vote_b",
+            patterns=[
+                "I vote for option B",
+                "option B",
+                "I prefer B",
+                "B for me",
+                "going with B",
+                "my vote is B",
+                "definitely B",
+            ],
+            response="B sounds good!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_poll_either",
+            patterns=[
+                "either works for me",
+                "I'm fine with both",
+                "no preference",
+                "both options work",
+                "I can go either way",
+                "happy with whatever",
+                "any option is fine",
+            ],
+            response="Same here, flexible on this one!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_poll_create",
+            patterns=[
+                "let's do a poll",
+                "let's vote on it",
+                "should we vote",
+                "let's put it to a vote",
+                "what does everyone think",
+                "can we get everyone's input",
+                "let's see what everyone wants",
+            ],
+            response="Good idea! What are the options?",
+            is_group_template=True,
+            min_group_size=3,
+        ),
+        # --- Group Logistics ---
+        ResponseTemplate(
+            name="group_logistics_who_bringing",
+            patterns=[
+                "who's bringing what",
+                "what should I bring",
+                "who's bringing food",
+                "should I bring anything",
+                "what do we need",
+                "who's handling what",
+                "what's everyone bringing",
+            ],
+            response="I can bring drinks! What else do we need?",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_logistics_ill_handle",
+            patterns=[
+                "I'll handle the reservation",
+                "I'll book it",
+                "I can make the reservation",
+                "I'll take care of it",
+                "leave it to me",
+                "I got this",
+                "I'll set it up",
+            ],
+            response="You're the best! Thanks for handling that!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_logistics_location",
+            patterns=[
+                "where are we meeting",
+                "what's the address",
+                "where should we go",
+                "any suggestions for a place",
+                "where's the spot",
+                "what venue",
+                "location suggestions",
+            ],
+            response="Good question! Anyone have ideas?",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_logistics_carpooling",
+            patterns=[
+                "anyone need a ride",
+                "I can drive",
+                "can someone pick me up",
+                "let's carpool",
+                "who's driving",
+                "I need a ride",
+                "anyone driving from downtown",
+            ],
+            response="I might need a ride! Where are you coming from?",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_logistics_splitting_bill",
+            patterns=[
+                "let's split the bill",
+                "how should we split it",
+                "I'll venmo everyone",
+                "everyone pay their share",
+                "let's split evenly",
+                "how much do I owe",
+                "I'll send the payment request",
+            ],
+            response="Sounds fair! Just let me know the amount.",
+            is_group_template=True,
+        ),
+        # --- Celebratory Messages ---
+        ResponseTemplate(
+            name="group_celebration_birthday",
+            patterns=[
+                "happy birthday",
+                "happy bday",
+                "hbd",
+                "hope you have a great birthday",
+                "wishing you a happy birthday",
+                "birthday wishes",
+                "have an amazing birthday",
+            ],
+            response="Happy birthday! Hope it's amazing! 🎉",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_celebration_congrats",
+            patterns=[
+                "congrats everyone",
+                "congratulations to all",
+                "way to go team",
+                "we did it",
+                "great job everyone",
+                "congrats all around",
+                "proud of everyone",
+            ],
+            response="Congrats all! We crushed it! 🎉",
+            is_group_template=True,
+            min_group_size=3,
+        ),
+        ResponseTemplate(
+            name="group_celebration_individual",
+            patterns=[
+                "congrats",
+                "congratulations",
+                "so proud of you",
+                "well done",
+                "amazing job",
+                "you did it",
+                "so happy for you",
+            ],
+            response="Congrats! That's awesome! 🎉",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_celebration_holiday",
+            patterns=[
+                "happy holidays",
+                "happy new year",
+                "merry christmas",
+                "happy thanksgiving",
+                "happy easter",
+                "have a great holiday",
+                "enjoy the holidays",
+            ],
+            response="Happy holidays to everyone! 🎊",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_celebration_thanks",
+            patterns=[
+                "thanks everyone",
+                "thank you all",
+                "appreciate everyone",
+                "thanks to all of you",
+                "grateful for this group",
+                "thanks for everything",
+                "you all are the best",
+            ],
+            response="Aw, this group is the best! ❤️",
+            is_group_template=True,
+            min_group_size=3,
+        ),
+        # --- Information Sharing ---
+        ResponseTemplate(
+            name="group_info_fyi",
+            patterns=[
+                "fyi",
+                "for your information",
+                "just so everyone knows",
+                "heads up",
+                "just a heads up",
+                "wanted to let you all know",
+                "quick update",
+            ],
+            response="Thanks for the heads up!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_info_sharing",
+            patterns=[
+                "sharing with the group",
+                "thought you'd all want to see this",
+                "check this out everyone",
+                "sharing this with everyone",
+                "wanted to share this",
+                "look what I found",
+                "you all need to see this",
+            ],
+            response="Thanks for sharing! This is great!",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_info_update",
+            patterns=[
+                "update for everyone",
+                "quick update for the group",
+                "here's what's happening",
+                "status update",
+                "letting everyone know",
+                "keeping everyone posted",
+                "just an update",
+            ],
+            response="Thanks for the update! Good to know.",
+            is_group_template=True,
+        ),
+        ResponseTemplate(
+            name="group_info_reminder",
+            patterns=[
+                "reminder for everyone",
+                "don't forget",
+                "just a reminder",
+                "quick reminder",
+                "remember that",
+                "reminding everyone",
+                "friendly reminder",
+            ],
+            response="Thanks for the reminder!",
+            is_group_template=True,
+        ),
+        # --- Large Group Specific (10+ people) ---
+        ResponseTemplate(
+            name="group_large_lost_track",
+            patterns=[
+                "sorry catching up on messages",
+                "catching up on the chat",
+                "so many messages",
+                "what did I miss",
+                "can someone summarize",
+                "tldr of the chat",
+                "filling in on missed messages",
+            ],
+            response="No worries! Here's the quick version...",
+            is_group_template=True,
+            min_group_size=10,
+        ),
+        ResponseTemplate(
+            name="group_large_quiet_down",
+            patterns=[
+                "so many notifications",
+                "my phone is blowing up",
+                "this chat is active",
+                "loving the energy",
+                "lots of messages",
+                "active chat today",
+                "the group is popping",
+            ],
+            response="Haha right? Love this group's energy!",
+            is_group_template=True,
+            min_group_size=10,
+        ),
+        # --- Small Group Specific (3-5 people) ---
+        ResponseTemplate(
+            name="group_small_intimate",
+            patterns=[
+                "just us three",
+                "just the four of us",
+                "our little group",
+                "the gang",
+                "the crew",
+                "the squad",
+                "just us",
+            ],
+            response="Love our little crew! 💯",
+            is_group_template=True,
+            min_group_size=3,
+            max_group_size=5,
+        ),
     ]
 
 
@@ -1171,6 +1623,154 @@ class TemplateMatcher:
             # Fall back to model generation if sentence model unavailable
             logger.warning("Template matching unavailable, falling back to model generation")
             return None
+
+    def _template_matches_group_size(
+        self, template: ResponseTemplate, group_size: int | None
+    ) -> bool:
+        """Check if a template is appropriate for the given group size.
+
+        Args:
+            template: The template to check
+            group_size: Number of participants in the chat (None = unknown/1-on-1)
+
+        Returns:
+            True if template is appropriate for the group size
+        """
+        # If no group size specified, only match non-group templates
+        if group_size is None:
+            return not template.is_group_template
+
+        # For 1-on-1 chats, don't use group templates
+        if group_size <= 2:
+            return not template.is_group_template
+
+        # For group chats (3+), can use both group and general templates
+        # Check min_group_size constraint
+        if template.min_group_size is not None and group_size < template.min_group_size:
+            return False
+
+        # Check max_group_size constraint
+        if template.max_group_size is not None and group_size > template.max_group_size:
+            return False
+
+        return True
+
+    def match_with_context(
+        self,
+        query: str,
+        group_size: int | None = None,
+        prefer_group_templates: bool = False,
+    ) -> TemplateMatch | None:
+        """Find best matching template for a query with context awareness.
+
+        This method extends the basic match() by considering:
+        - Group size constraints on templates
+        - Whether to prefer group-specific templates over general ones
+
+        Args:
+            query: Input prompt to match against templates
+            group_size: Number of participants in the chat (None = unknown/1-on-1)
+            prefer_group_templates: If True and in a group chat, boost group template scores
+
+        Returns:
+            TemplateMatch if similarity >= threshold and context matches, None otherwise.
+            Returns None if sentence model fails to load (falls back to model generation).
+        """
+        try:
+            self._ensure_embeddings()
+
+            # Type guard
+            pattern_embeddings = self._pattern_embeddings
+            if pattern_embeddings is None:
+                return None
+
+            pattern_norms = self._pattern_norms
+            if pattern_norms is None:
+                pattern_norms = np.linalg.norm(pattern_embeddings, axis=1)
+                pattern_norms = np.where(pattern_norms == 0, 1, pattern_norms)
+
+            # Get query embedding
+            query_embedding = self._get_query_embedding(query)
+            query_norm = np.linalg.norm(query_embedding)
+
+            if query_norm == 0:
+                return None
+
+            # Compute similarities
+            dot_products = np.dot(pattern_embeddings, query_embedding)
+            similarities = dot_products / (pattern_norms * query_norm)
+
+            # Find best matching template that matches group context
+            best_match: TemplateMatch | None = None
+            best_similarity = 0.0
+
+            # Create list of (similarity, index) sorted by similarity descending
+            sorted_indices = np.argsort(similarities)[::-1]
+
+            for idx in sorted_indices:
+                similarity = float(similarities[idx])
+
+                # Stop if below threshold
+                if similarity < self.SIMILARITY_THRESHOLD:
+                    break
+
+                matched_pattern, template = self._pattern_to_template[idx]
+
+                # Check if template matches group context
+                if not self._template_matches_group_size(template, group_size):
+                    continue
+
+                # Apply boost for group templates if preferred and in group chat
+                effective_similarity = similarity
+                if (
+                    prefer_group_templates
+                    and group_size is not None
+                    and group_size >= 3
+                    and template.is_group_template
+                ):
+                    # Boost group templates by 0.05 (but cap at 1.0)
+                    effective_similarity = min(1.0, similarity + 0.05)
+
+                if effective_similarity > best_similarity:
+                    best_similarity = effective_similarity
+                    best_match = TemplateMatch(
+                        template=template,
+                        similarity=effective_similarity,
+                        matched_pattern=matched_pattern,
+                    )
+
+            if best_match is not None:
+                logger.debug(
+                    "Template match with context: %s (similarity: %.3f, group_size: %s)",
+                    best_match.template.name,
+                    best_match.similarity,
+                    group_size,
+                )
+
+            return best_match
+
+        except SentenceModelError:
+            logger.warning("Template matching unavailable, falling back to model generation")
+            return None
+
+    def get_group_templates(self) -> list[ResponseTemplate]:
+        """Get all group-specific templates.
+
+        Returns:
+            List of templates marked as group templates
+        """
+        return [t for t in self.templates if t.is_group_template]
+
+    def get_templates_for_group_size(self, group_size: int) -> list[ResponseTemplate]:
+        """Get templates appropriate for a specific group size.
+
+        Args:
+            group_size: Number of participants in the chat
+
+        Returns:
+            List of templates appropriate for this group size
+        """
+        return [t for t in self.templates if self._template_matches_group_size(t, group_size)]
 
     def clear_cache(self) -> None:
         """Clear cached embeddings.

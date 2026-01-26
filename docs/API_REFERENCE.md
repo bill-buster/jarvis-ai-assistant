@@ -459,6 +459,8 @@ curl -X POST http://localhost:8742/drafts/summarize \
 
 Fast pattern-based reply suggestions (no model required). Uses pre-defined response patterns for common scenarios, making it extremely fast (typically < 1ms).
 
+Supports both 1-on-1 chats and **group chats** with specialized patterns for event planning, RSVPs, polls, logistics, celebrations, and information sharing.
+
 ---
 
 #### POST /suggestions
@@ -469,7 +471,8 @@ Get smart reply suggestions based on the last message.
 ```json
 {
     "last_message": "Want to grab dinner tonight?",
-    "num_suggestions": 3
+    "num_suggestions": 3,
+    "group_size": 5
 }
 ```
 
@@ -477,6 +480,7 @@ Get smart reply suggestions based on the last message.
 |-------|------|---------|-------------|
 | `last_message` | string | Required | Last received message (min 1 char) |
 | `num_suggestions` | int | 3 | Number of suggestions (1-5) |
+| `group_size` | int | null | Number of chat participants. If >= 3, group-specific suggestions are included |
 
 **Response:**
 ```json
@@ -498,7 +502,7 @@ Get smart reply suggestions based on the last message.
 - Use `/suggestions` for quick, common responses (fast, no model load)
 - Use `/drafts/reply` for contextual, AI-generated replies (slower, better quality)
 
-**Supported Patterns:**
+**Supported Patterns (1-on-1 and Group):**
 - Time/scheduling: "what time", "are you free", "when", "can we meet"
 - Affirmative: "sounds good", "yes", "okay", "sure"
 - Gratitude: "thanks", "thank you", "appreciate"
@@ -507,7 +511,34 @@ Get smart reply suggestions based on the last message.
 - Location: "where", "location", "address"
 - Goodbyes: "see you", "bye", "ttyl"
 
-**curl:**
+**Group Chat Patterns (when group_size >= 3):**
+- Event planning: "when works for everyone", "let's pick a date", "what time works"
+- RSVP coordination: "count me in", "who's coming", "+1", "can't make it"
+- Poll responses: "let's vote", "option A", "either works for me"
+- Group logistics: "who's bringing what", "I'll handle the reservation", "let's carpool"
+- Celebrations: "happy birthday", "congrats everyone", "happy holidays"
+- Information sharing: "fyi", "heads up", "reminder for everyone"
+- Large groups (10+): "so many messages", "catching up on the chat"
+
+**Example: Group Chat RSVP**
+```bash
+curl -X POST http://localhost:8742/suggestions \
+  -H "Content-Type: application/json" \
+  -d '{"last_message": "Who is coming to the party?", "num_suggestions": 3, "group_size": 8}'
+```
+
+Response:
+```json
+{
+    "suggestions": [
+        {"text": "Count me in!", "score": 0.95},
+        {"text": "I'll be there!", "score": 0.9},
+        {"text": "Sounds good!", "score": 0.285}
+    ]
+}
+```
+
+**curl (1-on-1):**
 ```bash
 curl -X POST http://localhost:8742/suggestions \
   -H "Content-Type: application/json" \
