@@ -18,6 +18,14 @@ from contracts.health import FeatureState
 from contracts.models import GenerationRequest
 from core.health import get_degradation_controller, reset_degradation_controller
 from core.memory import get_memory_controller, reset_memory_controller
+from jarvis.context import ContextFetcher
+from jarvis.intent import IntentClassifier, IntentResult, IntentType
+from jarvis.prompts import (
+    REPLY_EXAMPLES,
+    SUMMARY_EXAMPLES,
+    build_reply_prompt,
+    build_summary_prompt,
+)
 from jarvis.system import (
     DEFAULT_MAX_TOKENS,
     FEATURE_CHAT,
@@ -29,6 +37,17 @@ from jarvis.system import (
 
 console = Console()
 logger = logging.getLogger(__name__)
+
+# Singleton intent classifier
+_intent_classifier: IntentClassifier | None = None
+
+
+def get_intent_classifier() -> IntentClassifier:
+    """Get or create singleton intent classifier instance."""
+    global _intent_classifier
+    if _intent_classifier is None:
+        _intent_classifier = IntentClassifier()
+    return _intent_classifier
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -69,8 +88,294 @@ def _parse_date(date_str: str) -> datetime | None:
     return None
 
 
+def _handle_quick_reply(prompt: str) -> str:
+    """Handle quick reply using template matcher (no LLM).
+
+    Args:
+        prompt: User input.
+
+    Returns:
+        Template response or fallback.
+    """
+    from models.templates import TemplateMatcher
+
+    matcher = TemplateMatcher()
+    match = matcher.match(prompt)
+    if match:
+        return match.template.response
+    return "Got it!"
+
+
+def _handle_reply_intent(prompt: str, intent_result: IntentResult) -> str:
+    """Handle reply intent with conversation context.
+
+    Args:
+        prompt: Original user input.
+        intent_result: Classified intent with extracted params.
+
+    Returns:
+        Generated reply or error message.
+    """
+    from integrations.imessage import ChatDBReader
+    from models import get_generator
+
+    person_name = intent_result.extracted_params.get("person_name")
+
+    if not _check_imessage_access():
+        return (
+            "I can't access your messages right now. "
+            "Please grant Full Disk Access in System Settings > Privacy & Security."
+        )
+
+    try:
+        with ChatDBReader() as reader:
+            fetcher = ContextFetcher(reader)
+
+            # Find conversation by person name
+            if person_name:
+                chat_id = fetcher.find_conversation_by_name(person_name)
+                if not chat_id:
+                    convos = reader.get_conversations(limit=5)
+                    names = [c.display_name or c.participants[0] for c in convos if c.participants]
+                    return (
+                        f"I couldn't find a conversation with '{person_name}'. "
+                        f"Recent conversations: {', '.join(names)}"
+                    )
+            else:
+                # Use most recent conversation
+                convos = reader.get_conversations(limit=1)
+                if not convos:
+                    return "No conversations found."
+                chat_id = convos[0].chat_id
+                person_name = convos[0].display_name or (
+                    convos[0].participants[0] if convos[0].participants else "Unknown"
+                )
+
+            # Get conversation context
+            context = fetcher.get_reply_context(chat_id, num_messages=20)
+
+            if not context.last_received_message:
+                return f"No recent messages from {person_name} to reply to."
+
+            # Build prompt with RAG context
+            formatted_prompt = build_reply_prompt(
+                context=context.formatted_context,
+                last_message=context.last_received_message.text,
+            )
+
+            # Generate with context
+            generator = get_generator()
+            request = GenerationRequest(
+                prompt=formatted_prompt,
+                context_documents=[context.formatted_context],
+                few_shot_examples=REPLY_EXAMPLES,
+                max_tokens=150,
+                temperature=0.7,
+            )
+            response = generator.generate(request)
+
+            # Format output nicely
+            last_msg = context.last_received_message
+            msg_text = last_msg.text
+            text_preview = msg_text[:100] + "..." if len(msg_text) > 100 else msg_text
+            return (
+                f"[Replying to {person_name}]\n"
+                f'Their message: "{text_preview}"\n\n'
+                f"Suggested reply: {response.text}"
+            )
+
+    except Exception as e:
+        logger.exception("Error generating reply")
+        return f"Error generating reply: {e}"
+
+
+def _handle_summarize_intent(prompt: str, intent_result: IntentResult) -> str:
+    """Handle summarize intent with conversation context.
+
+    Args:
+        prompt: Original user input.
+        intent_result: Classified intent with extracted params.
+
+    Returns:
+        Generated summary or error message.
+    """
+    from integrations.imessage import ChatDBReader
+    from models import get_generator
+
+    person_name = intent_result.extracted_params.get("person_name")
+
+    if not _check_imessage_access():
+        return (
+            "I can't access your messages right now. "
+            "Please grant Full Disk Access in System Settings > Privacy & Security."
+        )
+
+    try:
+        with ChatDBReader() as reader:
+            fetcher = ContextFetcher(reader)
+
+            # Find conversation
+            if person_name:
+                chat_id = fetcher.find_conversation_by_name(person_name)
+                if not chat_id:
+                    convos = reader.get_conversations(limit=5)
+                    names = [c.display_name or c.participants[0] for c in convos if c.participants]
+                    return (
+                        f"I couldn't find a conversation with '{person_name}'. "
+                        f"Recent conversations: {', '.join(names)}"
+                    )
+            else:
+                convos = reader.get_conversations(limit=1)
+                if not convos:
+                    return "No conversations found."
+                chat_id = convos[0].chat_id
+                person_name = convos[0].display_name or (
+                    convos[0].participants[0] if convos[0].participants else "Unknown"
+                )
+
+            # Get summary context (more messages than reply)
+            context = fetcher.get_summary_context(chat_id, num_messages=50)
+
+            if len(context.messages) < 3:
+                return f"Not enough messages with {person_name} to summarize."
+
+            # Build summary prompt
+            formatted_prompt = build_summary_prompt(context=context.formatted_context)
+
+            # Generate summary
+            generator = get_generator()
+            request = GenerationRequest(
+                prompt=formatted_prompt,
+                context_documents=[context.formatted_context],
+                few_shot_examples=SUMMARY_EXAMPLES,
+                max_tokens=500,
+                temperature=0.5,
+            )
+            response = generator.generate(request)
+
+            # Format output
+            start_date = context.date_range[0].strftime("%b %d")
+            end_date = context.date_range[1].strftime("%b %d")
+
+            return (
+                f"[Summary: {person_name}]\n"
+                f"Period: {start_date} - {end_date} ({len(context.messages)} messages)\n\n"
+                f"{response.text}"
+            )
+
+    except Exception as e:
+        logger.exception("Error generating summary")
+        return f"Error generating summary: {e}"
+
+
+def _handle_search_intent(prompt: str, intent_result: IntentResult) -> str:
+    """Handle search intent - find specific messages.
+
+    Args:
+        prompt: Original user input.
+        intent_result: Classified intent with extracted params.
+
+    Returns:
+        Search results or error message.
+    """
+    from integrations.imessage import ChatDBReader
+
+    search_query = intent_result.extracted_params.get("search_query") or prompt
+    person_name = intent_result.extracted_params.get("person_name")
+
+    if not _check_imessage_access():
+        return "I can't access your messages. Please grant Full Disk Access."
+
+    try:
+        with ChatDBReader() as reader:
+            results = reader.search(
+                query=search_query,
+                limit=10,
+                sender=person_name,
+            )
+
+            if not results:
+                return f"No messages found matching '{search_query}'."
+
+            # Format results
+            output_lines = [f"Found {len(results)} messages matching '{search_query}':\n"]
+            for msg in results[:5]:
+                sender = "You" if msg.is_from_me else (msg.sender_name or msg.sender)
+                date = msg.date.strftime("%b %d, %H:%M")
+                text = msg.text[:80] + "..." if len(msg.text) > 80 else msg.text
+                output_lines.append(f"[{date}] {sender}: {text}")
+
+            if len(results) > 5:
+                output_lines.append(f"\n... and {len(results) - 5} more")
+
+            return "\n".join(output_lines)
+
+    except Exception as e:
+        logger.exception("Error searching messages")
+        return f"Error searching: {e}"
+
+
+def _handle_general_intent(prompt: str) -> str:
+    """Handle general questions without message context.
+
+    Args:
+        prompt: User input.
+
+    Returns:
+        Generated response.
+    """
+    from models import get_generator
+
+    generator = get_generator()
+    request = GenerationRequest(
+        prompt=prompt,
+        context_documents=[],
+        few_shot_examples=[],
+        max_tokens=DEFAULT_MAX_TOKENS,
+        temperature=0.7,
+    )
+    response = generator.generate(request)
+    return response.text
+
+
+def _generate_response_with_intent(user_input: str) -> str:
+    """Generate response using intent-based routing with RAG.
+
+    Args:
+        user_input: User's input text.
+
+    Returns:
+        Generated response.
+    """
+    classifier = get_intent_classifier()
+    intent_result = classifier.classify(user_input)
+
+    logger.debug(
+        "Intent: %s (confidence: %.2f), params: %s",
+        intent_result.intent.value,
+        intent_result.confidence,
+        intent_result.extracted_params,
+    )
+
+    # Route based on intent
+    if intent_result.intent == IntentType.QUICK_REPLY:
+        return _handle_quick_reply(user_input)
+
+    elif intent_result.intent == IntentType.REPLY:
+        return _handle_reply_intent(user_input, intent_result)
+
+    elif intent_result.intent == IntentType.SUMMARIZE:
+        return _handle_summarize_intent(user_input, intent_result)
+
+    elif intent_result.intent == IntentType.SEARCH:
+        return _handle_search_intent(user_input, intent_result)
+
+    else:  # GENERAL
+        return _handle_general_intent(user_input)
+
+
 def cmd_chat(args: argparse.Namespace) -> int:
-    """Interactive chat mode.
+    """Interactive chat mode with intent-aware routing.
 
     Args:
         args: Parsed arguments.
@@ -81,7 +386,8 @@ def cmd_chat(args: argparse.Namespace) -> int:
     console.print(
         Panel(
             "[bold green]JARVIS Chat[/bold green]\n"
-            "Type your message and press Enter. Type 'quit' or 'exit' to leave.",
+            "Type your message and press Enter. Type 'quit' or 'exit' to leave.\n"
+            "Try: 'reply to John', 'summarize my chat with Sarah', or ask anything!",
             title="Chat Mode",
         )
     )
@@ -93,24 +399,14 @@ def cmd_chat(args: argparse.Namespace) -> int:
 
     try:
         from models import get_generator
+
+        # Verify generator is available
+        get_generator()
     except ImportError:
         console.print("[red]Error: Model system not available.[/red]")
         return 1
 
-    generator = get_generator()
     deg_controller = get_degradation_controller()
-
-    # Define response generator outside the loop to avoid function redefinition
-    def generate_response(prompt: str) -> str:
-        request = GenerationRequest(
-            prompt=prompt,
-            context_documents=[],
-            few_shot_examples=[],
-            max_tokens=DEFAULT_MAX_TOKENS,
-            temperature=0.7,
-        )
-        response = generator.generate(request)
-        return response.text
 
     while True:
         try:
@@ -129,7 +425,7 @@ def cmd_chat(args: argparse.Namespace) -> int:
         try:
             result = deg_controller.execute(
                 FEATURE_CHAT,
-                generate_response,
+                _generate_response_with_intent,
                 user_input,
             )
             console.print(f"[bold green]JARVIS:[/bold green] {result}\n")
@@ -138,6 +434,178 @@ def cmd_chat(args: argparse.Namespace) -> int:
             console.print(f"[red]Error: {e}[/red]\n")
 
     return 0
+
+
+def cmd_reply(args: argparse.Namespace) -> int:
+    """Generate reply suggestions for a conversation.
+
+    Args:
+        args: Parsed arguments with 'person' and optional 'instruction'.
+
+    Returns:
+        Exit code.
+    """
+    from integrations.imessage import ChatDBReader
+    from models import get_generator
+
+    person = args.person
+    instruction = getattr(args, "instruction", None)
+
+    console.print(f"[bold]Generating reply for conversation with {person}...[/bold]\n")
+
+    if not _check_imessage_access():
+        console.print(
+            "[red]Cannot access iMessage. Grant Full Disk Access in "
+            "System Settings > Privacy & Security.[/red]"
+        )
+        return 1
+
+    try:
+        with ChatDBReader() as reader:
+            fetcher = ContextFetcher(reader)
+
+            chat_id = fetcher.find_conversation_by_name(person)
+            if not chat_id:
+                convos = reader.get_conversations(limit=5)
+                console.print(f"[yellow]Could not find conversation with '{person}'[/yellow]")
+                console.print("\nRecent conversations:")
+                for c in convos:
+                    name = c.display_name or (c.participants[0] if c.participants else "Unknown")
+                    console.print(f"  - {name}")
+                return 1
+
+            context = fetcher.get_reply_context(chat_id, num_messages=20)
+
+            if not context.last_received_message:
+                console.print(f"[yellow]No recent messages from {person} to reply to.[/yellow]")
+                return 1
+
+            # Show what we're replying to
+            last_msg = context.last_received_message
+            console.print(f"[dim]Last message from {person}:[/dim]")
+            console.print(f'  "{last_msg.text}"\n')
+
+            # Build prompt
+            prompt_instruction = instruction or "Generate a natural, friendly reply"
+            formatted_prompt = build_reply_prompt(
+                context=context.formatted_context,
+                last_message=last_msg.text,
+                instruction=prompt_instruction,
+            )
+
+            # Generate
+            console.print("[dim]Generating suggestions...[/dim]")
+            generator = get_generator()
+
+            suggestions = []
+            for i in range(3):  # Generate 3 options
+                request = GenerationRequest(
+                    prompt=formatted_prompt,
+                    context_documents=[context.formatted_context],
+                    few_shot_examples=REPLY_EXAMPLES,
+                    max_tokens=150,
+                    temperature=0.7 + (i * 0.1),  # Vary temperature for diversity
+                )
+                response = generator.generate(request)
+                suggestions.append(response.text)
+
+            # Display suggestions
+            console.print("\n[bold green]Suggested replies:[/bold green]")
+            for i, suggestion in enumerate(suggestions, 1):
+                console.print(f"\n  {i}. {suggestion}")
+
+            return 0
+
+    except Exception as e:
+        logger.exception("Error generating reply")
+        console.print(f"[red]Error: {e}[/red]")
+        return 1
+
+
+def cmd_summarize(args: argparse.Namespace) -> int:
+    """Summarize a conversation.
+
+    Args:
+        args: Parsed arguments with 'person' and optional 'messages' count.
+
+    Returns:
+        Exit code.
+    """
+    from integrations.imessage import ChatDBReader
+    from models import get_generator
+
+    person = args.person
+    num_messages = args.messages
+
+    console.print(f"[bold]Summarizing conversation with {person}...[/bold]\n")
+
+    if not _check_imessage_access():
+        console.print(
+            "[red]Cannot access iMessage. Grant Full Disk Access in "
+            "System Settings > Privacy & Security.[/red]"
+        )
+        return 1
+
+    try:
+        with ChatDBReader() as reader:
+            fetcher = ContextFetcher(reader)
+
+            chat_id = fetcher.find_conversation_by_name(person)
+            if not chat_id:
+                convos = reader.get_conversations(limit=5)
+                console.print(f"[yellow]Could not find conversation with '{person}'[/yellow]")
+                console.print("\nRecent conversations:")
+                for c in convos:
+                    name = c.display_name or (c.participants[0] if c.participants else "Unknown")
+                    console.print(f"  - {name}")
+                return 1
+
+            context = fetcher.get_summary_context(chat_id, num_messages=num_messages)
+
+            if len(context.messages) < 3:
+                console.print(
+                    f"[yellow]Not enough messages to summarize "
+                    f"({len(context.messages)} found).[/yellow]"
+                )
+                return 1
+
+            # Show context info
+            start_date = context.date_range[0].strftime("%B %d, %Y")
+            end_date = context.date_range[1].strftime("%B %d, %Y")
+            console.print(
+                f"[dim]Analyzing {len(context.messages)} messages "
+                f"from {start_date} to {end_date}[/dim]\n"
+            )
+
+            # Generate summary
+            console.print("[dim]Generating summary...[/dim]")
+            formatted_prompt = build_summary_prompt(context=context.formatted_context)
+
+            generator = get_generator()
+            request = GenerationRequest(
+                prompt=formatted_prompt,
+                context_documents=[context.formatted_context],
+                few_shot_examples=SUMMARY_EXAMPLES,
+                max_tokens=500,
+                temperature=0.5,
+            )
+            response = generator.generate(request)
+
+            # Display summary
+            console.print(
+                Panel(
+                    response.text,
+                    title=f"Summary: {person}",
+                    subtitle=f"{len(context.messages)} messages | {start_date} - {end_date}",
+                )
+            )
+
+            return 0
+
+    except Exception as e:
+        logger.exception("Error generating summary")
+        console.print(f"[red]Error: {e}[/red]")
+        return 1
 
 
 def cmd_search_messages(args: argparse.Namespace) -> int:
@@ -417,12 +885,15 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  jarvis chat                    Start interactive chat
-  jarvis search-messages "hello" Search iMessage for "hello"
-  jarvis health                  Show system health status
-  jarvis benchmark memory        Run memory benchmark
-  jarvis serve                   Start the API server
-  jarvis serve --port 3000       Start server on custom port
+  jarvis chat                      Start interactive chat
+  jarvis reply John                Generate reply suggestions for John
+  jarvis reply Sarah -i "say yes" Reply with specific instruction
+  jarvis summarize Mom             Summarize conversation with Mom
+  jarvis summarize Dad -n 100      Summarize last 100 messages
+  jarvis search-messages "dinner"  Search for messages about dinner
+  jarvis health                    Show system health status
+  jarvis benchmark memory          Run memory benchmark
+  jarvis serve                     Start the API server
         """,
     )
 
@@ -447,6 +918,40 @@ Examples:
         help="Interactive chat mode",
     )
     chat_parser.set_defaults(func=cmd_chat)
+
+    # Reply command
+    reply_parser = subparsers.add_parser(
+        "reply",
+        help="Generate reply suggestions for a conversation",
+    )
+    reply_parser.add_argument(
+        "person",
+        help="Name of person to reply to",
+    )
+    reply_parser.add_argument(
+        "-i",
+        "--instruction",
+        help="Optional instruction (e.g., 'say yes but ask about timing')",
+    )
+    reply_parser.set_defaults(func=cmd_reply)
+
+    # Summarize command
+    summarize_parser = subparsers.add_parser(
+        "summarize",
+        help="Summarize a conversation",
+    )
+    summarize_parser.add_argument(
+        "person",
+        help="Name of person/conversation to summarize",
+    )
+    summarize_parser.add_argument(
+        "-n",
+        "--messages",
+        type=int,
+        default=50,
+        help="Number of messages to include (default: 50)",
+    )
+    summarize_parser.set_defaults(func=cmd_summarize)
 
     # Search messages command
     search_parser = subparsers.add_parser(

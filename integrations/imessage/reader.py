@@ -573,6 +573,10 @@ class ChatDBReader:
 
             # Replace all optional columns with NULL placeholders
             # Group event columns
+            affected_handle_join = (
+                "LEFT JOIN handle AS affected_handle "
+                "ON message.other_handle = affected_handle.ROWID"
+            )
             fallback_query = fallback_query.replace(
                 "message.group_action_type,",
                 "NULL as group_action_type,",
@@ -580,7 +584,7 @@ class ChatDBReader:
                 "affected_handle.id as affected_handle_id",
                 "NULL as affected_handle_id",
             ).replace(
-                "LEFT JOIN handle AS affected_handle ON message.other_handle = affected_handle.ROWID",
+                affected_handle_join,
                 "",
             )
 
@@ -719,6 +723,10 @@ class ChatDBReader:
             fallback_query = query
 
             # Replace all optional columns with NULL placeholders
+            affected_handle_join = (
+                "LEFT JOIN handle AS affected_handle "
+                "ON message.other_handle = affected_handle.ROWID"
+            )
             fallback_query = fallback_query.replace(
                 "message.group_action_type,",
                 "NULL as group_action_type,",
@@ -726,7 +734,7 @@ class ChatDBReader:
                 "affected_handle.id as affected_handle_id",
                 "NULL as affected_handle_id",
             ).replace(
-                "LEFT JOIN handle AS affected_handle ON message.other_handle = affected_handle.ROWID",
+                affected_handle_join,
                 "",
             )
 
