@@ -287,6 +287,42 @@ export interface TemplateAnalyticsDashboard {
   pie_chart_data: PieChartData;
 }
 
+// Semantic Search types
+export interface SemanticSearchFilters {
+  sender?: string;
+  chat_id?: string;
+  after?: string;
+  before?: string;
+  has_attachments?: boolean;
+}
+
+export interface SemanticSearchRequest {
+  query: string;
+  limit?: number;
+  threshold?: number;
+  index_limit?: number;
+  filters?: SemanticSearchFilters;
+}
+
+export interface SemanticSearchResultItem {
+  message: Message;
+  similarity: number;
+}
+
+export interface SemanticSearchResponse {
+  query: string;
+  results: SemanticSearchResultItem[];
+  total_results: number;
+  threshold_used: number;
+  messages_searched: number;
+}
+
+export interface SemanticCacheStats {
+  embedding_count: number;
+  size_bytes: number;
+  size_mb: number;
+}
+
 // PDF Export types
 export interface PDFExportDateRange {
   start?: string;

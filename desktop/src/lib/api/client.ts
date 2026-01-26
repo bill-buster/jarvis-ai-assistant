@@ -14,6 +14,9 @@ import type {
   PDFExportRequest,
   PDFExportResponse,
   SearchFilters,
+  SemanticCacheStats,
+  SemanticSearchFilters,
+  SemanticSearchResponse,
   SettingsResponse,
   SettingsUpdateRequest,
   SmartReplySuggestionsResponse,
@@ -164,6 +167,60 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  // Semantic search endpoint
+  async semanticSearch(
+    query: string,
+    options: {
+      limit?: number;
+      threshold?: number;
+      indexLimit?: number;
+      filters?: SemanticSearchFilters;
+    } = {},
+    signal?: AbortSignal
+  ): Promise<SemanticSearchResponse> {
+    const body = {
+      query,
+      limit: options.limit ?? 20,
+      threshold: options.threshold ?? 0.3,
+      index_limit: options.indexLimit ?? 1000,
+      filters: options.filters || null,
+    };
+
+    const response = await fetch(`${this.baseUrl}/search/semantic`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
+    }
+
+    return response.json();
+  }
+
+  // Semantic search cache stats
+  async getSemanticCacheStats(): Promise<SemanticCacheStats> {
+    return this.request<SemanticCacheStats>("/search/semantic/cache/stats");
+  }
+
+  // Clear semantic search cache
+  async clearSemanticCache(): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      "/search/semantic/cache",
+      { method: "DELETE" }
+    );
   }
 
   // Settings endpoints
