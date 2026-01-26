@@ -27,6 +27,7 @@ from api.routers import (
     health_router,
     metrics_router,
     settings_router,
+    stats_router,
     suggestions_router,
     topics_router,
 )
@@ -114,6 +115,12 @@ API_TAGS_METADATA = [
         "name": "topics",
         "description": "Automatic topic detection for conversations. "
         "Analyzes message content to identify common themes like scheduling and questions.",
+    },
+    {
+        "name": "stats",
+        "description": "Conversation statistics and analytics. "
+        "Get insights on messaging patterns, word frequency, activity by hour/day, "
+        "response times, emoji usage, and attachment breakdowns.",
     },
 ]
 
@@ -235,6 +242,7 @@ app.include_router(drafts_router)
 app.include_router(export_router)
 app.include_router(suggestions_router)
 app.include_router(settings_router)
+app.include_router(stats_router)
 app.include_router(metrics_router)
 app.include_router(topics_router)
 

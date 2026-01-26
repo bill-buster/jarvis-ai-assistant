@@ -204,3 +204,34 @@ export interface ApiError {
   detail: string;
   code: string | null;
 }
+
+// Statistics types
+export type TimeRange = "week" | "month" | "three_months" | "all_time";
+
+export interface HourlyActivity {
+  hour: number;
+  count: number;
+}
+
+export interface WordFrequency {
+  word: string;
+  count: number;
+}
+
+export interface ConversationStats {
+  chat_id: string;
+  time_range: TimeRange;
+  total_messages: number;
+  sent_count: number;
+  received_count: number;
+  avg_response_time_minutes: number | null;
+  hourly_activity: HourlyActivity[];
+  daily_activity: Record<string, number>;
+  message_length_distribution: Record<string, number>;
+  top_words: WordFrequency[];
+  emoji_usage: Record<string, number>;
+  attachment_breakdown: Record<string, number>;
+  first_message_date: string | null;
+  last_message_date: string | null;
+  participants: string[];
+}

@@ -590,7 +590,9 @@ class ChatDBReader:
             # Get last message text (may be None if no text messages)
             # Try text column first, fall back to parsing attributedBody
             row_keys = row.keys()
-            last_message_text = row["last_message_text"] if "last_message_text" in row_keys else None
+            last_message_text = (
+                row["last_message_text"] if "last_message_text" in row_keys else None
+            )
             if not last_message_text and "last_message_attributed_body" in row_keys:
                 # Parse attributedBody using existing parser
                 attributed_body = row["last_message_attributed_body"]
