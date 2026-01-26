@@ -82,6 +82,25 @@ class TestTCCPermissionMonitorInitialization:
         assert len(monitor._cache) == 0
 
 
+class TestUnknownPermissionType:
+    """Tests for unknown permission type handling."""
+
+    def test_unknown_permission_returns_false(self, tmp_path):
+        """Test that unknown permission types return False (lines 150-151)."""
+        from unittest.mock import MagicMock
+
+        monitor = TCCPermissionMonitor(chat_db_path=tmp_path / "chat.db")
+
+        # Create a mock permission that doesn't match any known type
+        mock_permission = MagicMock()
+        mock_permission.value = "unknown_permission"
+
+        # Directly call the implementation method
+        result = monitor._check_permission_impl(mock_permission)
+
+        assert result is False
+
+
 class TestFullDiskAccessCheck:
     """Tests for Full Disk Access permission check."""
 
@@ -139,6 +158,23 @@ class TestFullDiskAccessCheck:
 
         assert status.granted is False
 
+    def test_full_disk_access_denied_on_other_os_error(self, tmp_path):
+        """Test FULL_DISK_ACCESS returns denied on non-TCC OSError (lines 181-182)."""
+        chat_db = tmp_path / "chat.db"
+        chat_db.write_bytes(b"test")
+
+        monitor = TCCPermissionMonitor(chat_db_path=chat_db)
+
+        # Mock open to raise OSError with a different message (not TCC)
+        with patch(
+            "builtins.open",
+            side_effect=OSError("Disk I/O error"),
+        ):
+            status = monitor.check_permission(Permission.FULL_DISK_ACCESS)
+
+        # Non-TCC OSErrors still return False (conservative approach)
+        assert status.granted is False
+
 
 class TestContactsAccessCheck:
     """Tests for Contacts permission check."""
@@ -177,6 +213,34 @@ class TestContactsAccessCheck:
         assert status.granted is False
         assert "Contacts" in status.fix_instructions
 
+    def test_contacts_access_denied_on_tcc_os_error(self, tmp_path):
+        """Test CONTACTS returns denied on TCC OSError (lines 200-202)."""
+        contacts_dir = tmp_path / "AddressBook"
+        contacts_dir.mkdir()
+
+        monitor = TCCPermissionMonitor(contacts_path=contacts_dir)
+
+        # Mock iterdir to raise OSError with TCC message
+        with patch.object(Path, "iterdir", side_effect=OSError("Operation not permitted")):
+            status = monitor.check_permission(Permission.CONTACTS)
+
+        assert status.granted is False
+        assert "Contacts" in status.fix_instructions
+
+    def test_contacts_access_granted_on_other_os_error(self, tmp_path):
+        """Test CONTACTS returns granted on non-TCC OSError (line 203)."""
+        contacts_dir = tmp_path / "AddressBook"
+        contacts_dir.mkdir()
+
+        monitor = TCCPermissionMonitor(contacts_path=contacts_dir)
+
+        # Mock iterdir to raise OSError with a different message (not TCC)
+        with patch.object(Path, "iterdir", side_effect=OSError("Network error")):
+            status = monitor.check_permission(Permission.CONTACTS)
+
+        # Non-TCC OSErrors return True (not a permission issue)
+        assert status.granted is True
+
 
 class TestCalendarAccessCheck:
     """Tests for Calendar permission check."""
@@ -200,6 +264,47 @@ class TestCalendarAccessCheck:
         status = monitor.check_permission(Permission.CALENDAR)
 
         # Directory doesn't exist - not a permission issue
+        assert status.granted is True
+
+    def test_calendar_access_denied_on_permission_error(self, tmp_path):
+        """Test CALENDAR returns denied on PermissionError (lines 219-220)."""
+        calendar_dir = tmp_path / "Calendars"
+        calendar_dir.mkdir()
+
+        monitor = TCCPermissionMonitor(calendar_path=calendar_dir)
+
+        with patch.object(Path, "iterdir", side_effect=PermissionError("Access denied")):
+            status = monitor.check_permission(Permission.CALENDAR)
+
+        assert status.granted is False
+        assert "Calendar" in status.fix_instructions
+
+    def test_calendar_access_denied_on_tcc_os_error(self, tmp_path):
+        """Test CALENDAR returns denied on TCC OSError (lines 221-223)."""
+        calendar_dir = tmp_path / "Calendars"
+        calendar_dir.mkdir()
+
+        monitor = TCCPermissionMonitor(calendar_path=calendar_dir)
+
+        # Mock iterdir to raise OSError with TCC message
+        with patch.object(Path, "iterdir", side_effect=OSError("Operation not permitted")):
+            status = monitor.check_permission(Permission.CALENDAR)
+
+        assert status.granted is False
+        assert "Calendar" in status.fix_instructions
+
+    def test_calendar_access_granted_on_other_os_error(self, tmp_path):
+        """Test CALENDAR returns granted on non-TCC OSError (line 224)."""
+        calendar_dir = tmp_path / "Calendars"
+        calendar_dir.mkdir()
+
+        monitor = TCCPermissionMonitor(calendar_path=calendar_dir)
+
+        # Mock iterdir to raise OSError with a different message (not TCC)
+        with patch.object(Path, "iterdir", side_effect=OSError("Network error")):
+            status = monitor.check_permission(Permission.CALENDAR)
+
+        # Non-TCC OSErrors return True (not a permission issue)
         assert status.granted is True
 
 
