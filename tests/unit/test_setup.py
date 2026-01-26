@@ -1049,9 +1049,6 @@ class TestSetupWizardExtended:
         monkeypatch.setattr("jarvis.setup.JARVIS_CONFIG_FILE", config_file)
 
         # Mock load_config to raise an exception
-        from jarvis.setup import load_config
-        original_load = load_config
-
         def mock_load_config(*args, **kwargs):
             raise OSError("Cannot read config")
 
