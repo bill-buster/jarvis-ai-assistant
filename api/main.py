@@ -20,6 +20,7 @@ from api.errors import register_exception_handlers
 from api.routers import (
     conversations_router,
     drafts_router,
+    export_router,
     health_router,
     settings_router,
     suggestions_router,
@@ -190,6 +191,7 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(conversations_router)
 app.include_router(drafts_router)
+app.include_router(export_router)
 app.include_router(suggestions_router)
 app.include_router(settings_router)
 

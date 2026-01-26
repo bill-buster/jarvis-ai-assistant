@@ -5,6 +5,7 @@ All schemas include OpenAPI metadata for automatic documentation generation.
 """
 
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -1396,4 +1397,103 @@ class ActivateResponse(BaseModel):
         default=None,
         description="Error message if activation failed",
         examples=[None, "Model not downloaded. Please download first."],
+    )
+
+
+# =============================================================================
+# Export Schemas
+# =============================================================================
+
+
+class ExportFormatEnum(str, Enum):
+    """Supported export formats."""
+
+    JSON = "json"
+    CSV = "csv"
+    TXT = "txt"
+
+
+class ExportDateRange(BaseModel):
+    """Date range filter for exports."""
+
+    start: datetime | None = Field(default=None, description="Start date (inclusive)")
+    end: datetime | None = Field(default=None, description="End date (inclusive)")
+
+
+class ExportConversationRequest(BaseModel):
+    """Request to export a single conversation."""
+
+    format: ExportFormatEnum = Field(
+        default=ExportFormatEnum.JSON,
+        description="Export format (json, csv, txt)",
+    )
+    date_range: ExportDateRange | None = Field(
+        default=None,
+        description="Optional date range filter",
+    )
+    include_attachments: bool = Field(
+        default=False,
+        description="Include attachment info in export (CSV only)",
+    )
+    limit: int = Field(
+        default=1000,
+        ge=1,
+        le=10000,
+        description="Maximum messages to export",
+    )
+
+
+class ExportSearchRequest(BaseModel):
+    """Request to export search results."""
+
+    query: str = Field(..., min_length=1, description="Search query")
+    format: ExportFormatEnum = Field(
+        default=ExportFormatEnum.JSON,
+        description="Export format (json, csv, txt)",
+    )
+    limit: int = Field(
+        default=500,
+        ge=1,
+        le=5000,
+        description="Maximum results to export",
+    )
+    sender: str | None = Field(default=None, description="Filter by sender")
+    date_range: ExportDateRange | None = Field(
+        default=None,
+        description="Optional date range filter",
+    )
+
+
+class ExportBackupRequest(BaseModel):
+    """Request for full conversation backup."""
+
+    conversation_limit: int = Field(
+        default=50,
+        ge=1,
+        le=500,
+        description="Maximum conversations to include",
+    )
+    messages_per_conversation: int = Field(
+        default=500,
+        ge=1,
+        le=5000,
+        description="Maximum messages per conversation",
+    )
+    date_range: ExportDateRange | None = Field(
+        default=None,
+        description="Optional date range filter for messages",
+    )
+
+
+class ExportResponse(BaseModel):
+    """Response containing exported data."""
+
+    success: bool
+    format: str
+    filename: str
+    data: str = Field(..., description="Exported data as string")
+    message_count: int
+    export_type: str = Field(
+        default="conversation",
+        description="Type of export: conversation, search, or backup",
     )

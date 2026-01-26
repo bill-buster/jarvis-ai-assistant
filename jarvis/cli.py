@@ -936,6 +936,103 @@ def cmd_version(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_export(args: argparse.Namespace) -> int:
+    """Export a conversation to a file.
+
+    Args:
+        args: Parsed arguments with chat_id, format, and output options.
+
+    Returns:
+        Exit code.
+    """
+    from pathlib import Path
+
+    from jarvis.export import ExportFormat, export_messages, get_export_filename
+
+    chat_id = args.chat_id
+    format_str = args.format.lower()
+    output_path = args.output
+
+    # Validate format
+    try:
+        export_format = ExportFormat(format_str)
+    except ValueError:
+        console.print(f"[red]Invalid format: {format_str}[/red]")
+        console.print("Supported formats: json, csv, txt")
+        return 1
+
+    console.print(f"[bold]Exporting conversation: {chat_id}[/bold]\n")
+
+    if not _check_imessage_access():
+        console.print(
+            "[red]Cannot access iMessage. Grant Full Disk Access in "
+            "System Settings > Privacy & Security.[/red]"
+        )
+        return 1
+
+    try:
+        from integrations.imessage import ChatDBReader
+
+        with ChatDBReader() as reader:
+            # Get conversation metadata
+            conversations = reader.get_conversations(limit=500)
+            conversation = None
+            for conv in conversations:
+                if conv.chat_id == chat_id:
+                    conversation = conv
+                    break
+
+            if conversation is None:
+                console.print(f"[red]Conversation not found: {chat_id}[/red]")
+                console.print("\nAvailable conversations:")
+                for c in conversations[:10]:
+                    name = c.display_name or (c.participants[0] if c.participants else "Unknown")
+                    console.print(f"  {c.chat_id} - {name}")
+                if len(conversations) > 10:
+                    console.print(f"  ... and {len(conversations) - 10} more")
+                return 1
+
+            # Get messages
+            limit = args.limit
+            messages = reader.get_messages(chat_id=chat_id, limit=limit)
+
+            if not messages:
+                console.print("[yellow]No messages found in this conversation.[/yellow]")
+                return 1
+
+            # Export
+            console.print(f"[dim]Exporting {len(messages)} messages...[/dim]")
+            exported_data = export_messages(
+                messages=messages,
+                format=export_format,
+                conversation=conversation,
+                include_attachments=args.include_attachments,
+            )
+
+            # Determine output path
+            if output_path is None:
+                output_path = get_export_filename(
+                    format=export_format,
+                    prefix="conversation",
+                    chat_id=chat_id,
+                )
+
+            # Write to file
+            output_file = Path(output_path)
+            output_file.write_text(exported_data, encoding="utf-8")
+
+            console.print(f"\n[green]Successfully exported to: {output_file}[/green]")
+            console.print(f"Format: {format_str.upper()}")
+            console.print(f"Messages: {len(messages)}")
+
+            return 0
+
+    except Exception as e:
+        logger.exception("Export error")
+        console.print(f"[red]Error exporting conversation: {e}[/red]")
+        return 1
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     """Start the API server.
 
@@ -1019,6 +1116,10 @@ Quick Start:
   jarvis reply John                Generate reply suggestions for John
   jarvis summarize Mom             Get summary of conversation with Mom
   jarvis health                    Check system health status
+
+Export Commands:
+  jarvis export --chat-id <id>     Export conversation to JSON
+  jarvis export --chat-id <id> -f csv  Export to CSV format
 
 Advanced Commands:
   jarvis reply Sarah -i "say yes"  Reply with specific instruction
@@ -1338,6 +1439,45 @@ Output:
         formatter_class=HelpFormatter,
     )
     version_parser.set_defaults(func=cmd_version)
+
+    # Export command
+    export_parser = subparsers.add_parser(
+        "export",
+        help="Export a conversation to a file",
+    )
+    export_parser.add_argument(
+        "--chat-id",
+        dest="chat_id",
+        required=True,
+        help="Conversation ID to export",
+    )
+    export_parser.add_argument(
+        "-f",
+        "--format",
+        choices=["json", "csv", "txt"],
+        default="json",
+        help="Export format (default: json)",
+    )
+    export_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output file path (default: auto-generated)",
+    )
+    export_parser.add_argument(
+        "-l",
+        "--limit",
+        type=int,
+        default=1000,
+        help="Maximum messages to export (default: 1000)",
+    )
+    export_parser.add_argument(
+        "--include-attachments",
+        dest="include_attachments",
+        action="store_true",
+        default=False,
+        help="Include attachment info in export (CSV only)",
+    )
+    export_parser.set_defaults(func=cmd_export)
 
     # Serve command
     serve_parser = subparsers.add_parser(
