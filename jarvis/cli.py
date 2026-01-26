@@ -503,6 +503,45 @@ def cmd_version(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    """Start the API server.
+
+    Args:
+        args: Parsed arguments with host, port, and reload options.
+
+    Returns:
+        Exit code.
+    """
+    import uvicorn
+
+    host = args.host
+    port = args.port
+    reload = args.reload
+
+    console.print(
+        Panel(
+            f"[bold green]Starting JARVIS API Server[/bold green]\n"
+            f"Host: {host}\n"
+            f"Port: {port}\n"
+            f"Reload: {'Enabled' if reload else 'Disabled'}",
+            title="API Server",
+        )
+    )
+
+    try:
+        uvicorn.run(
+            "jarvis.api:app",
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info",
+        )
+        return 0
+    except Exception as e:
+        console.print(f"[red]Error starting server: {e}[/red]")
+        return 1
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create the argument parser with all subcommands.
 
@@ -519,6 +558,8 @@ Examples:
   jarvis search-messages "hello" Search iMessage for "hello"
   jarvis health                  Show system health status
   jarvis benchmark memory        Run memory benchmark
+  jarvis serve                   Start the API server
+  jarvis serve --port 3000       Start server on custom port
         """,
     )
 
@@ -619,6 +660,30 @@ Examples:
         help="Show version information",
     )
     version_parser.set_defaults(func=cmd_version)
+
+    # Serve command
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Start the API server",
+    )
+    serve_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind to (default: 127.0.0.1)",
+    )
+    serve_parser.add_argument(
+        "-p",
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind to (default: 8000)",
+    )
+    serve_parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development",
+    )
+    serve_parser.set_defaults(func=cmd_serve)
 
     return parser
 
