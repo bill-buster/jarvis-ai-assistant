@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { api, APIError } from "../api/client";
-  import type { Message, SearchFilters } from "../api/types";
+  import type { Message, SearchFilters, SemanticSearchResultItem } from "../api/types";
   import { navigateToMessage, conversationsStore } from "../stores/conversations";
 
   interface Props {
@@ -10,13 +10,21 @@
 
   let { onClose }: Props = $props();
 
+  // Search mode: text (keyword) or semantic (AI-powered)
+  type SearchMode = "text" | "semantic";
+  let searchMode: SearchMode = $state("text");
+
   // Search state
   type SearchState = "idle" | "searching" | "results" | "no-results" | "error";
   let searchState: SearchState = $state("idle");
   let query = $state("");
   let results: Message[] = $state([]);
+  let semanticResults: SemanticSearchResultItem[] = $state([]);
   let errorMessage = $state("");
   let selectedIndex = $state(-1);
+
+  // Semantic search settings
+  let semanticThreshold = $state(0.3);
 
   // Filter state
   let showFilters = $state(false);
@@ -36,15 +44,19 @@
   interface GroupedResults {
     chat_id: string;
     conversation_name: string;
-    messages: Message[];
+    messages: Array<Message & { similarity?: number }>;
   }
 
   let groupedResults: GroupedResults[] = $derived.by(() => {
-    if (results.length === 0) return [];
+    const items = searchMode === "semantic"
+      ? semanticResults.map(r => ({ ...r.message, similarity: r.similarity }))
+      : results;
+
+    if (items.length === 0) return [];
 
     const groups = new Map<string, GroupedResults>();
 
-    for (const msg of results) {
+    for (const msg of items) {
       if (!groups.has(msg.chat_id)) {
         // Find conversation name from store
         const conv = $conversationsStore.conversations.find(c => c.chat_id === msg.chat_id);
@@ -61,8 +73,8 @@
   });
 
   // Flat list of all messages for keyboard navigation
-  let flatResults: { msg: Message; groupIndex: number; msgIndex: number }[] = $derived.by(() => {
-    const flat: { msg: Message; groupIndex: number; msgIndex: number }[] = [];
+  let flatResults: { msg: Message & { similarity?: number }; groupIndex: number; msgIndex: number }[] = $derived.by(() => {
+    const flat: { msg: Message & { similarity?: number }; groupIndex: number; msgIndex: number }[] = [];
     groupedResults.forEach((group, groupIndex) => {
       group.messages.forEach((msg, msgIndex) => {
         flat.push({ msg, groupIndex, msgIndex });
@@ -70,6 +82,9 @@
     });
     return flat;
   });
+
+  // Total results count
+  let totalResultsCount = $derived(searchMode === "semantic" ? semanticResults.length : results.length);
 
   onMount(() => {
     searchInput?.focus();
@@ -87,14 +102,16 @@
     if (!query.trim()) {
       searchState = "idle";
       results = [];
+      semanticResults = [];
       selectedIndex = -1;
       return;
     }
 
-    // Debounce search
+    // Debounce search - longer for semantic to avoid unnecessary API calls
+    const delay = searchMode === "semantic" ? 500 : 300;
     debounceTimer = setTimeout(() => {
       performSearch();
-    }, 300);
+    }, delay);
   }
 
   async function performSearch() {
@@ -109,6 +126,28 @@
     errorMessage = "";
     selectedIndex = -1;
 
+    try {
+      if (searchMode === "semantic") {
+        await performSemanticSearch(searchQuery);
+      } else {
+        await performTextSearch(searchQuery);
+      }
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") {
+        return;
+      }
+      searchState = "error";
+      if (e instanceof APIError) {
+        errorMessage = e.detail || e.message;
+      } else if (e instanceof Error) {
+        errorMessage = e.message;
+      } else {
+        errorMessage = "An unknown error occurred";
+      }
+    }
+  }
+
+  async function performTextSearch(searchQuery: string) {
     const filters: SearchFilters = {};
     if (filterSender.trim()) {
       filters.sender = filterSender.trim();
@@ -123,29 +162,44 @@
       filters.has_attachments = true;
     }
 
-    try {
-      const searchResults = await api.searchMessages(
-        searchQuery,
-        filters,
-        100,
-        abortController.signal
-      );
+    const searchResults = await api.searchMessages(
+      searchQuery,
+      filters,
+      100,
+      abortController!.signal
+    );
 
-      results = searchResults;
-      searchState = searchResults.length > 0 ? "results" : "no-results";
-    } catch (e) {
-      if (e instanceof Error && e.name === "AbortError") {
-        return;
-      }
-      searchState = "error";
-      if (e instanceof APIError) {
-        errorMessage = e.detail || e.message;
-      } else if (e instanceof Error) {
-        errorMessage = e.message;
-      } else {
-        errorMessage = "An unknown error occurred";
-      }
+    results = searchResults;
+    semanticResults = [];
+    searchState = searchResults.length > 0 ? "results" : "no-results";
+  }
+
+  async function performSemanticSearch(searchQuery: string) {
+    const filters: { sender?: string; after?: string; before?: string } = {};
+    if (filterSender.trim()) {
+      filters.sender = filterSender.trim();
     }
+    if (filterStartDate) {
+      filters.after = new Date(filterStartDate).toISOString();
+    }
+    if (filterEndDate) {
+      filters.before = new Date(filterEndDate).toISOString();
+    }
+
+    const response = await api.semanticSearch(
+      searchQuery,
+      {
+        limit: 50,
+        threshold: semanticThreshold,
+        indexLimit: 1000,
+        filters: Object.keys(filters).length > 0 ? filters : undefined,
+      },
+      abortController!.signal
+    );
+
+    semanticResults = response.results;
+    results = [];
+    searchState = response.results.length > 0 ? "results" : "no-results";
   }
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -190,6 +244,9 @@
 
   function highlightMatch(text: string, searchQuery: string): string {
     if (!searchQuery.trim() || !text) return text;
+
+    // For semantic search, don't highlight (no exact matches)
+    if (searchMode === "semantic") return text;
 
     // Escape special regex characters in the search query
     const escaped = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -238,6 +295,20 @@
       onClose();
     }
   }
+
+  function toggleSearchMode() {
+    searchMode = searchMode === "text" ? "semantic" : "text";
+    // Clear results and re-search
+    results = [];
+    semanticResults = [];
+    if (query.trim()) {
+      performSearch();
+    }
+  }
+
+  function formatSimilarity(similarity: number): string {
+    return `${Math.round(similarity * 100)}%`;
+  }
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
@@ -248,20 +319,27 @@
   <div class="search-modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-label="Global Search">
     <div class="search-header">
       <div class="search-input-wrapper">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.35-4.35"></path>
-        </svg>
+        {#if searchMode === "semantic"}
+          <svg class="search-icon semantic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" title="Semantic Search">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v10M1 12h6m6 0h10M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"></path>
+          </svg>
+        {:else}
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+        {/if}
         <input
           bind:this={searchInput}
           type="text"
           class="search-input"
-          placeholder="Search messages..."
+          placeholder={searchMode === "semantic" ? "Search by meaning..." : "Search messages..."}
           bind:value={query}
           oninput={handleInput}
         />
         {#if query}
-          <button class="clear-btn" onclick={() => { query = ""; searchState = "idle"; results = []; }} aria-label="Clear search">
+          <button class="clear-btn" onclick={() => { query = ""; searchState = "idle"; results = []; semanticResults = []; }} aria-label="Clear search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -269,6 +347,24 @@
           </button>
         {/if}
       </div>
+      <button
+        class="mode-toggle"
+        class:semantic={searchMode === "semantic"}
+        onclick={toggleSearchMode}
+        aria-label="Toggle search mode"
+        title={searchMode === "semantic" ? "Switch to keyword search" : "Switch to semantic search"}
+      >
+        {#if searchMode === "semantic"}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v10M1 12h6m6 0h10"></path>
+          </svg>
+        {:else}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        {/if}
+      </button>
       <button class="filter-toggle" class:active={showFilters} onclick={toggleFilters} aria-label="Toggle filters" title="Filters">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -315,14 +411,29 @@
           </div>
         </div>
         <div class="filter-row">
-          <label class="checkbox-label">
-            <input
-              type="checkbox"
-              bind:checked={filterHasAttachments}
-              onchange={performSearch}
-            />
-            <span>Has attachments</span>
-          </label>
+          {#if searchMode === "text"}
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                bind:checked={filterHasAttachments}
+                onchange={performSearch}
+              />
+              <span>Has attachments</span>
+            </label>
+          {:else}
+            <div class="threshold-control">
+              <label for="threshold">Similarity: {Math.round(semanticThreshold * 100)}%</label>
+              <input
+                id="threshold"
+                type="range"
+                min="0.1"
+                max="0.9"
+                step="0.1"
+                bind:value={semanticThreshold}
+                onchange={performSearch}
+              />
+            </div>
+          {/if}
           <button class="clear-filters-btn" onclick={clearFilters}>Clear filters</button>
         </div>
       </div>
@@ -331,17 +442,26 @@
     <div class="search-results">
       {#if searchState === "idle"}
         <div class="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          <p>Search across all your conversations</p>
-          <span class="hint">Use filters to narrow down results</span>
+          {#if searchMode === "semantic"}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v10M1 12h6m6 0h10M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"></path>
+            </svg>
+            <p>Semantic search finds messages by meaning</p>
+            <span class="hint">Try "dinner plans" to find messages about eating out</span>
+          {:else}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <p>Search across all your conversations</p>
+            <span class="hint">Use filters to narrow down results</span>
+          {/if}
         </div>
       {:else if searchState === "searching"}
         <div class="loading-state">
           <div class="spinner"></div>
-          <p>Searching...</p>
+          <p>{searchMode === "semantic" ? "Computing semantic similarity..." : "Searching..."}</p>
         </div>
       {:else if searchState === "error"}
         <div class="error-state">
@@ -364,16 +484,25 @@
           <div class="search-tips">
             <h4>Search tips:</h4>
             <ul>
-              <li>Try different keywords</li>
-              <li>Check for typos</li>
-              <li>Use fewer or more general words</li>
+              {#if searchMode === "semantic"}
+                <li>Try describing what you're looking for differently</li>
+                <li>Lower the similarity threshold in filters</li>
+                <li>Use simpler, more common phrases</li>
+              {:else}
+                <li>Try different keywords</li>
+                <li>Check for typos</li>
+                <li>Use fewer or more general words</li>
+              {/if}
               <li>Try removing filters</li>
             </ul>
           </div>
         </div>
       {:else if searchState === "results"}
         <div class="results-count">
-          {results.length} result{results.length !== 1 ? "s" : ""} in {groupedResults.length} conversation{groupedResults.length !== 1 ? "s" : ""}
+          {totalResultsCount} result{totalResultsCount !== 1 ? "s" : ""} in {groupedResults.length} conversation{groupedResults.length !== 1 ? "s" : ""}
+          {#if searchMode === "semantic"}
+            <span class="mode-indicator">Semantic</span>
+          {/if}
         </div>
         <div class="results-list">
           {#each groupedResults as group, groupIndex}
@@ -392,7 +521,12 @@
                 >
                   <div class="result-meta">
                     <span class="sender">{message.sender_name || message.sender}</span>
-                    <span class="date">{formatDate(message.date)}</span>
+                    <div class="meta-right">
+                      {#if searchMode === "semantic" && message.similarity !== undefined}
+                        <span class="similarity-badge">{formatSimilarity(message.similarity)}</span>
+                      {/if}
+                      <span class="date">{formatDate(message.date)}</span>
+                    </div>
                   </div>
                   <div class="result-text">
                     {@html highlightMatch(getSnippet(message.text), query)}
@@ -418,6 +552,9 @@
         <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
         <span><kbd>Enter</kbd> Select</span>
         <span><kbd>Esc</kbd> Close</span>
+      </div>
+      <div class="mode-hint">
+        {searchMode === "semantic" ? "AI-powered" : "Keyword"} search
       </div>
     </div>
   </div>
@@ -499,6 +636,10 @@
     flex-shrink: 0;
   }
 
+  .search-icon.semantic {
+    color: var(--accent-color);
+  }
+
   .search-input {
     flex: 1;
     background: transparent;
@@ -535,6 +676,7 @@
     height: 14px;
   }
 
+  .mode-toggle,
   .filter-toggle,
   .close-btn {
     background: var(--bg-primary);
@@ -549,11 +691,18 @@
     transition: all 0.15s ease;
   }
 
+  .mode-toggle:hover,
   .filter-toggle:hover,
   .close-btn:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
     border-color: var(--accent-color);
+  }
+
+  .mode-toggle.semantic {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
   }
 
   .filter-toggle.active {
@@ -562,6 +711,7 @@
     color: white;
   }
 
+  .mode-toggle svg,
   .filter-toggle svg,
   .close-btn svg {
     width: 18px;
@@ -627,6 +777,25 @@
     accent-color: var(--accent-color);
     width: 16px;
     height: 16px;
+  }
+
+  .threshold-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .threshold-control label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .threshold-control input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent-color);
+    max-width: 150px;
   }
 
   .clear-filters-btn {
@@ -747,7 +916,7 @@
   }
 
   .search-tips li::before {
-    content: "•";
+    content: "*";
     margin-right: 8px;
     color: var(--accent-color);
   }
@@ -757,6 +926,18 @@
     font-size: 13px;
     color: var(--text-secondary);
     border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mode-indicator {
+    background: var(--accent-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
   }
 
   .results-list {
@@ -823,6 +1004,12 @@
     margin-bottom: 6px;
   }
 
+  .meta-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .sender {
     font-size: 13px;
     font-weight: 500;
@@ -832,6 +1019,15 @@
   .date {
     font-size: 12px;
     color: var(--text-secondary);
+  }
+
+  .similarity-badge {
+    background: var(--accent-color);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 500;
   }
 
   .result-text {
@@ -866,6 +1062,9 @@
     padding: 10px 16px;
     border-top: 1px solid var(--border-color);
     background: var(--bg-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .keyboard-hints {
@@ -879,6 +1078,12 @@
     display: flex;
     align-items: center;
     gap: 4px;
+  }
+
+  .mode-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.7;
   }
 
   kbd {

@@ -28,6 +28,7 @@ from api.routers import (
     health_router,
     metrics_router,
     pdf_export_router,
+    search_router,
     settings_router,
     stats_router,
     suggestions_router,
@@ -98,6 +99,11 @@ API_TAGS_METADATA = [
         "name": "conversations",
         "description": "iMessage conversation and message management. "
         "List conversations, retrieve messages, search, and send messages.",
+    },
+    {
+        "name": "search",
+        "description": "Semantic search using AI-powered embeddings. "
+        "Find messages by meaning rather than exact keyword matching.",
     },
     {
         "name": "drafts",
@@ -249,6 +255,7 @@ app.include_router(conversations_router)
 app.include_router(drafts_router)
 app.include_router(export_router)
 app.include_router(pdf_export_router)
+app.include_router(search_router)
 app.include_router(suggestions_router)
 app.include_router(settings_router)
 app.include_router(stats_router)

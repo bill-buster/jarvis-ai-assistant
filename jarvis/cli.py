@@ -799,6 +799,114 @@ def cmd_search_messages(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_search_semantic(args: argparse.Namespace) -> int:
+    """Search messages using semantic similarity.
+
+    Args:
+        args: Parsed arguments with 'query', 'limit', 'threshold', etc.
+
+    Returns:
+        Exit code.
+    """
+    from jarvis.semantic_search import SearchFilters, SemanticSearcher
+
+    query = args.query
+    limit = args.limit
+    threshold = args.threshold
+
+    # Parse optional filter arguments
+    start_date = _parse_date(args.start_date) if args.start_date else None
+    end_date = _parse_date(args.end_date) if args.end_date else None
+    sender = args.sender
+    chat_id = args.chat_id
+
+    console.print(f"[bold]Semantic search for:[/bold] {query}\n")
+
+    # Show settings
+    console.print(f"[dim]Similarity threshold: {threshold}[/dim]")
+    if sender:
+        console.print(f"[dim]Sender filter: {sender}[/dim]")
+    if chat_id:
+        console.print(f"[dim]Conversation filter: {chat_id}[/dim]")
+    if start_date:
+        console.print(f"[dim]After: {start_date.strftime('%Y-%m-%d')}[/dim]")
+    if end_date:
+        console.print(f"[dim]Before: {end_date.strftime('%Y-%m-%d')}[/dim]")
+    console.print()
+
+    if not _check_imessage_access():
+        console.print(
+            "[red]Cannot access iMessage. Grant Full Disk Access in "
+            "System Settings > Privacy & Security.[/red]"
+        )
+        return 1
+
+    try:
+        from integrations.imessage import ChatDBReader
+
+        with ChatDBReader() as reader:
+            # Build filters
+            filters = SearchFilters(
+                sender=sender,
+                chat_id=chat_id,
+                after=start_date,
+                before=end_date,
+            )
+
+            # Create searcher
+            searcher = SemanticSearcher(
+                reader=reader,
+                similarity_threshold=threshold,
+            )
+
+            console.print("[dim]Computing semantic embeddings...[/dim]")
+            results = searcher.search(
+                query=query,
+                filters=filters,
+                limit=limit,
+                index_limit=args.index_limit,
+            )
+
+            if not results:
+                console.print("[yellow]No semantically similar messages found.[/yellow]")
+                console.print("\n[dim]Tips:[/dim]")
+                console.print("  - Try lowering the threshold with --threshold 0.2")
+                console.print("  - Use different or simpler query terms")
+                console.print("  - Remove filters to search more messages")
+                return 0
+
+            # Display results
+            table = Table(title=f"Semantic Search Results ({len(results)} matches)")
+            table.add_column("Score", style="cyan", width=6)
+            table.add_column("Date", style="dim")
+            table.add_column("Sender")
+            table.add_column("Message")
+
+            for result in results:
+                msg = result.message
+                date_str = msg.date.strftime("%Y-%m-%d %H:%M") if msg.date else "Unknown"
+                display_sender = "Me" if msg.is_from_me else (msg.sender_name or msg.sender)
+                score = f"{result.similarity:.2f}"
+
+                if len(msg.text) > MESSAGE_PREVIEW_LENGTH:
+                    text = msg.text[:MESSAGE_PREVIEW_LENGTH] + "..."
+                else:
+                    text = msg.text
+
+                table.add_row(score, date_str, display_sender, text)
+
+            console.print(table)
+            return 0
+
+    except JarvisError as e:
+        _format_jarvis_error(e)
+        return 1
+    except Exception as e:
+        logger.exception("Semantic search error")
+        console.print(f"[red]Error during semantic search: {e}[/red]")
+        return 1
+
+
 def cmd_health(args: argparse.Namespace) -> int:
     """Display system health status.
 
@@ -1355,6 +1463,99 @@ Date Formats:
         help="show only messages without attachments",
     )
     search_parser.set_defaults(func=cmd_search_messages)
+
+    # Semantic search command
+    semantic_search_parser = subparsers.add_parser(
+        "search-semantic",
+        help="semantic search using AI embeddings",
+        description=(
+            "Search through your iMessage conversations using semantic similarity.\n\n"
+            "Unlike keyword search, semantic search finds messages by meaning,\n"
+            "allowing you to find conceptually similar messages even if they don't\n"
+            "contain the exact search terms.\n\n"
+            "Uses the all-MiniLM-L6-v2 sentence embedding model.\n\n"
+            "Requires Full Disk Access for iMessage access."
+        ),
+        formatter_class=HelpFormatter,
+        epilog="""
+Examples:
+  jarvis search-semantic "dinner plans"
+      Find messages about eating out, restaurants, meal planning
+
+  jarvis search-semantic "meeting tomorrow" --limit 30
+      Get up to 30 results about scheduling
+
+  jarvis search-semantic "running late" --threshold 0.5
+      Higher threshold = more relevant results only
+
+  jarvis search-semantic "project deadline" --sender "John"
+      Search messages from John about project deadlines
+
+  jarvis search-semantic "vacation ideas" --start-date 2024-01-01
+      Search messages after January 1, 2024
+
+  jarvis search-semantic "thank you" --chat-id "chat123"
+      Search within a specific conversation
+
+Threshold Guide:
+  0.3 (default)  - Broad search, more results
+  0.4-0.5        - Balanced relevance
+  0.6+           - Strict, highly relevant only
+        """,
+    )
+    semantic_search_parser.add_argument(
+        "query",
+        metavar="<query>",
+        help="natural language search query",
+    )
+    semantic_search_parser.add_argument(
+        "-l",
+        "--limit",
+        type=int,
+        default=20,
+        metavar="<n>",
+        help="maximum number of results (default: 20)",
+    )
+    semantic_search_parser.add_argument(
+        "-t",
+        "--threshold",
+        type=float,
+        default=0.3,
+        metavar="<score>",
+        help="minimum similarity score 0.0-1.0 (default: 0.3)",
+    )
+    semantic_search_parser.add_argument(
+        "--index-limit",
+        dest="index_limit",
+        type=int,
+        default=1000,
+        metavar="<n>",
+        help="maximum messages to search through (default: 1000)",
+    )
+    semantic_search_parser.add_argument(
+        "--start-date",
+        dest="start_date",
+        metavar="<date>",
+        help="filter messages after this date (YYYY-MM-DD)",
+    )
+    semantic_search_parser.add_argument(
+        "--end-date",
+        dest="end_date",
+        metavar="<date>",
+        help="filter messages before this date (YYYY-MM-DD)",
+    )
+    semantic_search_parser.add_argument(
+        "--sender",
+        metavar="<name>",
+        help="filter by sender (use 'me' for your own messages)",
+    )
+    semantic_search_parser.add_argument(
+        "--chat-id",
+        dest="chat_id",
+        metavar="<id>",
+        help="filter to a specific conversation",
+    )
+    semantic_search_parser.set_defaults(func=cmd_search_semantic)
 
     # Health command
     health_parser = subparsers.add_parser(
