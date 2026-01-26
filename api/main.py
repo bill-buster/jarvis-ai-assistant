@@ -10,12 +10,7 @@ Usage:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import (
-    conversations_router,
-    drafts_router,
-    health_router,
-    suggestions_router,
-)
+from api.routers import conversations_router, drafts_router, health_router, suggestions_router
 
 # Create FastAPI app
 app = FastAPI(

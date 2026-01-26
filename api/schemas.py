@@ -111,60 +111,59 @@ class SendMessageResponse(BaseModel):
     error: str | None = None
 
 
-class Suggestion(BaseModel):
-    """A single reply suggestion."""
-
-    text: str
-    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence score")
-
-
-class ContextInfo(BaseModel):
-    """Information about context used for generation."""
-
-    messages_used: int = Field(default=0, description="Number of messages used as context")
-    tokens_used: int = Field(default=0, description="Number of tokens used")
-    truncated: bool = Field(default=False, description="Whether context was truncated")
+# Draft Reply Schemas
 
 
 class DraftReplyRequest(BaseModel):
-    """Request to generate reply drafts."""
+    """Request for AI-powered draft reply generation."""
 
-    chat_id: str = Field(..., description="Conversation ID")
-    last_message: str = Field(..., min_length=1, description="The last received message")
+    chat_id: str = Field(..., description="The conversation ID")
     num_suggestions: int = Field(default=3, ge=1, le=5, description="Number of suggestions")
-    include_context: bool = Field(default=True, description="Include conversation context")
+    context_messages: int = Field(default=20, ge=1, le=100, description="Messages for context")
+    instruction: str | None = Field(
+        default=None, description="Optional instruction for reply tone/content"
+    )
+
+
+class DraftSuggestion(BaseModel):
+    """A single draft reply suggestion."""
+
+    text: str
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+class ContextInfo(BaseModel):
+    """Information about the context used for generation."""
+
+    num_messages: int
+    participants: list[str]
+    last_message: str | None
 
 
 class DraftReplyResponse(BaseModel):
-    """Response containing reply draft suggestions."""
+    """Response containing AI-generated draft replies."""
 
-    suggestions: list[Suggestion]
-    context_used: ContextInfo | None = None
-    error: str | None = None
-    used_fallback: bool = False
+    suggestions: list[DraftSuggestion]
+    context_used: ContextInfo
 
 
-class SummaryRequest(BaseModel):
-    """Request to generate conversation summary."""
+class DraftSummaryRequest(BaseModel):
+    """Request for conversation summary."""
 
-    chat_id: str = Field(..., description="Conversation ID")
-    max_messages: int = Field(default=50, ge=1, le=200, description="Max messages to summarize")
+    chat_id: str = Field(..., description="The conversation ID")
+    num_messages: int = Field(default=50, ge=1, le=500, description="Messages to summarize")
 
 
-class SummaryResponse(BaseModel):
+class DateRange(BaseModel):
+    """Date range for summarized messages."""
+
+    start: str  # ISO date string
+    end: str  # ISO date string
+
+
+class DraftSummaryResponse(BaseModel):
     """Response containing conversation summary."""
 
     summary: str
-    participant: str
-    message_count: int
-    error: str | None = None
-    used_fallback: bool = False
-
-
-class GenerationStatus(BaseModel):
-    """Status of the generation system."""
-
-    model_loaded: bool
-    can_generate: bool
-    reason: str | None = None
-    memory_mode: str
+    key_points: list[str]
+    date_range: DateRange
