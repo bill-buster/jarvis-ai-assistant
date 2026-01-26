@@ -14,6 +14,7 @@ import type {
   SettingsUpdateRequest,
   SmartReplySuggestionsResponse,
   SummaryResponse,
+  TopicsResponse,
 } from "./types";
 
 const API_BASE = "http://localhost:8742";
@@ -98,6 +99,19 @@ class ApiClient {
       url += `&before=${encodeURIComponent(before)}`;
     }
     return this.request<Message[]>(url);
+  }
+
+  // Topics endpoints
+  async getTopics(
+    chatId: string,
+    limit: number = 50,
+    refresh: boolean = false
+  ): Promise<TopicsResponse> {
+    let url = `/conversations/${encodeURIComponent(chatId)}/topics?limit=${limit}`;
+    if (refresh) {
+      url += "&refresh=true";
+    }
+    return this.request<TopicsResponse>(url, { method: "POST" });
   }
 
   // Settings endpoints

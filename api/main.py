@@ -27,6 +27,7 @@ from api.routers import (
     metrics_router,
     settings_router,
     suggestions_router,
+    topics_router,
 )
 from jarvis.metrics import get_latency_histogram, get_request_counter
 
@@ -107,6 +108,11 @@ API_TAGS_METADATA = [
         "name": "settings",
         "description": "Application configuration management. "
         "Manage model selection, generation parameters, and behavior preferences.",
+    },
+    {
+        "name": "topics",
+        "description": "Automatic topic detection for conversations. "
+        "Analyzes message content to identify common themes like scheduling and questions.",
     },
 ]
 
@@ -228,6 +234,7 @@ app.include_router(export_router)
 app.include_router(suggestions_router)
 app.include_router(settings_router)
 app.include_router(metrics_router)
+app.include_router(topics_router)
 
 # Register JARVIS exception handlers for standardized error responses
 register_exception_handlers(app)

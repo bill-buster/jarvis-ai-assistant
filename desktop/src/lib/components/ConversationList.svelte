@@ -5,10 +5,50 @@
     fetchConversations,
     selectConversation,
   } from "../stores/conversations";
+  import { api } from "../api/client";
+  import type { Topic } from "../api/types";
+
+  // Store for conversation topics
+  let topicsMap: Map<string, Topic[]> = new Map();
+  let allTopicsMap: Map<string, Topic[]> = new Map();
+  let loadingTopics: Set<string> = new Set();
 
   onMount(() => {
     fetchConversations();
   });
+
+  // Fetch topics when conversations are loaded
+  $: if ($conversationsStore.conversations.length > 0) {
+    fetchTopicsForConversations();
+  }
+
+  async function fetchTopicsForConversations() {
+    // Fetch topics for visible conversations (first 20)
+    const visibleConvs = $conversationsStore.conversations.slice(0, 20);
+    for (const conv of visibleConvs) {
+      if (!topicsMap.has(conv.chat_id) && !loadingTopics.has(conv.chat_id)) {
+        fetchTopicsForChat(conv.chat_id);
+      }
+    }
+  }
+
+  async function fetchTopicsForChat(chatId: string) {
+    loadingTopics.add(chatId);
+    loadingTopics = loadingTopics;
+    try {
+      const response = await api.getTopics(chatId);
+      topicsMap.set(chatId, response.topics);
+      allTopicsMap.set(chatId, response.all_topics);
+      topicsMap = topicsMap;
+      allTopicsMap = allTopicsMap;
+    } catch (error) {
+      // Silently fail - topics are optional
+      console.debug("Failed to fetch topics for", chatId, error);
+    } finally {
+      loadingTopics.delete(chatId);
+      loadingTopics = loadingTopics;
+    }
+  }
 
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr);
@@ -32,6 +72,28 @@
     if (conv.participants.length === 1) return conv.participants[0];
     return conv.participants.slice(0, 2).join(", ") +
       (conv.participants.length > 2 ? ` +${conv.participants.length - 2}` : "");
+  }
+
+  function getTopicColorClass(color: string): string {
+    const colorMap: Record<string, string> = {
+      blue: "topic-blue",
+      green: "topic-green",
+      purple: "topic-purple",
+      pink: "topic-pink",
+      orange: "topic-orange",
+      gray: "topic-gray",
+      indigo: "topic-indigo",
+      amber: "topic-amber",
+      cyan: "topic-cyan",
+      rose: "topic-rose",
+    };
+    return colorMap[color] || "topic-gray";
+  }
+
+  function getAllTopicsTooltip(chatId: string): string {
+    const allTopics = allTopicsMap.get(chatId) || [];
+    if (allTopics.length <= 2) return "";
+    return allTopics.map(t => `${t.display_name} (${Math.round(t.confidence * 100)}%)`).join("\n");
   }
 </script>
 
@@ -72,6 +134,26 @@
             <div class="name-row">
               <span class="name">{getDisplayName(conv)}</span>
               <span class="date">{formatDate(conv.last_message_date)}</span>
+            </div>
+            <div class="topics-row">
+              {#if topicsMap.has(conv.chat_id)}
+                {#each topicsMap.get(conv.chat_id) || [] as topic}
+                  <span
+                    class="topic-tag {getTopicColorClass(topic.color)}"
+                    title={getAllTopicsTooltip(conv.chat_id) || topic.display_name}
+                  >
+                    {topic.display_name}
+                  </span>
+                {/each}
+                {#if (allTopicsMap.get(conv.chat_id)?.length || 0) > 2}
+                  <span
+                    class="topic-more"
+                    title={getAllTopicsTooltip(conv.chat_id)}
+                  >
+                    +{(allTopicsMap.get(conv.chat_id)?.length || 0) - 2}
+                  </span>
+                {/if}
+              {/if}
             </div>
             <div class="preview">
               {conv.last_message_text || "No messages"}
@@ -204,6 +286,81 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .topics-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+
+  .topic-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .topic-more {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: var(--bg-tertiary, #e5e5e5);
+    color: var(--text-secondary);
+    cursor: help;
+  }
+
+  /* Topic color variants */
+  .topic-blue {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .topic-green {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  .topic-purple {
+    background: #f3e8ff;
+    color: #7c3aed;
+  }
+
+  .topic-pink {
+    background: #fce7f3;
+    color: #be185d;
+  }
+
+  .topic-orange {
+    background: #ffedd5;
+    color: #c2410c;
+  }
+
+  .topic-gray {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+  .topic-indigo {
+    background: #e0e7ff;
+    color: #4338ca;
+  }
+
+  .topic-amber {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .topic-cyan {
+    background: #cffafe;
+    color: #0e7490;
+  }
+
+  .topic-rose {
+    background: #ffe4e6;
+    color: #be123c;
   }
 
   .loading,

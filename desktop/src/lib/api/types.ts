@@ -157,6 +157,22 @@ export interface SmartReplySuggestionsResponse {
   suggestions: SmartReplySuggestion[];
 }
 
+// Topic types
+export interface Topic {
+  topic: string;
+  confidence: number;
+  color: string;
+  display_name: string;
+}
+
+export interface TopicsResponse {
+  chat_id: string;
+  topics: Topic[];
+  all_topics: Topic[];
+  cached: boolean;
+  message_count_analyzed: number;
+}
+
 // Error types
 export interface ApiError {
   error: string;
