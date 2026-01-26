@@ -38,7 +38,9 @@ class AvatarCache:
     Stores avatar image data with 1-hour TTL to avoid repeated database queries.
     """
 
-    def __init__(self, ttl_seconds: float = AVATAR_CACHE_TTL_SECONDS, maxsize: int = AVATAR_CACHE_MAX_SIZE) -> None:
+    def __init__(
+        self, ttl_seconds: float = AVATAR_CACHE_TTL_SECONDS, maxsize: int = AVATAR_CACHE_MAX_SIZE
+    ) -> None:
         """Initialize the avatar cache.
 
         Args:
@@ -231,14 +233,17 @@ def generate_svg_avatar(
     # Calculate font size based on number of characters
     font_size = size * 0.4 if len(initials) <= 2 else size * 0.35
 
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 {size} {size}">
-  <circle cx="{size // 2}" cy="{size // 2}" r="{size // 2}" fill="{background_color}"/>
-  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-        font-size="{font_size}" font-weight="600" fill="white">
-    {initials}
-  </text>
-</svg>'''
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" '
+        f'viewBox="0 0 {size} {size}">'
+        f'<circle cx="{size // 2}" cy="{size // 2}" r="{size // 2}" '
+        f'fill="{background_color}"/>'
+        f'<text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" '
+        f"font-family=\"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif\" "
+        f'font-size="{font_size}" font-weight="600" fill="white">'
+        f"{initials}"
+        f"</text></svg>"
+    )
 
     return svg.encode("utf-8")
 
@@ -282,13 +287,13 @@ def generate_png_avatar(
     try:
         # Try macOS system font
         font = ImageFont.truetype("/System/Library/Fonts/SFNS.ttf", font_size)
-    except (OSError, IOError):
+    except OSError:
         try:
             # Fallback to another common font
             font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
-        except (OSError, IOError):
+        except OSError:
             # Use default font
-            font = ImageFont.load_default()
+            font = ImageFont.load_default()  # type: ignore[assignment]
 
     # Calculate text position for centering
     bbox = draw.textbbox((0, 0), initials, font=font)
@@ -370,15 +375,17 @@ def get_avatar(
     """
     # Normalize the identifier
     is_email = "@" in identifier
+    normalized: str
     if is_email:
         normalized = identifier.lower().strip()
     else:
-        normalized = normalize_phone_number(identifier)
-        if normalized is None:
+        normalized_phone = normalize_phone_number(identifier)
+        if normalized_phone is None:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid phone number format",
             )
+        normalized = normalized_phone
 
     # Build cache key
     cache_key = f"{normalized}:{size}:{format}"
@@ -424,7 +431,7 @@ def get_avatar(
                     img = Image.open(io.BytesIO(image_bytes))
                     # Resize if needed
                     if img.size[0] != size or img.size[1] != size:
-                        img = img.resize((size, size), Image.Resampling.LANCZOS)
+                        img = img.resize((size, size), Image.Resampling.LANCZOS)  # type: ignore[assignment]
                     output = io.BytesIO()
                     img.save(output, format="PNG")
                     image_bytes = output.getvalue()
@@ -518,15 +525,17 @@ def get_contact_info(identifier: str) -> dict[str, Any]:
     """
     # Normalize the identifier
     is_email = "@" in identifier
+    normalized: str
     if is_email:
         normalized = identifier.lower().strip()
     else:
-        normalized = normalize_phone_number(identifier)
-        if normalized is None:
+        normalized_phone = normalize_phone_number(identifier)
+        if normalized_phone is None:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid phone number format",
             )
+        normalized = normalized_phone
 
     # Try to get contact info
     avatar_data: ContactAvatarData | None = None

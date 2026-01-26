@@ -260,9 +260,7 @@ def _compute_response_time(messages: list[Any]) -> float | None:
 def _compute_hourly_activity(messages: list[Any]) -> list[HourlyActivity]:
     """Compute message counts by hour of day."""
     hour_counts: Counter[int] = Counter(msg.date.hour for msg in messages)
-    return [
-        HourlyActivity(hour=hour, count=hour_counts.get(hour, 0)) for hour in range(24)
-    ]
+    return [HourlyActivity(hour=hour, count=hour_counts.get(hour, 0)) for hour in range(24)]
 
 
 def _compute_daily_activity(messages: list[Any]) -> dict[str, int]:
@@ -318,10 +316,7 @@ def _compute_word_frequency(messages: list[Any], top_n: int = 20) -> list[WordFr
             words = _extract_words(msg.text)
             word_counts.update(words)
 
-    return [
-        WordFrequency(word=word, count=count)
-        for word, count in word_counts.most_common(top_n)
-    ]
+    return [WordFrequency(word=word, count=count) for word, count in word_counts.most_common(top_n)]
 
 
 def _compute_emoji_stats(messages: list[Any]) -> dict[str, int]:
@@ -551,9 +546,7 @@ def get_conversation_stats(
         total_messages=total,
         sent_count=sent_count,
         received_count=received_count,
-        avg_response_time_minutes=round(avg_response_time, 1)
-        if avg_response_time
-        else None,
+        avg_response_time_minutes=round(avg_response_time, 1) if avg_response_time else None,
         hourly_activity=hourly_activity,
         daily_activity=daily_activity,
         message_length_distribution=message_lengths,

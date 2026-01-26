@@ -17,7 +17,6 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     Image,
-    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -268,9 +267,7 @@ class PDFGenerator:
         buffer.seek(0)
         return buffer.read()
 
-    def _filter_by_date(
-        self, messages: list[Message], options: PDFExportOptions
-    ) -> list[Message]:
+    def _filter_by_date(self, messages: list[Message], options: PDFExportOptions) -> list[Message]:
         """Filter messages by date range."""
         if not options.start_date and not options.end_date:
             return messages
@@ -285,9 +282,7 @@ class PDFGenerator:
 
         return filtered
 
-    def _create_header(
-        self, messages: list[Message], conversation: Conversation | None
-    ) -> list:
+    def _create_header(self, messages: list[Message], conversation: Conversation | None) -> list:
         """Create the document header section."""
         elements = []
 
@@ -327,7 +322,9 @@ class PDFGenerator:
 
         if participants and len(participants) <= 5:
             participant_text = ", ".join(participants)
-            header_data.append([Paragraph(f"Participants: {participant_text}", self.styles["subtitle"])])
+            header_data.append(
+                [Paragraph(f"Participants: {participant_text}", self.styles["subtitle"])]
+            )
 
         header_table = Table(
             header_data,
@@ -372,9 +369,7 @@ class PDFGenerator:
             if current_date != msg_date:
                 current_date = msg_date
                 date_text = _format_date_header(message.date)
-                elements.append(
-                    Paragraph(f"— {date_text} —", self.styles["date_header"])
-                )
+                elements.append(Paragraph(f"— {date_text} —", self.styles["date_header"]))
 
             # Handle system messages
             if message.is_system_message:
@@ -390,12 +385,12 @@ class PDFGenerator:
             # Sender name (for group chats, incoming messages)
             if is_group and not message.is_from_me:
                 sender = message.sender_name or message.sender
-                msg_elements.append(
-                    Paragraph(_escape_text(sender), self.styles["sender"])
-                )
+                msg_elements.append(Paragraph(_escape_text(sender), self.styles["sender"]))
 
             # Message text
-            style = self.styles["message_me"] if message.is_from_me else self.styles["message_other"]
+            style = (
+                self.styles["message_me"] if message.is_from_me else self.styles["message_other"]
+            )
             msg_elements.append(Paragraph(_escape_text(message.text), style))
 
             # Attachments
@@ -426,9 +421,7 @@ class PDFGenerator:
 
             # Reactions
             if options.include_reactions and message.reactions:
-                reaction_text = " ".join(
-                    f"{r.type}" for r in message.reactions
-                )
+                reaction_text = " ".join(f"{r.type}" for r in message.reactions)
                 msg_elements.append(
                     Paragraph(f"Reactions: {reaction_text}", self.styles["reaction"])
                 )

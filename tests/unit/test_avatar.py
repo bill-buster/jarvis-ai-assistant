@@ -3,16 +3,12 @@
 Tests the avatar module and contacts API endpoint.
 """
 
-import pytest
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from integrations.imessage.avatar import (
     ContactAvatarData,
     get_contact_avatar,
-    _query_contact_avatar,
-    _query_by_phone,
-    _query_by_email,
 )
 
 
@@ -311,16 +307,7 @@ class TestContactInfoEndpoint:
 
     def test_contact_info_structure(self):
         """Test the structure of contact info response."""
-        # The endpoint returns a dict with specific keys
-        expected_keys = {
-            "identifier",
-            "display_name",
-            "has_avatar",
-            "initials",
-            "avatar_color",
-        }
-
-        # We can verify the structure by checking the function signature
+        # We can verify the function exists and is callable
         from api.routers.contacts import get_contact_info
 
         # This would need an actual API test with TestClient
@@ -340,6 +327,7 @@ class TestAvatarEndpoint:
     def test_avatar_endpoint_parameters(self):
         """Test avatar endpoint parameter defaults."""
         import inspect
+
         from api.routers.contacts import get_avatar
 
         sig = inspect.signature(get_avatar)

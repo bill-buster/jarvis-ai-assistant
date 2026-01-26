@@ -598,6 +598,7 @@ class ChatDBReader:
                 attributed_body = row["last_message_attributed_body"]
                 if attributed_body:
                     from .parser import parse_attributed_body
+
                     last_message_text = parse_attributed_body(attributed_body)
 
             conversations.append(

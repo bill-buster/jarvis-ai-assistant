@@ -737,8 +737,7 @@ class TemplateAnalytics:
                 reverse=True,
             )[:limit]
             return [
-                {"template_name": name, "match_count": count}
-                for name, count in sorted_templates
+                {"template_name": name, "match_count": count} for name, count in sorted_templates
             ]
 
     def get_missed_queries(self, limit: int = 50) -> list[dict[str, Any]]:
