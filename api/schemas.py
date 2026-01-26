@@ -111,20 +111,79 @@ class SendMessageResponse(BaseModel):
     error: str | None = None
 
 
-class ModelStatusResponse(BaseModel):
-    """Model loading status for progress feedback."""
+# Settings schemas
 
-    state: str  # "unloaded", "loading", "loaded", "error"
-    progress: float | None = None  # 0.0 to 1.0 during loading
-    message: str | None = None
-    memory_usage_mb: float | None = None
-    load_time_seconds: float | None = None
+
+class ModelInfo(BaseModel):
+    """Information about an available model."""
+
+    model_id: str
+    name: str
+    size_gb: float
+    quality_tier: str  # "basic", "good", "best"
+    ram_requirement_gb: float
+    is_downloaded: bool
+    is_loaded: bool
+    is_recommended: bool
+    description: str | None = None
+
+
+class GenerationSettings(BaseModel):
+    """Generation parameter settings."""
+
+    temperature: float = Field(default=0.7, ge=0.1, le=1.0)
+    max_tokens_reply: int = Field(default=150, ge=50, le=300)
+    max_tokens_summary: int = Field(default=500, ge=200, le=1000)
+
+
+class BehaviorSettings(BaseModel):
+    """Behavior preference settings."""
+
+    auto_suggest_replies: bool = True
+    suggestion_count: int = Field(default=3, ge=1, le=5)
+    context_messages_reply: int = Field(default=20, ge=10, le=50)
+    context_messages_summary: int = Field(default=50, ge=20, le=100)
+
+
+class SystemInfo(BaseModel):
+    """Read-only system information."""
+
+    system_ram_gb: float
+    current_memory_usage_gb: float
+    model_loaded: bool
+    model_memory_usage_gb: float
+    imessage_access: bool
+
+
+class SettingsResponse(BaseModel):
+    """Complete settings response."""
+
+    model_id: str
+    generation: GenerationSettings
+    behavior: BehaviorSettings
+    system: SystemInfo
+
+
+class SettingsUpdateRequest(BaseModel):
+    """Request to update settings."""
+
+    model_id: str | None = None
+    generation: GenerationSettings | None = None
+    behavior: BehaviorSettings | None = None
+
+
+class DownloadStatus(BaseModel):
+    """Model download status."""
+
+    model_id: str
+    status: str  # "downloading", "completed", "failed"
+    progress: float = Field(default=0.0, ge=0.0, le=100.0)
     error: str | None = None
 
 
-class PreloadResponse(BaseModel):
-    """Response from model preload request."""
+class ActivateResponse(BaseModel):
+    """Response after activating a model."""
 
     success: bool
-    message: str
-    state: str  # Current model state after operation
+    model_id: str
+    error: str | None = None

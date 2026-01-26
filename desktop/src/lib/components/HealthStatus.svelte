@@ -1,251 +1,157 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import {
-    healthStatus,
-    modelStatus,
-    fetchHealthStatus,
-    fetchModelStatus,
-    preloadModel,
-    unloadModel,
-  } from "../stores/health";
-  import LoadingSpinner from "./LoadingSpinner.svelte";
+  import { healthStore, fetchHealth } from "../stores/health";
 
-  let loading = true;
-  let isPreloading = false;
-  let isUnloading = false;
+  let refreshing = false;
 
-  onMount(async () => {
-    await Promise.all([fetchHealthStatus(), fetchModelStatus()]);
-    loading = false;
+  onMount(() => {
+    fetchHealth();
   });
 
-  async function handlePreload() {
-    isPreloading = true;
-    await preloadModel();
-    // Poll until loaded
-    const pollInterval = setInterval(async () => {
-      const status = await fetchModelStatus();
-      if (status && (status.state === "loaded" || status.state === "error")) {
-        clearInterval(pollInterval);
-        isPreloading = false;
-      }
-    }, 500);
-  }
-
-  async function handleUnload() {
-    isUnloading = true;
-    await unloadModel();
-    isUnloading = false;
-  }
-
-  async function refreshStatus() {
-    await Promise.all([fetchHealthStatus(), fetchModelStatus()]);
+  async function refresh() {
+    refreshing = true;
+    await fetchHealth();
+    refreshing = false;
   }
 </script>
 
 <div class="health-status">
-  <header>
+  <div class="header">
     <h1>System Health</h1>
-    <button class="refresh-btn" on:click={refreshStatus}>
-      🔄 Refresh
+    <button class="refresh-btn" on:click={refresh} disabled={refreshing}>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        class:spinning={refreshing}
+      >
+        <path d="M23 4v6h-6M1 20v-6h6" />
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      </svg>
+      {refreshing ? "Refreshing..." : "Refresh"}
     </button>
-  </header>
+  </div>
 
-  {#if loading}
-    <div class="loading">
-      <LoadingSpinner size="large" />
-      <span>Loading health status...</span>
+  {#if $healthStore.loading && !$healthStore.data}
+    <div class="loading">Loading health status...</div>
+  {:else if $healthStore.error}
+    <div class="error-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      <span>{$healthStore.error}</span>
     </div>
-  {:else}
-    <div class="sections">
-      <!-- Model Status Section -->
-      <section class="model-section">
-        <h2>AI Model</h2>
-        <div class="model-card">
-          <div class="model-header">
-            <div class="model-status-indicator" class:loaded={$modelStatus.state === "loaded"}>
-              {#if $modelStatus.state === "loaded"}
-                <span class="status-badge success">Ready</span>
-              {:else if $modelStatus.state === "loading"}
-                <span class="status-badge loading">Loading</span>
-              {:else if $modelStatus.state === "error"}
-                <span class="status-badge error">Error</span>
-              {:else}
-                <span class="status-badge">Unloaded</span>
-              {/if}
-            </div>
-          </div>
-
-          {#if $modelStatus.state === "loading"}
-            <div class="loading-progress">
-              <div class="progress-bar">
-                <div
-                  class="progress"
-                  style="width: {($modelStatus.progress || 0) * 100}%"
-                ></div>
-              </div>
-              <div class="progress-text">
-                {$modelStatus.message || "Loading..."} ({Math.round(($modelStatus.progress || 0) * 100)}%)
-              </div>
-            </div>
-          {/if}
-
-          {#if $modelStatus.state === "error"}
-            <div class="error-message">
-              {$modelStatus.error || "Unknown error occurred"}
-            </div>
-          {/if}
-
-          <div class="model-details">
-            {#if $modelStatus.memory_usage_mb}
-              <div class="detail-row">
-                <span class="label">Memory Usage:</span>
-                <span class="value">{$modelStatus.memory_usage_mb.toFixed(0)} MB</span>
-              </div>
-            {/if}
-            {#if $modelStatus.load_time_seconds}
-              <div class="detail-row">
-                <span class="label">Load Time:</span>
-                <span class="value">{$modelStatus.load_time_seconds.toFixed(2)}s</span>
-              </div>
-            {/if}
-          </div>
-
-          <div class="model-actions">
-            {#if $modelStatus.state === "loaded"}
-              <button
-                class="action-btn danger"
-                on:click={handleUnload}
-                disabled={isUnloading}
-              >
-                {#if isUnloading}
-                  <LoadingSpinner size="small" />
-                {:else}
-                  Unload Model
-                {/if}
-              </button>
-            {:else if $modelStatus.state === "loading"}
-              <button class="action-btn" disabled>
-                <LoadingSpinner size="small" />
-                Loading... {Math.round(($modelStatus.progress || 0) * 100)}%
-              </button>
-            {:else}
-              <button
-                class="action-btn primary"
-                on:click={handlePreload}
-                disabled={isPreloading}
-              >
-                {#if isPreloading}
-                  <LoadingSpinner size="small" />
-                {:else}
-                  Preload Model
-                {/if}
-              </button>
-            {/if}
-          </div>
-
-          <p class="model-hint">
-            {#if $modelStatus.state === "loaded"}
-              Model is ready for AI-powered suggestions
-            {:else}
-              Preload the model for faster response times (10-15s on first load)
-            {/if}
-          </p>
-        </div>
-      </section>
-
-      <!-- System Health Section -->
-      {#if $healthStatus}
-        <section class="system-section">
-          <h2>System Status</h2>
-          <div class="status-grid">
-            <div class="status-card" class:healthy={$healthStatus.status === "healthy"}>
-              <div class="status-icon">
-                {#if $healthStatus.status === "healthy"}
-                  ✓
-                {:else if $healthStatus.status === "degraded"}
-                  !
-                {:else}
-                  ✕
-                {/if}
-              </div>
-              <div class="status-info">
-                <div class="status-title">Overall Status</div>
-                <div class="status-value">{$healthStatus.status}</div>
-              </div>
-            </div>
-
-            <div class="status-card" class:healthy={$healthStatus.imessage_access}>
-              <div class="status-icon">
-                {$healthStatus.imessage_access ? "✓" : "✕"}
-              </div>
-              <div class="status-info">
-                <div class="status-title">iMessage Access</div>
-                <div class="status-value">
-                  {$healthStatus.imessage_access ? "Granted" : "Denied"}
-                </div>
-              </div>
-            </div>
-
-            <div class="status-card info">
-              <div class="status-icon">🧠</div>
-              <div class="status-info">
-                <div class="status-title">Memory Mode</div>
-                <div class="status-value">{$healthStatus.memory_mode}</div>
-              </div>
-            </div>
-
-            <div class="status-card info">
-              <div class="status-icon">💾</div>
-              <div class="status-info">
-                <div class="status-title">Available Memory</div>
-                <div class="status-value">{$healthStatus.memory_available_gb.toFixed(1)} GB</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="memory-section">
-          <h2>Memory Details</h2>
-          <div class="memory-grid">
-            <div class="memory-item">
-              <span class="label">System Available:</span>
-              <span class="value">{$healthStatus.memory_available_gb.toFixed(2)} GB</span>
-            </div>
-            <div class="memory-item">
-              <span class="label">System Used:</span>
-              <span class="value">{$healthStatus.memory_used_gb.toFixed(2)} GB</span>
-            </div>
-            <div class="memory-item">
-              <span class="label">JARVIS RSS:</span>
-              <span class="value">{$healthStatus.jarvis_rss_mb.toFixed(1)} MB</span>
-            </div>
-            <div class="memory-item">
-              <span class="label">JARVIS VMS:</span>
-              <span class="value">{$healthStatus.jarvis_vms_mb.toFixed(1)} MB</span>
-            </div>
-          </div>
-        </section>
-
-        {#if $healthStatus.details && Object.keys($healthStatus.details).length > 0}
-          <section class="details-section">
-            <h2>Issues</h2>
-            <div class="issues-list">
-              {#each Object.entries($healthStatus.details) as [key, value]}
-                <div class="issue-item">
-                  <span class="issue-key">{key}:</span>
-                  <span class="issue-value">{value}</span>
-                </div>
-              {/each}
-            </div>
-          </section>
+  {:else if $healthStore.data}
+    <div class="status-banner" class:healthy={$healthStore.data.status === "healthy"} class:degraded={$healthStore.data.status === "degraded"} class:unhealthy={$healthStore.data.status === "unhealthy"}>
+      <div class="status-icon">
+        {#if $healthStore.data.status === "healthy"}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        {:else if $healthStore.data.status === "degraded"}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        {:else}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
         {/if}
-      {:else}
-        <section class="error-section">
-          <p>Unable to fetch health status. Make sure the API is running.</p>
-        </section>
-      {/if}
+      </div>
+      <div class="status-text">
+        <h2>System is {$healthStore.data.status}</h2>
+        <p>
+          {#if $healthStore.data.status === "healthy"}
+            All systems operational
+          {:else if $healthStore.data.status === "degraded"}
+            Some features may be limited
+          {:else}
+            Some services are unavailable
+          {/if}
+        </p>
+      </div>
     </div>
+
+    <div class="metrics">
+      <div class="metric-card">
+        <h3>Memory</h3>
+        <div class="metric-value">
+          {$healthStore.data.memory_available_gb.toFixed(1)} GB
+          <span class="metric-label">available</span>
+        </div>
+        <div class="metric-bar">
+          <div
+            class="metric-fill"
+            style="width: {Math.min(100, ($healthStore.data.memory_used_gb / ($healthStore.data.memory_used_gb + $healthStore.data.memory_available_gb)) * 100)}%"
+          />
+        </div>
+        <p class="metric-detail">
+          {$healthStore.data.memory_used_gb.toFixed(1)} GB used of{" "}
+          {($healthStore.data.memory_used_gb + $healthStore.data.memory_available_gb).toFixed(1)} GB
+        </p>
+        <p class="metric-mode">Mode: {$healthStore.data.memory_mode}</p>
+      </div>
+
+      <div class="metric-card">
+        <h3>JARVIS Process</h3>
+        <div class="metric-value">
+          {$healthStore.data.jarvis_rss_mb.toFixed(0)} MB
+          <span class="metric-label">RSS</span>
+        </div>
+        <p class="metric-detail">
+          Virtual: {$healthStore.data.jarvis_vms_mb.toFixed(0)} MB
+        </p>
+      </div>
+
+      <div class="metric-card">
+        <h3>AI Model</h3>
+        <div class="metric-value" class:loaded={$healthStore.data.model_loaded}>
+          {$healthStore.data.model_loaded ? "Loaded" : "Not Loaded"}
+        </div>
+        <p class="metric-detail">
+          {#if $healthStore.data.model_loaded}
+            Ready for inference
+          {:else}
+            Will load on first request
+          {/if}
+        </p>
+      </div>
+
+      <div class="metric-card">
+        <h3>iMessage Access</h3>
+        <div class="metric-value" class:connected={$healthStore.data.imessage_access}>
+          {$healthStore.data.imessage_access ? "Connected" : "Not Connected"}
+        </div>
+        <p class="metric-detail">
+          {#if $healthStore.data.imessage_access}
+            Full Disk Access granted
+          {:else}
+            Enable in System Settings
+          {/if}
+        </p>
+      </div>
+    </div>
+
+    {#if $healthStore.data.details && Object.keys($healthStore.data.details).length > 0}
+      <div class="details">
+        <h3>Issues</h3>
+        <ul>
+          {#each Object.entries($healthStore.data.details) as [key, value]}
+            <li>
+              <strong>{key}:</strong> {value}
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -254,10 +160,9 @@
     flex: 1;
     padding: 24px;
     overflow-y: auto;
-    background: var(--bg-primary);
   }
 
-  header {
+  .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -266,287 +171,232 @@
 
   h1 {
     font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
+    font-weight: 600;
   }
 
   .refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 8px 16px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    cursor: pointer;
     color: var(--text-primary);
-    font-size: 13px;
+    cursor: pointer;
+    font-size: 14px;
     transition: all 0.15s ease;
   }
 
-  .refresh-btn:hover {
+  .refresh-btn:hover:not(:disabled) {
     background: var(--bg-hover);
+    border-color: var(--accent-color);
+  }
+
+  .refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .refresh-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .refresh-btn svg.spinning {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .loading {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 48px;
+  }
+
+  .error-banner {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(255, 95, 87, 0.1);
+    border: 1px solid var(--error-color);
+    border-radius: 12px;
+    color: var(--error-color);
+    margin-bottom: 24px;
+  }
+
+  .error-banner svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .status-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+
+  .status-banner.healthy {
+    background: rgba(52, 199, 89, 0.1);
+    border: 1px solid #34c759;
+  }
+
+  .status-banner.degraded {
+    background: rgba(255, 159, 10, 0.1);
+    border: 1px solid #ff9f0a;
+  }
+
+  .status-banner.unhealthy {
+    background: rgba(255, 95, 87, 0.1);
+    border: 1px solid var(--error-color);
+  }
+
+  .status-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    height: 300px;
-    color: var(--text-secondary);
   }
 
-  .sections {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  section {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    padding: 20px;
-  }
-
-  h2 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 16px 0;
-  }
-
-  .model-card {
-    background: var(--bg-primary);
-    border-radius: 8px;
-    padding: 16px;
-  }
-
-  .model-header {
-    margin-bottom: 12px;
-  }
-
-  .status-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-  }
-
-  .status-badge.success {
+  .healthy .status-icon {
     background: rgba(52, 199, 89, 0.2);
     color: #34c759;
   }
 
-  .status-badge.loading {
-    background: rgba(11, 147, 246, 0.2);
-    color: var(--accent-color);
+  .degraded .status-icon {
+    background: rgba(255, 159, 10, 0.2);
+    color: #ff9f0a;
   }
 
-  .status-badge.error {
+  .unhealthy .status-icon {
     background: rgba(255, 95, 87, 0.2);
     color: var(--error-color);
   }
 
-  .loading-progress {
-    margin: 16px 0;
+  .status-icon svg {
+    width: 24px;
+    height: 24px;
   }
 
-  .progress-bar {
-    width: 100%;
-    height: 6px;
+  .status-text h2 {
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: capitalize;
+    margin-bottom: 4px;
+  }
+
+  .status-text p {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .metric-card {
     background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .metric-card h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+
+  .metric-value {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .metric-value.loaded,
+  .metric-value.connected {
+    color: #34c759;
+  }
+
+  .metric-label {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+  }
+
+  .metric-bar {
+    height: 6px;
+    background: var(--bg-active);
     border-radius: 3px;
     overflow: hidden;
     margin-bottom: 8px;
   }
 
-  .progress {
+  .metric-fill {
     height: 100%;
     background: var(--accent-color);
+    border-radius: 3px;
     transition: width 0.3s ease;
   }
 
-  .progress-text {
+  .metric-detail {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .metric-mode {
     font-size: 12px;
     color: var(--text-secondary);
+    margin-top: 4px;
   }
 
-  .error-message {
-    padding: 12px;
-    background: rgba(255, 95, 87, 0.1);
-    border-radius: 8px;
-    color: var(--error-color);
-    font-size: 13px;
-    margin: 12px 0;
-  }
-
-  .model-details {
-    margin: 12px 0;
-  }
-
-  .detail-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    padding: 4px 0;
-  }
-
-  .detail-row .label {
-    color: var(--text-secondary);
-  }
-
-  .detail-row .value {
-    color: var(--text-primary);
-    font-weight: 500;
-  }
-
-  .model-actions {
-    margin-top: 16px;
-  }
-
-  .action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
+  .details {
+    background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .action-btn:hover:not(:disabled) {
-    background: var(--bg-hover);
-  }
-
-  .action-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .action-btn.primary {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
-  }
-
-  .action-btn.primary:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  .action-btn.danger {
-    border-color: var(--error-color);
-    color: var(--error-color);
-  }
-
-  .action-btn.danger:hover:not(:disabled) {
-    background: rgba(255, 95, 87, 0.1);
-  }
-
-  .model-hint {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin: 12px 0 0 0;
-  }
-
-  .status-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-  }
-
-  .status-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    background: var(--bg-primary);
-    border-radius: 8px;
-    border-left: 3px solid var(--border-color);
-  }
-
-  .status-card.healthy {
-    border-left-color: #34c759;
-  }
-
-  .status-card.info {
-    border-left-color: var(--accent-color);
-  }
-
-  .status-card .status-icon {
-    font-size: 20px;
-  }
-
-  .status-title {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  .status-value {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-    text-transform: capitalize;
-  }
-
-  .memory-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-
-  .memory-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px;
-    background: var(--bg-primary);
-    border-radius: 8px;
-    font-size: 13px;
-  }
-
-  .memory-item .label {
-    color: var(--text-secondary);
-  }
-
-  .memory-item .value {
-    color: var(--text-primary);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .issues-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .issue-item {
-    padding: 12px;
-    background: rgba(255, 95, 87, 0.1);
-    border-radius: 8px;
-    font-size: 13px;
-  }
-
-  .issue-key {
-    color: var(--error-color);
-    font-weight: 500;
-  }
-
-  .issue-value {
-    color: var(--text-primary);
-    margin-left: 8px;
-  }
-
-  .error-section {
-    background: var(--bg-secondary);
     border-radius: 12px;
     padding: 20px;
-    color: var(--text-secondary);
+  }
+
+  .details h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .details ul {
+    list-style: none;
+  }
+
+  .details li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+  }
+
+  .details li:last-child {
+    border-bottom: none;
+  }
+
+  .details strong {
+    text-transform: capitalize;
   }
 </style>

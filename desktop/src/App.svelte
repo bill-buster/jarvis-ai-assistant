@@ -6,38 +6,23 @@
   import MessageView from "./lib/components/MessageView.svelte";
   import Dashboard from "./lib/components/Dashboard.svelte";
   import HealthStatus from "./lib/components/HealthStatus.svelte";
-  import ModelLoadingOverlay from "./lib/components/ModelLoadingOverlay.svelte";
-  import { checkApiConnection, modelStatus, preloadModel, fetchModelStatus } from "./lib/stores/health";
+  import Settings from "./lib/components/Settings.svelte";
+  import { checkApiConnection } from "./lib/stores/health";
   import { clearSelection } from "./lib/stores/conversations";
 
-  let currentView: "messages" | "dashboard" | "health" = "messages";
-  let showModelLoading = false;
-  let preloadOnStart = false; // Could be loaded from settings
-
-  // Check if we should show loading overlay (only during active loading)
-  $: isModelLoading = $modelStatus.state === "loading";
+  let currentView: "messages" | "dashboard" | "health" | "settings" = "messages";
 
   onMount(async () => {
     // Check API connection on start
-    const connected = await checkApiConnection();
-
-    if (connected) {
-      // Fetch initial model status
-      await fetchModelStatus();
-
-      // Optionally preload model on start (based on settings)
-      if (preloadOnStart && $modelStatus.state === "unloaded") {
-        showModelLoading = true;
-        await preloadModel();
-      }
-    }
+    await checkApiConnection();
 
     // Listen for navigation events from tray menu
     const unlisten = await listen<string>("navigate", (event) => {
       if (
         event.payload === "health" ||
         event.payload === "dashboard" ||
-        event.payload === "messages"
+        event.payload === "messages" ||
+        event.payload === "settings"
       ) {
         currentView = event.payload;
         if (event.payload !== "messages") {
@@ -51,15 +36,6 @@
       unlisten();
     };
   });
-
-  function handleModelLoaded() {
-    showModelLoading = false;
-  }
-
-  function handleModelError(error: string) {
-    showModelLoading = false;
-    console.error("Model loading error:", error);
-  }
 </script>
 
 <main class="app">
@@ -69,18 +45,13 @@
     <Dashboard on:navigate={(e) => currentView = e.detail} />
   {:else if currentView === "health"}
     <HealthStatus />
+  {:else if currentView === "settings"}
+    <Settings />
   {:else}
     <ConversationList />
     <MessageView />
   {/if}
 </main>
-
-{#if showModelLoading && isModelLoading}
-  <ModelLoadingOverlay
-    onLoaded={handleModelLoaded}
-    onError={handleModelError}
-  />
-{/if}
 
 <style>
   :global(*) {

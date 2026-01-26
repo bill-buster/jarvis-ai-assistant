@@ -1,154 +1,117 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from "svelte";
-  import { healthStatus, fetchHealthStatus, modelStatus } from "../stores/health";
-  import { conversations, fetchConversations } from "../stores/conversations";
-  import LoadingSpinner from "./LoadingSpinner.svelte";
+  import { healthStore, fetchHealth } from "../stores/health";
+  import { conversationsStore, fetchConversations } from "../stores/conversations";
 
-  const dispatch = createEventDispatcher<{ navigate: "messages" | "health" }>();
+  const dispatch = createEventDispatcher<{ navigate: string }>();
 
-  let loading = true;
-
-  onMount(async () => {
-    await Promise.all([fetchHealthStatus(), fetchConversations()]);
-    loading = false;
+  onMount(() => {
+    fetchHealth();
+    fetchConversations();
   });
 
-  $: totalMessages = $conversations.reduce((sum, c) => sum + c.message_count, 0);
-  $: groupChats = $conversations.filter((c) => c.is_group).length;
-  $: directChats = $conversations.filter((c) => !c.is_group).length;
+  $: totalMessages = $conversationsStore.conversations.reduce(
+    (sum, c) => sum + c.message_count,
+    0
+  );
 </script>
 
 <div class="dashboard">
-  <header>
-    <h1>Dashboard</h1>
-    <p class="subtitle">JARVIS AI Assistant Overview</p>
-  </header>
+  <h1>Dashboard</h1>
 
-  {#if loading}
-    <div class="loading">
-      <LoadingSpinner size="large" />
-      <span>Loading dashboard...</span>
+  <div class="cards">
+    <button class="card" on:click={() => dispatch("navigate", "messages")}>
+      <div class="card-icon messages">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      </div>
+      <div class="card-content">
+        <h3>Conversations</h3>
+        <p class="stat">{$conversationsStore.conversations.length}</p>
+        <p class="sub">{totalMessages.toLocaleString()} total messages</p>
+      </div>
+    </button>
+
+    <button class="card" on:click={() => dispatch("navigate", "health")}>
+      <div class="card-icon health" class:healthy={$healthStore.data?.status === "healthy"}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      </div>
+      <div class="card-content">
+        <h3>System Health</h3>
+        <p class="stat" class:healthy={$healthStore.data?.status === "healthy"}>
+          {$healthStore.data?.status || "Unknown"}
+        </p>
+        <p class="sub">
+          {#if $healthStore.data}
+            {$healthStore.data.memory_available_gb.toFixed(1)} GB available
+          {:else}
+            Checking...
+          {/if}
+        </p>
+      </div>
+    </button>
+
+    <div class="card">
+      <div class="card-icon model" class:loaded={$healthStore.data?.model_loaded}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+      </div>
+      <div class="card-content">
+        <h3>AI Model</h3>
+        <p class="stat">{$healthStore.data?.model_loaded ? "Loaded" : "Not Loaded"}</p>
+        <p class="sub">{$healthStore.data?.memory_mode || "FULL"} mode</p>
+      </div>
     </div>
-  {:else}
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">💬</div>
-        <div class="stat-content">
-          <div class="stat-value">{$conversations.length}</div>
-          <div class="stat-label">Conversations</div>
-        </div>
-      </div>
 
-      <div class="stat-card">
-        <div class="stat-icon">📝</div>
-        <div class="stat-content">
-          <div class="stat-value">{totalMessages.toLocaleString()}</div>
-          <div class="stat-label">Total Messages</div>
-        </div>
+    <div class="card">
+      <div class="card-icon imessage" class:connected={$healthStore.data?.imessage_access}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+          <line x1="12" y1="18" x2="12.01" y2="18" />
+        </svg>
       </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">👤</div>
-        <div class="stat-content">
-          <div class="stat-value">{directChats}</div>
-          <div class="stat-label">Direct Chats</div>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">👥</div>
-        <div class="stat-content">
-          <div class="stat-value">{groupChats}</div>
-          <div class="stat-label">Group Chats</div>
-        </div>
+      <div class="card-content">
+        <h3>iMessage</h3>
+        <p class="stat">{$healthStore.data?.imessage_access ? "Connected" : "Not Connected"}</p>
+        <p class="sub">
+          {#if $healthStore.data?.imessage_access}
+            Full Disk Access granted
+          {:else}
+            Grant access in System Settings
+          {/if}
+        </p>
       </div>
     </div>
+  </div>
 
-    <div class="sections">
-      <section class="model-section">
-        <h2>AI Model Status</h2>
-        <div class="model-status" class:loaded={$modelStatus.state === "loaded"}>
-          <div class="model-indicator">
-            {#if $modelStatus.state === "loaded"}
-              <span class="status-icon success">✓</span>
-            {:else if $modelStatus.state === "loading"}
-              <LoadingSpinner size="small" />
-            {:else if $modelStatus.state === "error"}
-              <span class="status-icon error">✕</span>
-            {:else}
-              <span class="status-icon">○</span>
-            {/if}
-          </div>
-          <div class="model-info">
-            <div class="model-state">
-              {#if $modelStatus.state === "loaded"}
-                Model Ready
-              {:else if $modelStatus.state === "loading"}
-                Loading... {$modelStatus.progress ? Math.round($modelStatus.progress * 100) : 0}%
-              {:else if $modelStatus.state === "error"}
-                Error: {$modelStatus.error || "Unknown"}
-              {:else}
-                Model Not Loaded
-              {/if}
+  <div class="recent">
+    <h2>Recent Conversations</h2>
+    {#if $conversationsStore.conversations.length === 0}
+      <p class="empty">No conversations yet</p>
+    {:else}
+      <div class="recent-list">
+        {#each $conversationsStore.conversations.slice(0, 5) as conv (conv.chat_id)}
+          <div class="recent-item">
+            <div class="recent-avatar" class:group={conv.is_group}>
+              {(conv.display_name || conv.participants[0] || "?").charAt(0).toUpperCase()}
             </div>
-            {#if $modelStatus.memory_usage_mb}
-              <div class="model-memory">
-                Using {$modelStatus.memory_usage_mb.toFixed(0)} MB
-              </div>
-            {/if}
-            {#if $modelStatus.load_time_seconds}
-              <div class="model-load-time">
-                Loaded in {$modelStatus.load_time_seconds.toFixed(1)}s
-              </div>
-            {/if}
-          </div>
-        </div>
-      </section>
-
-      <section class="health-section">
-        <h2>System Health</h2>
-        {#if $healthStatus}
-          <div class="health-grid">
-            <div class="health-item" class:ok={$healthStatus.imessage_access}>
-              <span class="health-icon">{$healthStatus.imessage_access ? "✓" : "✕"}</span>
-              <span>iMessage Access</span>
-            </div>
-            <div class="health-item" class:ok={$healthStatus.status === "healthy"}>
-              <span class="health-icon">{$healthStatus.status === "healthy" ? "✓" : "!"}</span>
-              <span>System Status: {$healthStatus.status}</span>
-            </div>
-            <div class="health-item info">
-              <span class="health-icon">🧠</span>
-              <span>Memory Mode: {$healthStatus.memory_mode}</span>
-            </div>
-            <div class="health-item info">
-              <span class="health-icon">💾</span>
-              <span>Available: {$healthStatus.memory_available_gb.toFixed(1)} GB</span>
+            <div class="recent-info">
+              <span class="recent-name">
+                {conv.display_name || conv.participants.join(", ")}
+              </span>
+              <span class="recent-preview">
+                {conv.last_message_text || "No messages"}
+              </span>
             </div>
           </div>
-          <button class="view-health-btn" on:click={() => dispatch("navigate", "health")}>
-            View Full Health Report →
-          </button>
-        {:else}
-          <p class="no-health">Unable to fetch health status</p>
-        {/if}
-      </section>
-
-      <section class="quick-actions">
-        <h2>Quick Actions</h2>
-        <div class="actions-grid">
-          <button class="action-btn" on:click={() => dispatch("navigate", "messages")}>
-            <span class="action-icon">💬</span>
-            <span>View Messages</span>
-          </button>
-          <button class="action-btn" on:click={() => dispatch("navigate", "health")}>
-            <span class="action-icon">🔧</span>
-            <span>System Health</span>
-          </button>
-        </div>
-      </section>
-    </div>
-  {/if}
+        {/each}
+      </div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -156,202 +119,180 @@
     flex: 1;
     padding: 24px;
     overflow-y: auto;
-    background: var(--bg-primary);
-  }
-
-  header {
-    margin-bottom: 24px;
   }
 
   h1 {
     font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-  }
-
-  .subtitle {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin: 4px 0 0 0;
-  }
-
-  .loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    height: 300px;
-    color: var(--text-secondary);
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
+    font-weight: 600;
     margin-bottom: 24px;
   }
 
-  .stat-card {
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .card {
     background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 20px;
     display: flex;
-    align-items: center;
     gap: 16px;
-  }
-
-  .stat-icon {
-    font-size: 32px;
-  }
-
-  .stat-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .stat-label {
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-
-  .sections {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
-  section {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    padding: 20px;
-  }
-
-  h2 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 16px 0;
-  }
-
-  .model-status {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
-    background: var(--bg-primary);
-    border-radius: 8px;
-  }
-
-  .model-indicator {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .status-icon {
-    font-size: 20px;
-    color: var(--text-secondary);
-  }
-
-  .status-icon.success {
-    color: #34c759;
-  }
-
-  .status-icon.error {
-    color: var(--error-color);
-  }
-
-  .model-state {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-  }
-
-  .model-memory,
-  .model-load-time {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  .health-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .health-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    background: var(--bg-primary);
-    border-radius: 8px;
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-
-  .health-item.ok {
-    color: #34c759;
-  }
-
-  .health-icon {
-    font-size: 14px;
-  }
-
-  .view-health-btn {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--accent-color);
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.15s ease;
-  }
-
-  .view-health-btn:hover {
-    background: var(--bg-hover);
-  }
-
-  .no-health {
-    color: var(--text-secondary);
-    font-size: 14px;
-    margin: 0;
-  }
-
-  .actions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-  }
-
-  .action-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 16px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
     cursor: pointer;
     transition: all 0.15s ease;
-    color: var(--text-primary);
-    font-size: 13px;
+    text-align: left;
   }
 
-  .action-btn:hover {
+  .card:hover {
     background: var(--bg-hover);
     border-color: var(--accent-color);
   }
 
-  .action-icon {
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--bg-active);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .card-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .card-icon.messages {
+    background: rgba(11, 147, 246, 0.2);
+    color: var(--accent-color);
+  }
+
+  .card-icon.health {
+    background: rgba(255, 95, 87, 0.2);
+    color: var(--error-color);
+  }
+
+  .card-icon.health.healthy {
+    background: rgba(52, 199, 89, 0.2);
+    color: #34c759;
+  }
+
+  .card-icon.model {
+    background: rgba(88, 86, 214, 0.2);
+    color: var(--group-color);
+  }
+
+  .card-icon.model.loaded {
+    background: rgba(52, 199, 89, 0.2);
+    color: #34c759;
+  }
+
+  .card-icon.imessage {
+    background: rgba(255, 95, 87, 0.2);
+    color: var(--error-color);
+  }
+
+  .card-icon.imessage.connected {
+    background: rgba(52, 199, 89, 0.2);
+    color: #34c759;
+  }
+
+  .card-content h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .card-content .stat {
     font-size: 24px;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .card-content .stat.healthy {
+    color: #34c759;
+  }
+
+  .card-content .sub {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .recent {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .recent h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .recent-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .recent-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+  }
+
+  .recent-avatar.group {
+    background: var(--group-color);
+  }
+
+  .recent-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .recent-name {
+    display: block;
+    font-weight: 500;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .recent-preview {
+    display: block;
+    font-size: 13px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .empty {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 24px;
   }
 </style>

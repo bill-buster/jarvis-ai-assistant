@@ -1,158 +1,119 @@
 /**
- * API client for JARVIS backend.
- * Communicates with the FastAPI server at localhost:8742
+ * API client for JARVIS backend
  */
 
 import type {
+  ActivateResponse,
   Conversation,
+  DownloadStatus,
+  HealthResponse,
   Message,
-  HealthStatus,
-  SummaryRequest,
-  SummaryResponse,
-  SendMessageRequest,
-  SendMessageResponse,
-  ErrorResponse,
+  ModelInfo,
+  SettingsResponse,
+  SettingsUpdateRequest,
 } from "./types";
 
 const API_BASE = "http://localhost:8742";
-const DEFAULT_TIMEOUT = 30000; // 30 seconds
 
-class ApiError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number,
-    public detail?: string
-  ) {
-    super(message);
-    this.name = "ApiError";
+class ApiClient {
+  private baseUrl: string;
+
+  constructor(baseUrl: string = API_BASE) {
+    this.baseUrl = baseUrl;
   }
-}
 
-async function fetchWithTimeout(
-  url: string,
-  options: RequestInit = {},
-  timeout: number = DEFAULT_TIMEOUT
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  try {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal,
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    let errorDetail: string | undefined;
-    try {
-      const errorData: ErrorResponse = await response.json();
-      errorDetail = errorData.detail || errorData.error;
-    } catch {
-      errorDetail = response.statusText;
-    }
-    throw new ApiError(
-      `API request failed: ${response.status}`,
-      response.status,
-      errorDetail
-    );
-  }
-  return response.json();
-}
-
-export const api = {
-  /**
-   * Get list of conversations
-   */
-  async getConversations(limit: number = 50): Promise<Conversation[]> {
-    const response = await fetchWithTimeout(
-      `${API_BASE}/conversations?limit=${limit}`
-    );
-    return handleResponse<Conversation[]>(response);
-  },
-
-  /**
-   * Get messages for a specific conversation
-   */
-  async getMessages(chatId: string, limit: number = 100): Promise<Message[]> {
-    const response = await fetchWithTimeout(
-      `${API_BASE}/conversations/${encodeURIComponent(chatId)}/messages?limit=${limit}`
-    );
-    return handleResponse<Message[]>(response);
-  },
-
-  /**
-   * Get system health status
-   */
-  async getHealth(): Promise<HealthStatus> {
-    const response = await fetchWithTimeout(`${API_BASE}/health`);
-    return handleResponse<HealthStatus>(response);
-  },
-
-  /**
-   * Generate a summary for a conversation
-   */
-  async getSummary(
-    chatId: string,
-    messageCount: number = 50
-  ): Promise<SummaryResponse> {
-    const request: SummaryRequest = {
-      chat_id: chatId,
-      message_count: messageCount,
-    };
-
-    const response = await fetchWithTimeout(
-      `${API_BASE}/drafts/summarize`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
       },
-      DEFAULT_TIMEOUT
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new Error(error.detail || error.error || "Request failed");
+    }
+
+    return response.json();
+  }
+
+  // Health endpoints
+  async getHealth(): Promise<HealthResponse> {
+    return this.request<HealthResponse>("/health");
+  }
+
+  async ping(): Promise<{ status: string; service: string }> {
+    return this.request<{ status: string; service: string }>("/");
+  }
+
+  // Conversation endpoints
+  async getConversations(): Promise<Conversation[]> {
+    return this.request<Conversation[]>("/conversations");
+  }
+
+  async getConversation(chatId: string): Promise<Conversation> {
+    return this.request<Conversation>(
+      `/conversations/${encodeURIComponent(chatId)}`
     );
+  }
 
-    return handleResponse<SummaryResponse>(response);
-  },
-
-  /**
-   * Send a message to a conversation
-   */
-  async sendMessage(
+  async getMessages(
     chatId: string,
-    request: SendMessageRequest
-  ): Promise<SendMessageResponse> {
-    const response = await fetchWithTimeout(
-      `${API_BASE}/conversations/${encodeURIComponent(chatId)}/send`,
+    limit: number = 50,
+    before?: string
+  ): Promise<Message[]> {
+    let url = `/conversations/${encodeURIComponent(chatId)}/messages?limit=${limit}`;
+    if (before) {
+      url += `&before=${encodeURIComponent(before)}`;
+    }
+    return this.request<Message[]>(url);
+  }
+
+  // Settings endpoints
+  async getSettings(): Promise<SettingsResponse> {
+    return this.request<SettingsResponse>("/settings");
+  }
+
+  async updateSettings(
+    settings: SettingsUpdateRequest
+  ): Promise<SettingsResponse> {
+    return this.request<SettingsResponse>("/settings", {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getModels(): Promise<ModelInfo[]> {
+    return this.request<ModelInfo[]>("/settings/models");
+  }
+
+  async downloadModel(modelId: string): Promise<DownloadStatus> {
+    return this.request<DownloadStatus>(
+      `/settings/models/${encodeURIComponent(modelId)}/download`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(request),
       }
     );
-    return handleResponse<SendMessageResponse>(response);
-  },
+  }
 
-  /**
-   * Check if API is reachable
-   */
-  async ping(): Promise<boolean> {
-    try {
-      const response = await fetchWithTimeout(`${API_BASE}/health`, {}, 5000);
-      return response.ok;
-    } catch {
-      return false;
-    }
-  },
-};
+  async activateModel(modelId: string): Promise<ActivateResponse> {
+    return this.request<ActivateResponse>(
+      `/settings/models/${encodeURIComponent(modelId)}/activate`,
+      {
+        method: "POST",
+      }
+    );
+  }
+}
 
-export { ApiError };
-export default api;
+// Export singleton instance
+export const api = new ApiClient();
