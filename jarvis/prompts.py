@@ -2,6 +2,9 @@
 
 Provides well-engineered prompts optimized for small local LLMs (Qwen2.5-0.5B/1.5B)
 with clear structure, few-shot examples, and tone-aware generation.
+
+This module is the SINGLE SOURCE OF TRUTH for all prompts in the JARVIS system.
+Import prompts from here, not from other modules.
 """
 
 from __future__ import annotations
@@ -11,8 +14,32 @@ from dataclasses import dataclass
 from typing import Literal
 
 # =============================================================================
+# Prompt Metadata & Versioning
+# =============================================================================
+
+PROMPT_VERSION = "1.0.0"
+PROMPT_LAST_UPDATED = "2026-01-26"
+
+# =============================================================================
 # Few-Shot Examples
 # =============================================================================
+
+
+@dataclass
+class PromptMetadata:
+    """Metadata for a prompt or example set.
+
+    Attributes:
+        name: Human-readable name for the prompt/example set
+        version: Semantic version string (e.g., "1.0.0")
+        last_updated: ISO date string of last update
+        description: Brief description of the prompt's purpose
+    """
+
+    name: str
+    version: str = PROMPT_VERSION
+    last_updated: str = PROMPT_LAST_UPDATED
+    description: str = ""
 
 
 @dataclass
@@ -662,3 +689,266 @@ def is_within_token_limit(prompt: str, limit: int = MAX_PROMPT_TOKENS) -> bool:
 REPLY_EXAMPLES: list[tuple[str, str]] = [(ex.context, ex.output) for ex in CASUAL_REPLY_EXAMPLES]
 
 SUMMARY_EXAMPLES: list[tuple[str, str]] = SUMMARIZATION_EXAMPLES
+
+
+# =============================================================================
+# API-Style Prompt Examples
+# =============================================================================
+
+# These examples use the instruction-based format for API endpoints
+# (e.g., the drafts router). They include explicit instructions.
+
+API_REPLY_EXAMPLES_METADATA = PromptMetadata(
+    name="api_reply_examples",
+    version=PROMPT_VERSION,
+    last_updated=PROMPT_LAST_UPDATED,
+    description="Few-shot examples for API reply generation with explicit instructions",
+)
+
+API_REPLY_EXAMPLES: list[tuple[str, str]] = [
+    (
+        "Last message: 'Hey, are you free for dinner tomorrow?'\n"
+        "Instruction: accept enthusiastically",
+        "Yes, absolutely! I'd love to! What time works for you?",
+    ),
+    (
+        "Last message: 'Can you review this document by EOD?'\n"
+        "Instruction: confirm and ask for details",
+        "Sure, I can take a look. Which sections should I focus on?",
+    ),
+    (
+        "Last message: 'Thanks for your help yesterday!'\nInstruction: None",
+        "You're welcome! Happy I could help.",
+    ),
+]
+
+API_SUMMARY_EXAMPLES_METADATA = PromptMetadata(
+    name="api_summary_examples",
+    version=PROMPT_VERSION,
+    last_updated=PROMPT_LAST_UPDATED,
+    description="Few-shot examples for API conversation summarization",
+)
+
+API_SUMMARY_EXAMPLES: list[tuple[str, str]] = [
+    (
+        "Conversation about planning a birthday party with 5 messages "
+        "discussing date, venue, and guest list.",
+        "Summary: Planning discussion for a birthday party.\n"
+        "Key points:\n- Deciding on date and venue\n- Creating guest list",
+    ),
+]
+
+
+# =============================================================================
+# Prompt Registry
+# =============================================================================
+
+
+class PromptRegistry:
+    """Registry for dynamic prompt management.
+
+    Provides centralized access to all prompts, examples, and templates
+    with metadata tracking and versioning support.
+
+    Example:
+        >>> registry = PromptRegistry()
+        >>> examples = registry.get_examples("casual_reply")
+        >>> template = registry.get_template("reply_generation")
+        >>> metadata = registry.get_metadata("casual_reply")
+    """
+
+    def __init__(self) -> None:
+        """Initialize the prompt registry with all registered prompts."""
+        self._examples: dict[str, list[tuple[str, str]]] = {
+            "casual_reply": REPLY_EXAMPLES,
+            "professional_reply": [(ex.context, ex.output) for ex in PROFESSIONAL_REPLY_EXAMPLES],
+            "summarization": SUMMARIZATION_EXAMPLES,
+            "search_answer": [
+                (f"Messages:\n{msgs}\nQuestion: {q}", a) for msgs, q, a in SEARCH_ANSWER_EXAMPLES
+            ],
+            "api_reply": API_REPLY_EXAMPLES,
+            "api_summary": API_SUMMARY_EXAMPLES,
+        }
+
+        self._templates: dict[str, PromptTemplate] = {
+            "reply_generation": REPLY_TEMPLATE,
+            "conversation_summary": SUMMARY_TEMPLATE,
+            "search_answer": SEARCH_ANSWER_TEMPLATE,
+        }
+
+        self._metadata: dict[str, PromptMetadata] = {
+            "casual_reply": PromptMetadata(
+                name="casual_reply",
+                description="Few-shot examples for casual iMessage replies",
+            ),
+            "professional_reply": PromptMetadata(
+                name="professional_reply",
+                description="Few-shot examples for professional iMessage replies",
+            ),
+            "summarization": PromptMetadata(
+                name="summarization",
+                description="Few-shot examples for conversation summarization",
+            ),
+            "search_answer": PromptMetadata(
+                name="search_answer",
+                description="Few-shot examples for question answering over messages",
+            ),
+            "api_reply": API_REPLY_EXAMPLES_METADATA,
+            "api_summary": API_SUMMARY_EXAMPLES_METADATA,
+            "reply_generation": PromptMetadata(
+                name="reply_generation",
+                description="Template for generating iMessage replies",
+            ),
+            "conversation_summary": PromptMetadata(
+                name="conversation_summary",
+                description="Template for summarizing conversations",
+            ),
+            "search_answer_template": PromptMetadata(
+                name="search_answer_template",
+                description="Template for answering questions about conversations",
+            ),
+        }
+
+    def get_examples(self, name: str) -> list[tuple[str, str]]:
+        """Get few-shot examples by name.
+
+        Args:
+            name: The example set name (e.g., "casual_reply", "api_reply")
+
+        Returns:
+            List of (input, output) tuples for few-shot prompting
+
+        Raises:
+            KeyError: If the example set doesn't exist
+        """
+        if name not in self._examples:
+            available = ", ".join(sorted(self._examples.keys()))
+            raise KeyError(f"Unknown example set '{name}'. Available: {available}")
+        return self._examples[name]
+
+    def get_template(self, name: str) -> PromptTemplate:
+        """Get a prompt template by name.
+
+        Args:
+            name: The template name (e.g., "reply_generation")
+
+        Returns:
+            The PromptTemplate instance
+
+        Raises:
+            KeyError: If the template doesn't exist
+        """
+        if name not in self._templates:
+            available = ", ".join(sorted(self._templates.keys()))
+            raise KeyError(f"Unknown template '{name}'. Available: {available}")
+        return self._templates[name]
+
+    def get_metadata(self, name: str) -> PromptMetadata:
+        """Get metadata for a prompt or example set.
+
+        Args:
+            name: The prompt/example set name
+
+        Returns:
+            The PromptMetadata instance
+
+        Raises:
+            KeyError: If the metadata doesn't exist
+        """
+        if name not in self._metadata:
+            available = ", ".join(sorted(self._metadata.keys()))
+            raise KeyError(f"Unknown prompt '{name}'. Available: {available}")
+        return self._metadata[name]
+
+    def list_examples(self) -> list[str]:
+        """List all available example set names.
+
+        Returns:
+            Sorted list of example set names
+        """
+        return sorted(self._examples.keys())
+
+    def list_templates(self) -> list[str]:
+        """List all available template names.
+
+        Returns:
+            Sorted list of template names
+        """
+        return sorted(self._templates.keys())
+
+    def register_examples(
+        self,
+        name: str,
+        examples: list[tuple[str, str]],
+        metadata: PromptMetadata | None = None,
+    ) -> None:
+        """Register a new example set.
+
+        Args:
+            name: Unique name for the example set
+            examples: List of (input, output) tuples
+            metadata: Optional metadata for the example set
+        """
+        self._examples[name] = examples
+        if metadata:
+            self._metadata[name] = metadata
+        else:
+            self._metadata[name] = PromptMetadata(
+                name=name,
+                description=f"Custom example set: {name}",
+            )
+
+    def register_template(
+        self,
+        template: PromptTemplate,
+        metadata: PromptMetadata | None = None,
+    ) -> None:
+        """Register a new prompt template.
+
+        Args:
+            template: The PromptTemplate to register
+            metadata: Optional metadata for the template
+        """
+        self._templates[template.name] = template
+        if metadata:
+            self._metadata[template.name] = metadata
+        else:
+            self._metadata[template.name] = PromptMetadata(
+                name=template.name,
+                description=f"Custom template: {template.name}",
+            )
+
+    @property
+    def version(self) -> str:
+        """Get the prompt system version."""
+        return PROMPT_VERSION
+
+    @property
+    def last_updated(self) -> str:
+        """Get the last update date."""
+        return PROMPT_LAST_UPDATED
+
+
+# Global registry instance
+_registry: PromptRegistry | None = None
+
+
+def get_prompt_registry() -> PromptRegistry:
+    """Get the global PromptRegistry instance.
+
+    Returns:
+        The shared PromptRegistry instance
+    """
+    global _registry
+    if _registry is None:
+        _registry = PromptRegistry()
+    return _registry
+
+
+def reset_prompt_registry() -> None:
+    """Reset the global PromptRegistry instance.
+
+    Useful for testing or when prompts need to be reloaded.
+    """
+    global _registry
+    _registry = None
