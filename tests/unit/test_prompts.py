@@ -201,9 +201,7 @@ class TestBuildReplyPrompt:
 
     def test_build_reply_prompt_casual_tone(self):
         """Test reply prompt with casual tone."""
-        result = build_reply_prompt(
-            context="Hey there", last_message="Hey there", tone="casual"
-        )
+        result = build_reply_prompt(context="Hey there", last_message="Hey there", tone="casual")
 
         assert "casual/friendly" in result
 
@@ -227,9 +225,7 @@ class TestBuildReplyPrompt:
 
     def test_build_reply_prompt_includes_examples(self):
         """Test that reply prompt includes few-shot examples."""
-        result = build_reply_prompt(
-            context="Test", last_message="Test", tone="casual"
-        )
+        result = build_reply_prompt(context="Test", last_message="Test", tone="casual")
 
         assert "### Examples:" in result
         assert "Context:" in result
@@ -237,9 +233,7 @@ class TestBuildReplyPrompt:
 
     def test_build_reply_prompt_mixed_tone_uses_casual(self):
         """Test that mixed tone uses casual examples."""
-        result = build_reply_prompt(
-            context="Test", last_message="Test", tone="mixed"
-        )
+        result = build_reply_prompt(context="Test", last_message="Test", tone="mixed")
 
         # Mixed tone should use casual examples
         assert "casual/friendly" in result
@@ -262,9 +256,7 @@ class TestBuildSummaryPrompt:
 
     def test_build_summary_prompt_with_focus(self):
         """Test summary prompt with focus area."""
-        result = build_summary_prompt(
-            context="Test conversation", focus="action items"
-        )
+        result = build_summary_prompt(context="Test conversation", focus="action items")
 
         assert "action items" in result
         assert "Focus especially on" in result
@@ -301,9 +293,7 @@ class TestBuildSearchAnswerPrompt:
 
     def test_build_search_answer_prompt_includes_examples(self):
         """Test that search answer prompt includes few-shot examples."""
-        result = build_search_answer_prompt(
-            context="Test messages", question="Test question?"
-        )
+        result = build_search_answer_prompt(context="Test messages", question="Test question?")
 
         assert "Messages:" in result
         assert "Question:" in result
@@ -311,9 +301,7 @@ class TestBuildSearchAnswerPrompt:
 
     def test_build_search_answer_prompt_has_instructions(self):
         """Test that search answer prompt includes instructions."""
-        result = build_search_answer_prompt(
-            context="Test messages", question="Test question?"
-        )
+        result = build_search_answer_prompt(context="Test messages", question="Test question?")
 
         assert "Answer the question based only on the messages" in result
 
@@ -482,8 +470,13 @@ class TestPromptQuality:
         )
 
         # Should have distinct sections
-        sections = ["### Conversation Context:", "### Instructions:", "### Examples:",
-                    "### Last message to reply to:", "### Your reply:"]
+        sections = [
+            "### Conversation Context:",
+            "### Instructions:",
+            "### Examples:",
+            "### Last message to reply to:",
+            "### Your reply:",
+        ]
         for section in sections:
             assert section in result, f"Missing section: {section}"
 

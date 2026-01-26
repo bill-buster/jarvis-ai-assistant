@@ -125,10 +125,66 @@ class SendMessageResponse(BaseModel):
     error: str | None = None
 
 
+# Draft API schemas
+
+
+class DraftSuggestion(BaseModel):
+    """A suggested reply for a conversation."""
+
+    text: str
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+class ContextInfo(BaseModel):
+    """Information about the context used to generate a reply."""
+
+    num_messages: int
+    participants: list[str]
+    last_message: str | None
+
+
+class DraftReplyRequest(BaseModel):
+    """Request for draft reply generation."""
+
+    chat_id: str
+    instruction: str | None = None
+    num_suggestions: int = Field(default=3, ge=1, le=5)
+    context_messages: int = Field(default=20, ge=5, le=50)
+
+
+class DraftReplyResponse(BaseModel):
+    """Response with generated reply suggestions."""
+
+    suggestions: list[DraftSuggestion]
+    context_used: ContextInfo
+
+
+class DraftSummaryRequest(BaseModel):
+    """Request for conversation summarization."""
+
+    chat_id: str
+    num_messages: int = Field(default=50, ge=10, le=200)
+
+
+class DateRange(BaseModel):
+    """Date range for a conversation summary."""
+
+    start: str
+    end: str
+
+
+class DraftSummaryResponse(BaseModel):
+    """Response with conversation summary."""
+
+    summary: str
+    key_points: list[str]
+    date_range: DateRange
+
+
 # Settings schemas
 
 
-class ModelInfo(BaseModel):
+class AvailableModelInfo(BaseModel):
     """Information about an available model."""
 
     model_id: str

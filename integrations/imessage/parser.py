@@ -100,9 +100,7 @@ def _extract_from_typedstream(data: bytes) -> str | None:
 
         decoded = data.decode("utf-8", errors="ignore")
         # Find sequences of printable characters (at least 1 char)
-        import re
-
-        matches = re.findall(r"[\x20-\x7e\u00a0-\uffff]+", decoded)
+        matches: list[str] = re.findall(r"[\x20-\x7e\u00a0-\uffff]+", decoded)
         for match in matches:
             clean = match.strip()
             if clean and clean not in skip_strings and not clean.startswith("$"):

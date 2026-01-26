@@ -251,9 +251,7 @@ class TestDraftReplyEndpoint:
         assert "John Smith" in data["context_used"]["participants"]
 
     @patch("api.routers.drafts.get_generator")
-    def test_reply_with_instruction(
-        self, mock_get_generator, client, mock_reader, mock_messages
-    ):
+    def test_reply_with_instruction(self, mock_get_generator, client, mock_reader, mock_messages):
         """Generates reply with custom instruction."""
         mock_reader.get_messages.return_value = mock_messages
 
@@ -375,9 +373,7 @@ class TestDraftSummarizeEndpoint:
     """Tests for POST /drafts/summarize endpoint."""
 
     @patch("api.routers.drafts.get_generator")
-    def test_successful_summarization(
-        self, mock_get_generator, client, mock_reader, mock_messages
-    ):
+    def test_successful_summarization(self, mock_get_generator, client, mock_reader, mock_messages):
         """Successfully summarizes a conversation."""
         mock_reader.get_messages.return_value = mock_messages
 

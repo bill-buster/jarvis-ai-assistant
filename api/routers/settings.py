@@ -14,10 +14,10 @@ from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     ActivateResponse,
+    AvailableModelInfo,
     BehaviorSettings,
     DownloadStatus,
     GenerationSettings,
-    ModelInfo,
     SettingsResponse,
     SettingsUpdateRequest,
     SystemInfo,
@@ -252,8 +252,8 @@ def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
     )
 
 
-@router.get("/models", response_model=list[ModelInfo])
-def list_models() -> list[ModelInfo]:
+@router.get("/models", response_model=list[AvailableModelInfo])
+def list_models() -> list[AvailableModelInfo]:
     """List available models with their status."""
     recommended_model = _get_recommended_model()
 
@@ -261,7 +261,7 @@ def list_models() -> list[ModelInfo]:
     for model in AVAILABLE_MODELS:
         model_id = model["model_id"]
         models.append(
-            ModelInfo(
+            AvailableModelInfo(
                 model_id=model_id,
                 name=model["name"],
                 size_gb=model["size_gb"],

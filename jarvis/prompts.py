@@ -14,6 +14,7 @@ from typing import Literal
 # Few-Shot Examples
 # =============================================================================
 
+
 @dataclass
 class FewShotExample:
     """A few-shot example for prompt engineering.
@@ -372,12 +373,12 @@ PROFESSIONAL_INDICATORS: set[str] = {
 # Emoji regex pattern
 EMOJI_PATTERN = re.compile(
     "["
-    "\U0001F600-\U0001F64F"  # emoticons
-    "\U0001F300-\U0001F5FF"  # symbols & pictographs
-    "\U0001F680-\U0001F6FF"  # transport & map symbols
-    "\U0001F1E0-\U0001F1FF"  # flags
-    "\U00002702-\U000027B0"  # dingbats
-    "\U000024C2-\U0001F251"  # enclosed characters
+    "\U0001f600-\U0001f64f"  # emoticons
+    "\U0001f300-\U0001f5ff"  # symbols & pictographs
+    "\U0001f680-\U0001f6ff"  # transport & map symbols
+    "\U0001f1e0-\U0001f1ff"  # flags
+    "\U00002702-\U000027b0"  # dingbats
+    "\U000024c2-\U0001f251"  # enclosed characters
     "]+"
 )
 
@@ -651,3 +652,13 @@ def is_within_token_limit(prompt: str, limit: int = MAX_PROMPT_TOKENS) -> bool:
         True if prompt is within limit, False otherwise
     """
     return estimate_tokens(prompt) <= limit
+
+
+# =============================================================================
+# Compatibility Exports
+# =============================================================================
+
+# Convert FewShotExample lists to tuple format for GenerationRequest compatibility
+REPLY_EXAMPLES: list[tuple[str, str]] = [(ex.context, ex.output) for ex in CASUAL_REPLY_EXAMPLES]
+
+SUMMARY_EXAMPLES: list[tuple[str, str]] = SUMMARIZATION_EXAMPLES

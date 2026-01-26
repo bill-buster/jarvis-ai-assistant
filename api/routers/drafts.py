@@ -192,9 +192,7 @@ def generate_draft_reply(
 
     # Build context info
     last_message = messages[0].text if messages else None
-    participants = list(
-        {m.sender_name or m.sender for m in messages if not m.is_from_me}
-    )
+    participants = list({m.sender_name or m.sender for m in messages if not m.is_from_me})
     context_text = _format_messages_for_context(messages)
 
     # Get the generator

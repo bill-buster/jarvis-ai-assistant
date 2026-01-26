@@ -55,9 +55,7 @@ class ContextFetcher:
             print(context.formatted_context)
     """
 
-    def __init__(
-        self, reader: iMessageReader, max_cached_conversations: int = 500
-    ) -> None:
+    def __init__(self, reader: iMessageReader, max_cached_conversations: int = 500) -> None:
         """Initialize the context fetcher.
 
         Args:
@@ -117,9 +115,7 @@ class ContextFetcher:
             return "Me"
         return message.sender_name or message.sender
 
-    def _format_messages(
-        self, messages: list[Message], participant_names: list[str]
-    ) -> str:
+    def _format_messages(self, messages: list[Message], participant_names: list[str]) -> str:
         """Format messages as context for LLM.
 
         Args:
@@ -242,9 +238,7 @@ class ContextFetcher:
             last_received_message=last_received,
         )
 
-    def get_summary_context(
-        self, chat_id: str, num_messages: int = 50
-    ) -> SummaryContext:
+    def get_summary_context(self, chat_id: str, num_messages: int = 50) -> SummaryContext:
         """Get context for summarizing a conversation.
 
         Retrieves messages from a conversation for summarization.
