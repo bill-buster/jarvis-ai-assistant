@@ -6,6 +6,13 @@ import type {
   ActivateResponse,
   Conversation,
   ConversationStats,
+  DigestExportRequest,
+  DigestExportResponse,
+  DigestGenerateRequest,
+  DigestPeriod,
+  DigestPreferences,
+  DigestPreferencesUpdateRequest,
+  DigestResponse,
   DownloadStatus,
   DraftReplyResponse,
   HealthResponse,
@@ -419,6 +426,91 @@ class ApiClient {
 
     const blob = await response.blob();
     return { blob, filename };
+  }
+
+  // Digest endpoints
+  async generateDigest(
+    options: DigestGenerateRequest = {},
+    signal?: AbortSignal
+  ): Promise<DigestResponse> {
+    const body = {
+      period: options.period ?? "daily",
+      end_date: options.end_date || null,
+    };
+
+    const response = await fetch(`${this.baseUrl}/digest/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
+    }
+
+    return response.json();
+  }
+
+  async getDailyDigest(signal?: AbortSignal): Promise<DigestResponse> {
+    return this.request<DigestResponse>("/digest/daily", { signal });
+  }
+
+  async getWeeklyDigest(signal?: AbortSignal): Promise<DigestResponse> {
+    return this.request<DigestResponse>("/digest/weekly", { signal });
+  }
+
+  async exportDigest(
+    options: DigestExportRequest = {},
+    signal?: AbortSignal
+  ): Promise<DigestExportResponse> {
+    const body = {
+      period: options.period ?? "daily",
+      format: options.format ?? "markdown",
+      end_date: options.end_date || null,
+    };
+
+    const response = await fetch(`${this.baseUrl}/digest/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
+    }
+
+    return response.json();
+  }
+
+  async getDigestPreferences(): Promise<DigestPreferences> {
+    return this.request<DigestPreferences>("/digest/preferences");
+  }
+
+  async updateDigestPreferences(
+    settings: DigestPreferencesUpdateRequest
+  ): Promise<DigestPreferences> {
+    return this.request<DigestPreferences>("/digest/preferences", {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    });
   }
 }
 

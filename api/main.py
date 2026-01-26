@@ -23,6 +23,7 @@ from api.errors import register_exception_handlers
 from api.routers import (
     contacts_router,
     conversations_router,
+    digest_router,
     drafts_router,
     export_router,
     health_router,
@@ -98,6 +99,12 @@ API_TAGS_METADATA = [
         "name": "conversations",
         "description": "iMessage conversation and message management. "
         "List conversations, retrieve messages, search, and send messages.",
+    },
+    {
+        "name": "digest",
+        "description": "Daily and weekly digest generation. "
+        "Get summaries of unanswered messages, group highlights, action items, and statistics. "
+        "Export digests in Markdown or HTML format.",
     },
     {
         "name": "drafts",
@@ -246,6 +253,7 @@ async def metrics_middleware(request: Request, call_next):  # type: ignore[no-un
 app.include_router(health_router)
 app.include_router(contacts_router)
 app.include_router(conversations_router)
+app.include_router(digest_router)
 app.include_router(drafts_router)
 app.include_router(export_router)
 app.include_router(pdf_export_router)

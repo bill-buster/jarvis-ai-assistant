@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 CONFIG_PATH = Path.home() / ".jarvis" / "config.json"
 
 # Current config schema version for migration tracking
-CONFIG_VERSION = 3
+CONFIG_VERSION = 4
 
 
 class MemoryThresholds(BaseModel):
@@ -100,6 +100,28 @@ class ModelSettings(BaseModel):
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
 
 
+class DigestConfig(BaseModel):
+    """Digest generation preferences.
+
+    Attributes:
+        enabled: Whether digest generation is enabled.
+        schedule: Digest schedule ("daily" or "weekly").
+        preferred_time: Preferred time for digest generation (HH:MM format).
+        include_action_items: Include detected action items in digest.
+        include_stats: Include message statistics in digest.
+        max_conversations: Maximum conversations to analyze for digest.
+        export_format: Default export format ("markdown" or "html").
+    """
+
+    enabled: bool = True
+    schedule: Literal["daily", "weekly"] = "daily"
+    preferred_time: str = Field(default="08:00", pattern=r"^\d{2}:\d{2}$")
+    include_action_items: bool = True
+    include_stats: bool = True
+    max_conversations: int = Field(default=50, ge=10, le=200)
+    export_format: Literal["markdown", "html"] = "markdown"
+
+
 class JarvisConfig(BaseModel):
     """JARVIS configuration schema.
 
@@ -113,6 +135,7 @@ class JarvisConfig(BaseModel):
         search: Search preferences.
         chat: Chat preferences.
         model: Model configuration for text generation.
+        digest: Digest generation preferences.
     """
 
     config_version: int = CONFIG_VERSION
@@ -124,6 +147,7 @@ class JarvisConfig(BaseModel):
     search: SearchConfig = Field(default_factory=SearchConfig)
     chat: ChatConfig = Field(default_factory=ChatConfig)
     model: ModelSettings = Field(default_factory=ModelSettings)
+    digest: DigestConfig = Field(default_factory=DigestConfig)
 
 
 # Module-level singleton with thread safety
@@ -184,6 +208,15 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
                 data["model"]["model_id"] = path_to_id[model_path]
 
         version = 3
+
+    if version < 4:
+        logger.info(f"Migrating config from version {version} to {CONFIG_VERSION}")
+
+        # Add digest section if missing
+        if "digest" not in data:
+            data["digest"] = {}
+
+        version = 4
 
     # Update version
     data["config_version"] = CONFIG_VERSION

@@ -2,6 +2,7 @@
 
 from .contacts import router as contacts_router
 from .conversations import router as conversations_router
+from .digest import router as digest_router
 from .drafts import router as drafts_router
 from .export import router as export_router
 from .health import router as health_router
@@ -16,6 +17,7 @@ from .topics import router as topics_router
 __all__ = [
     "contacts_router",
     "conversations_router",
+    "digest_router",
     "drafts_router",
     "export_router",
     "health_router",

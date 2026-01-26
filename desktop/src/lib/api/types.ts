@@ -307,3 +307,98 @@ export interface PDFExportResponse {
   message_count: number;
   size_bytes: number;
 }
+
+// Digest types
+export type DigestPeriod = "daily" | "weekly";
+export type DigestFormat = "markdown" | "html";
+
+export interface UnansweredConversation {
+  chat_id: string;
+  display_name: string;
+  participants: string[];
+  unanswered_count: number;
+  last_message_date: string | null;
+  last_message_preview: string | null;
+  is_group: boolean;
+}
+
+export interface GroupHighlight {
+  chat_id: string;
+  display_name: string;
+  participants: string[];
+  message_count: number;
+  active_participants: string[];
+  top_topics: string[];
+  last_activity: string | null;
+}
+
+export interface ActionItem {
+  text: string;
+  chat_id: string;
+  conversation_name: string;
+  sender: string;
+  date: string;
+  message_id: number;
+  item_type: "task" | "question" | "event" | "reminder";
+}
+
+export interface DigestStats {
+  total_sent: number;
+  total_received: number;
+  total_messages: number;
+  active_conversations: number;
+  most_active_conversation: string | null;
+  most_active_count: number;
+  avg_messages_per_day: number;
+  busiest_hour: number | null;
+  hourly_distribution: Record<string, number>;
+}
+
+export interface DigestResponse {
+  period: DigestPeriod;
+  generated_at: string;
+  start_date: string;
+  end_date: string;
+  needs_attention: UnansweredConversation[];
+  highlights: GroupHighlight[];
+  action_items: ActionItem[];
+  stats: DigestStats;
+}
+
+export interface DigestGenerateRequest {
+  period?: DigestPeriod;
+  end_date?: string;
+}
+
+export interface DigestExportRequest {
+  period?: DigestPeriod;
+  format?: DigestFormat;
+  end_date?: string;
+}
+
+export interface DigestExportResponse {
+  success: boolean;
+  format: string;
+  filename: string;
+  data: string;
+}
+
+export interface DigestPreferences {
+  enabled: boolean;
+  schedule: string;
+  preferred_time: string;
+  include_action_items: boolean;
+  include_stats: boolean;
+  max_conversations: number;
+  export_format: string;
+}
+
+export interface DigestPreferencesUpdateRequest {
+  enabled?: boolean;
+  schedule?: string;
+  preferred_time?: string;
+  include_action_items?: boolean;
+  include_stats?: boolean;
+  max_conversations?: number;
+  export_format?: string;
+}
