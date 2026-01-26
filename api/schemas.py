@@ -47,6 +47,7 @@ class MessageResponse(BaseModel):
     reactions: list[ReactionResponse]
     date_delivered: datetime | None = None
     date_read: datetime | None = None
+    is_system_message: bool = False  # Group events like "John left the group"
 
 
 class ConversationResponse(BaseModel):

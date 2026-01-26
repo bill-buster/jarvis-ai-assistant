@@ -47,6 +47,8 @@ class Message:
     # Read receipt info (only for messages you sent)
     date_delivered: datetime | None = None
     date_read: datetime | None = None
+    # System messages (group events like "John left the group")
+    is_system_message: bool = False
 
 
 @dataclass

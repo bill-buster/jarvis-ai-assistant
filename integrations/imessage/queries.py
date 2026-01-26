@@ -102,11 +102,14 @@ _BASE_QUERIES = {
             message.is_from_me,
             message.thread_originator_guid as reply_to_guid,
             message.date_delivered,
-            message.date_read
+            message.date_read,
+            message.group_action_type,
+            affected_handle.id as affected_handle_id
         FROM message
         JOIN chat_message_join ON message.ROWID = chat_message_join.message_id
         JOIN chat ON chat_message_join.chat_id = chat.ROWID
         LEFT JOIN handle ON message.handle_id = handle.ROWID
+        LEFT JOIN handle AS affected_handle ON message.other_handle = affected_handle.ROWID
         WHERE chat.guid = ?
         {before_filter}
         ORDER BY message.date DESC
@@ -144,11 +147,14 @@ _BASE_QUERIES = {
             message.attributedBody,
             message.date,
             message.is_from_me,
-            message.thread_originator_guid as reply_to_guid
+            message.thread_originator_guid as reply_to_guid,
+            message.group_action_type,
+            affected_handle.id as affected_handle_id
         FROM message
         JOIN chat_message_join ON message.ROWID = chat_message_join.message_id
         JOIN chat ON chat_message_join.chat_id = chat.ROWID
         LEFT JOIN handle ON message.handle_id = handle.ROWID
+        LEFT JOIN handle AS affected_handle ON message.other_handle = affected_handle.ROWID
         WHERE chat.guid = ?
         ORDER BY ABS(message.ROWID - ?)
         LIMIT ?

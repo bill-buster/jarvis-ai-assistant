@@ -556,20 +556,38 @@ class ChatDBReader:
             cursor.execute(query, params)
             rows = cursor.fetchall()
         except sqlite3.OperationalError as e:
-            # If query fails (e.g., missing date_delivered column), try simpler query
-            if "date_delivered" in str(e) or "date_read" in str(e):
-                logger.debug("Read receipt columns not available, using fallback query")
-                fallback_query = query.replace("message.date_delivered,", "").replace(
-                    "message.date_read", "NULL as date_read"
-                )
-                try:
-                    cursor.execute(fallback_query, params)
-                    rows = cursor.fetchall()
-                except sqlite3.OperationalError as e2:
-                    logger.warning(f"Query error in get_messages: {e2}")
-                    return []
-            else:
-                logger.warning(f"Query error in get_messages: {e}")
+            # If query fails due to missing columns, create a minimal fallback query
+            # that replaces all optional columns with NULL
+            logger.debug(f"Query failed ({e}), trying fallback with NULL for optional columns")
+            fallback_query = query
+
+            # Replace all optional columns with NULL placeholders
+            # Group event columns
+            fallback_query = fallback_query.replace(
+                "message.group_action_type,",
+                "NULL as group_action_type,",
+            ).replace(
+                "affected_handle.id as affected_handle_id",
+                "NULL as affected_handle_id",
+            ).replace(
+                "LEFT JOIN handle AS affected_handle ON message.other_handle = affected_handle.ROWID",
+                "",
+            )
+
+            # Read receipt columns
+            fallback_query = fallback_query.replace(
+                "message.date_delivered,",
+                "NULL as date_delivered,",
+            ).replace(
+                "message.date_read,",
+                "NULL as date_read,",
+            )
+
+            try:
+                cursor.execute(fallback_query, params)
+                rows = cursor.fetchall()
+            except sqlite3.OperationalError as e2:
+                logger.warning(f"Query error in get_messages: {e2}")
                 return []
 
         return self._rows_to_messages(rows, chat_id)
@@ -686,8 +704,28 @@ class ChatDBReader:
             cursor.execute(query, (chat_id, around_message_id, total_limit))
             rows = cursor.fetchall()
         except sqlite3.OperationalError as e:
-            logger.warning(f"Query error in get_conversation_context: {e}")
-            return []
+            # If query fails due to missing columns, create a minimal fallback query
+            logger.debug(f"Context query failed ({e}), trying fallback")
+            fallback_query = query
+
+            # Replace all optional columns with NULL placeholders
+            fallback_query = fallback_query.replace(
+                "message.group_action_type,",
+                "NULL as group_action_type,",
+            ).replace(
+                "affected_handle.id as affected_handle_id",
+                "NULL as affected_handle_id",
+            ).replace(
+                "LEFT JOIN handle AS affected_handle ON message.other_handle = affected_handle.ROWID",
+                "",
+            )
+
+            try:
+                cursor.execute(fallback_query, (chat_id, around_message_id, total_limit))
+                rows = cursor.fetchall()
+            except sqlite3.OperationalError as e2:
+                logger.warning(f"Query error in get_conversation_context: {e2}")
+                return []
 
         messages = self._rows_to_messages(rows, chat_id)
 
@@ -724,16 +762,7 @@ class ChatDBReader:
             Message object, or None if message has no text and no attachments
         """
         message_id = row["id"]
-
-        # Extract text (tries text column, falls back to attributedBody)
-        text = extract_text_from_row(dict(row)) or ""
-
-        # Fetch attachments for this message
-        attachments = self._get_attachments_for_message(message_id)
-
-        # Skip messages with no text AND no attachments
-        if not text and not attachments:
-            return None
+        row_dict = dict(row)
 
         # Get sender and resolve name from contacts
         sender = normalize_phone_number(row["sender"]) or row["sender"]
@@ -741,9 +770,45 @@ class ChatDBReader:
         if not row["is_from_me"] and sender:
             sender_name = self._resolve_contact_name(sender)
 
+        # Check for group events (system messages)
+        group_action_type = row_dict.get("group_action_type", 0) or 0
+        is_system_message = group_action_type != 0
+
+        if is_system_message:
+            text = self._generate_group_event_text(
+                group_action_type,
+                sender,
+                sender_name,
+                row_dict.get("affected_handle_id"),
+                bool(row["is_from_me"]),
+            )
+            # System messages have no attachments or reactions
+            return Message(
+                id=message_id,
+                chat_id=chat_id,
+                sender=sender,
+                sender_name=sender_name,
+                text=text,
+                date=parse_apple_timestamp(row["date"]),
+                is_from_me=bool(row["is_from_me"]),
+                attachments=[],
+                reply_to_id=None,
+                reactions=[],
+                is_system_message=True,
+            )
+
+        # Extract text (tries text column, falls back to attributedBody)
+        text = extract_text_from_row(row_dict) or ""
+
+        # Fetch attachments for this message
+        attachments = self._get_attachments_for_message(message_id)
+
+        # Skip messages with no text AND no attachments (and not a system message)
+        if not text and not attachments:
+            return None
+
         # Parse reply_to_id from thread_originator_guid
         reply_to_id = None
-        row_dict = dict(row)
         reply_to_guid = row_dict.get("reply_to_guid")
         if reply_to_guid:
             reply_to_id = self._get_message_rowid_by_guid(reply_to_guid)
@@ -776,7 +841,56 @@ class ChatDBReader:
             reactions=reactions,
             date_delivered=date_delivered,
             date_read=date_read,
+            is_system_message=False,
         )
+
+    def _generate_group_event_text(
+        self,
+        action_type: int,
+        actor: str,
+        actor_name: str | None,
+        affected_handle_id: str | None,
+        is_from_me: bool,
+    ) -> str:
+        """Generate human-readable text for group events.
+
+        Args:
+            action_type: The group_action_type from the database
+                1 = left/removed, 2 = name changed, 3 = joined/added
+            actor: The handle ID of who performed the action
+            actor_name: Resolved contact name for actor
+            affected_handle_id: The handle ID of who was affected (if different)
+            is_from_me: Whether the current user performed the action
+
+        Returns:
+            Human-readable description of the group event
+        """
+        # Get display names
+        if is_from_me:
+            actor_display = "You"
+        else:
+            actor_display = actor_name or actor
+
+        affected_display = None
+        if affected_handle_id:
+            normalized = normalize_phone_number(affected_handle_id) or affected_handle_id
+            affected_display = self._resolve_contact_name(normalized) or normalized
+
+        # Generate text based on action type
+        if action_type == 1:  # Left or removed
+            if affected_display and affected_display != actor_display:
+                return f"{actor_display} removed {affected_display} from the group"
+            else:
+                return f"{actor_display} left the group"
+        elif action_type == 2:  # Name changed
+            return f"{actor_display} changed the group name"
+        elif action_type == 3:  # Joined or added
+            if affected_display and affected_display != actor_display:
+                return f"{actor_display} added {affected_display} to the group"
+            else:
+                return f"{actor_display} joined the group"
+        else:
+            return f"Group event (type {action_type})"
 
     def _get_reactions_for_message_id(self, message_id: int) -> list[Reaction]:
         """Fetch reactions for a message by its ROWID.
