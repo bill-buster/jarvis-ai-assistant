@@ -1,7 +1,11 @@
 """AI-powered draft reply generation API endpoints.
 
-Provides endpoints for generating draft replies using the LLM with
-conversation context via RAG.
+Provides endpoints for generating draft replies and conversation summaries
+using the MLX language model with conversation context via RAG (Retrieval
+Augmented Generation).
+
+These endpoints use the local MLX model to generate contextually appropriate
+responses without sending any data to external services.
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ from api.schemas import (
     DraftSuggestion,
     DraftSummaryRequest,
     DraftSummaryResponse,
+    ErrorResponse,
 )
 from contracts.imessage import Message
 from contracts.models import GenerationRequest
@@ -161,15 +166,112 @@ def _parse_summary_response(response_text: str) -> tuple[str, list[str]]:
     return summary, key_points
 
 
-@router.post("/reply", response_model=DraftReplyResponse)
+@router.post(
+    "/reply",
+    response_model=DraftReplyResponse,
+    response_model_exclude_unset=True,
+    response_description="AI-generated reply suggestions with context metadata",
+    summary="Generate draft reply suggestions",
+    responses={
+        200: {
+            "description": "Reply suggestions generated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "suggestions": [
+                            {"text": "Yes, I'd love to! What time?", "confidence": 0.9},
+                            {"text": "Sure! Let me know the details.", "confidence": 0.8},
+                            {"text": "Sounds good to me!", "confidence": 0.7},
+                        ],
+                        "context_used": {
+                            "num_messages": 20,
+                            "participants": ["John Doe"],
+                            "last_message": "Are you free for dinner tonight?",
+                        },
+                    }
+                }
+            },
+        },
+        403: {
+            "description": "Full Disk Access not granted",
+            "model": ErrorResponse,
+        },
+        404: {
+            "description": "Conversation not found or no messages",
+            "model": ErrorResponse,
+        },
+        500: {
+            "description": "Failed to generate suggestions",
+            "model": ErrorResponse,
+        },
+        503: {
+            "description": "Model service unavailable",
+            "model": ErrorResponse,
+        },
+    },
+)
 def generate_draft_reply(
     request: DraftReplyRequest,
     reader: ChatDBReader = Depends(get_imessage_reader),
 ) -> DraftReplyResponse:
     """Generate AI-powered reply suggestions for a conversation.
 
-    Uses the MLX generator with conversation context to produce
-    contextually appropriate reply suggestions.
+    Uses the local MLX language model with conversation context to generate
+    contextually appropriate reply suggestions. All processing is done locally
+    without sending data to external services.
+
+    **How It Works:**
+    1. Retrieves recent messages from the conversation for context
+    2. Formats the conversation as input for the language model
+    3. Generates multiple reply suggestions with varying tones
+    4. Returns suggestions ranked by confidence
+
+    **Customizing Replies:**
+    Use the `instruction` parameter to guide the tone or content:
+    - "accept enthusiastically" - positive, excited response
+    - "politely decline" - courteous refusal
+    - "ask for more details" - clarifying questions
+    - "be brief" - short, concise reply
+    - "be formal" - professional tone
+
+    **Example Request:**
+    ```json
+    {
+        "chat_id": "chat123456789",
+        "instruction": "accept enthusiastically",
+        "num_suggestions": 3,
+        "context_messages": 20
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+        "suggestions": [
+            {"text": "Yes, I'd love to! What time works for you?", "confidence": 0.9},
+            {"text": "Absolutely! Count me in!", "confidence": 0.8},
+            {"text": "Sure thing! Looking forward to it!", "confidence": 0.7}
+        ],
+        "context_used": {
+            "num_messages": 20,
+            "participants": ["John Doe"],
+            "last_message": "Are you free for dinner tonight?"
+        }
+    }
+    ```
+
+    Args:
+        request: DraftReplyRequest with chat_id, optional instruction,
+                 num_suggestions (1-5), and context_messages (5-50)
+
+    Returns:
+        DraftReplyResponse with list of suggestions and context metadata
+
+    Raises:
+        HTTPException 403: Full Disk Access not granted
+        HTTPException 404: No messages found for the conversation
+        HTTPException 500: Failed to generate suggestions
+        HTTPException 503: Model service unavailable
     """
     # Fetch conversation messages for context
     try:
@@ -254,15 +356,102 @@ def generate_draft_reply(
     )
 
 
-@router.post("/summarize", response_model=DraftSummaryResponse)
+@router.post(
+    "/summarize",
+    response_model=DraftSummaryResponse,
+    response_model_exclude_unset=True,
+    response_description="AI-generated conversation summary with key points",
+    summary="Summarize a conversation",
+    responses={
+        200: {
+            "description": "Summary generated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "summary": "Discussion about planning a weekend trip to the beach.",
+                        "key_points": [
+                            "Decided on Saturday departure",
+                            "Meeting at John's place at 9am",
+                            "Everyone bringing snacks",
+                        ],
+                        "date_range": {"start": "2024-01-10", "end": "2024-01-15"},
+                    }
+                }
+            },
+        },
+        403: {
+            "description": "Full Disk Access not granted",
+            "model": ErrorResponse,
+        },
+        404: {
+            "description": "Conversation not found or no messages",
+            "model": ErrorResponse,
+        },
+        500: {
+            "description": "Failed to generate summary",
+            "model": ErrorResponse,
+        },
+        503: {
+            "description": "Model service unavailable",
+            "model": ErrorResponse,
+        },
+    },
+)
 def summarize_conversation(
     request: DraftSummaryRequest,
     reader: ChatDBReader = Depends(get_imessage_reader),
 ) -> DraftSummaryResponse:
     """Summarize a conversation using AI.
 
-    Analyzes the specified number of messages and provides a summary
-    with key points and date range.
+    Analyzes the specified number of messages from a conversation and generates
+    a concise summary with key points. Uses the local MLX model for processing.
+
+    **What You Get:**
+    - A 1-2 sentence summary of the conversation
+    - 2-4 key points extracted from the discussion
+    - The date range of messages included in the summary
+
+    **Use Cases:**
+    - Catch up on a conversation you've missed
+    - Get a quick overview of a long group chat
+    - Find important decisions or action items
+
+    **Example Request:**
+    ```json
+    {
+        "chat_id": "chat123456789",
+        "num_messages": 50
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+        "summary": "Discussion about planning a weekend trip to the beach.",
+        "key_points": [
+            "Decided on Saturday departure at 9am",
+            "Meeting at John's place",
+            "Everyone bringing snacks and sunscreen",
+            "Return planned for Sunday evening"
+        ],
+        "date_range": {
+            "start": "2024-01-10",
+            "end": "2024-01-15"
+        }
+    }
+    ```
+
+    Args:
+        request: DraftSummaryRequest with chat_id and num_messages (10-200)
+
+    Returns:
+        DraftSummaryResponse with summary, key_points, and date_range
+
+    Raises:
+        HTTPException 403: Full Disk Access not granted
+        HTTPException 404: No messages found for the conversation
+        HTTPException 500: Failed to generate summary
+        HTTPException 503: Model service unavailable
     """
     # Fetch conversation messages
     try:

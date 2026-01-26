@@ -1,7 +1,11 @@
 """Smart reply suggestions API endpoint.
 
-Provides quick reply suggestions based on the last received message.
-Uses simple pattern matching for common response scenarios.
+Provides quick reply suggestions based on the last received message using
+pattern matching. This is a lightweight, fast alternative to the AI-powered
+draft generation that works without loading the language model.
+
+Unlike /drafts/reply which uses the MLX model, this endpoint uses pre-defined
+response patterns for common scenarios, making it extremely fast (~1ms).
 """
 
 from __future__ import annotations
@@ -10,7 +14,7 @@ import logging
 import re
 
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -18,23 +22,106 @@ router = APIRouter(prefix="/suggestions", tags=["suggestions"])
 
 
 class SuggestionRequest(BaseModel):
-    """Request for smart reply suggestions."""
+    """Request for smart reply suggestions.
 
-    last_message: str = Field(..., min_length=1, description="The last received message")
-    num_suggestions: int = Field(default=3, ge=1, le=5, description="Number of suggestions")
+    Example:
+        ```json
+        {
+            "last_message": "Are you free for dinner?",
+            "num_suggestions": 3
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "last_message": "Are you free for dinner?",
+                "num_suggestions": 3,
+            }
+        }
+    )
+
+    last_message: str = Field(
+        ...,
+        min_length=1,
+        description="The last received message to generate suggestions for",
+        examples=["Are you free for dinner?", "Thanks for your help!"],
+    )
+    num_suggestions: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        description="Number of suggestions to return (1-5)",
+    )
 
 
 class Suggestion(BaseModel):
-    """A single reply suggestion."""
+    """A single reply suggestion.
 
-    text: str
-    score: float
+    Example:
+        ```json
+        {
+            "text": "Sounds good!",
+            "score": 0.95
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "text": "Sounds good!",
+                "score": 0.95,
+            }
+        }
+    )
+
+    text: str = Field(
+        ...,
+        description="The suggested reply text",
+        examples=["Sounds good!", "Sure!", "What time?"],
+    )
+    score: float = Field(
+        ...,
+        description="Relevance score (0.0 to 1.0) - higher is more relevant",
+        examples=[0.95, 0.8, 0.5],
+        ge=0.0,
+        le=1.0,
+    )
 
 
 class SuggestionResponse(BaseModel):
-    """Response containing reply suggestions."""
+    """Response containing reply suggestions.
 
-    suggestions: list[Suggestion]
+    Example:
+        ```json
+        {
+            "suggestions": [
+                {"text": "Sounds good!", "score": 0.95},
+                {"text": "What time?", "score": 0.85},
+                {"text": "I'm in!", "score": 0.75}
+            ]
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "suggestions": [
+                    {"text": "Sounds good!", "score": 0.95},
+                    {"text": "What time?", "score": 0.85},
+                    {"text": "I'm in!", "score": 0.75},
+                ]
+            }
+        }
+    )
+
+    suggestions: list[Suggestion] = Field(
+        ...,
+        description="List of reply suggestions sorted by relevance score",
+    )
 
 
 # Pre-defined response patterns
@@ -108,11 +195,77 @@ def _compute_match_score(message: str, keywords: list[str], base_score: float) -
     return 0.0
 
 
-@router.post("", response_model=SuggestionResponse)
+@router.post(
+    "",
+    response_model=SuggestionResponse,
+    response_model_exclude_unset=True,
+    response_description="Quick reply suggestions ranked by relevance",
+    summary="Get smart reply suggestions",
+    responses={
+        200: {
+            "description": "Suggestions generated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "suggestions": [
+                            {"text": "I'm in! Where were you thinking?", "score": 0.85},
+                            {"text": "Sounds good!", "score": 0.75},
+                            {"text": "Got it!", "score": 0.25},
+                        ]
+                    }
+                }
+            },
+        }
+    },
+)
 def get_suggestions(request: SuggestionRequest) -> SuggestionResponse:
     """Get smart reply suggestions based on the last message.
 
     Returns contextually appropriate quick replies ranked by relevance.
+    This endpoint uses pattern matching rather than AI generation,
+    making it extremely fast (typically < 1ms).
+
+    **When to Use This vs /drafts/reply:**
+    - Use `/suggestions` for quick, common responses (fast, no model load)
+    - Use `/drafts/reply` for contextual, AI-generated replies (slower, better quality)
+
+    **How Scoring Works:**
+    - Score 0.9-1.0: Strong keyword match (e.g., "thanks" → "You're welcome!")
+    - Score 0.7-0.9: Partial word match
+    - Score 0.3 or below: Generic fallback suggestions
+
+    **Supported Patterns:**
+    - Time/scheduling: "what time", "are you free", "when"
+    - Affirmative: "sounds good", "yes", "okay"
+    - Gratitude: "thanks", "thank you", "appreciate"
+    - Social: "dinner", "lunch", "coffee", "drinks"
+    - Running late: "omw", "on my way", "running late"
+    - Goodbyes: "see you", "bye", "ttyl"
+
+    **Example Request:**
+    ```json
+    {
+        "last_message": "Want to grab dinner tonight?",
+        "num_suggestions": 3
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+        "suggestions": [
+            {"text": "I'm in! Where were you thinking?", "score": 0.85},
+            {"text": "Sounds good!", "score": 0.3},
+            {"text": "Got it!", "score": 0.25}
+        ]
+    }
+    ```
+
+    Args:
+        request: SuggestionRequest with last_message and num_suggestions
+
+    Returns:
+        SuggestionResponse with ranked list of suggestions
     """
     message = request.last_message.strip()
     if not message:

@@ -1,6 +1,8 @@
 """Health check API endpoints.
 
 Provides system health status including memory, model, and permission state.
+These endpoints are used by the frontend to monitor system status and
+display appropriate warnings or errors to the user.
 """
 
 import os
@@ -9,7 +11,6 @@ import psutil
 from fastapi import APIRouter
 
 from api.schemas import HealthResponse, ModelInfo
-from integrations.imessage import ChatDBReader
 
 router = APIRouter(tags=["health"])
 
@@ -37,6 +38,8 @@ def _get_process_memory() -> tuple[float, float]:
 def _check_imessage_access() -> bool:
     """Check if iMessage database is accessible."""
     try:
+        from integrations.imessage import ChatDBReader
+
         reader = ChatDBReader()
         result = reader.check_access()
         reader.close()
@@ -109,18 +112,75 @@ def _get_recommended_model(total_ram_gb: float) -> str | None:
         return None
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+    response_model_exclude_unset=True,
+    response_description="System health status including memory, permissions, and model state",
+    summary="Get system health status",
+    responses={
+        200: {
+            "description": "Health check successful",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "healthy",
+                        "imessage_access": True,
+                        "memory_available_gb": 12.5,
+                        "memory_used_gb": 3.5,
+                        "memory_mode": "FULL",
+                        "model_loaded": True,
+                        "permissions_ok": True,
+                        "jarvis_rss_mb": 256.5,
+                        "jarvis_vms_mb": 1024.0,
+                    }
+                }
+            },
+        }
+    },
+)
 def get_health() -> HealthResponse:
     """Get comprehensive system health status.
 
-    Returns information about:
-    - iMessage database access
-    - System memory usage (total system)
-    - JARVIS process memory usage (what this app is using)
-    - Memory controller mode
-    - Model loading state and details
-    - Recommended model for this system
-    - Overall system health
+    Returns detailed information about the current state of the JARVIS system,
+    including memory usage, permission status, model state, and overall health.
+
+    **Health Status Values:**
+    - `healthy`: All systems operational, iMessage access granted, sufficient memory
+    - `degraded`: System running but with reduced capability (low memory)
+    - `unhealthy`: Critical issue preventing normal operation (no iMessage access)
+
+    **Memory Modes:**
+    - `FULL`: >= 4GB available - all features enabled
+    - `LITE`: 2-4GB available - reduced context window
+    - `MINIMAL`: < 2GB available - basic functionality only
+
+    **Example Response:**
+    ```json
+    {
+        "status": "healthy",
+        "imessage_access": true,
+        "memory_available_gb": 12.5,
+        "memory_used_gb": 3.5,
+        "memory_mode": "FULL",
+        "model_loaded": true,
+        "permissions_ok": true,
+        "jarvis_rss_mb": 256.5,
+        "jarvis_vms_mb": 1024.0,
+        "model": {
+            "id": "mlx-community/Qwen2.5-0.5B-Instruct-4bit",
+            "display_name": "Qwen 0.5B (Fast)",
+            "loaded": true,
+            "memory_usage_mb": 450.5,
+            "quality_tier": "basic"
+        },
+        "recommended_model": "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+        "system_ram_gb": 16.0
+    }
+    ```
+
+    Returns:
+        HealthResponse: Comprehensive system health information
     """
     # System memory stats
     memory = psutil.virtual_memory()
@@ -174,7 +234,33 @@ def get_health() -> HealthResponse:
     )
 
 
-@router.get("/")
+@router.get(
+    "/",
+    response_model_exclude_unset=True,
+    response_description="Simple health ping response",
+    summary="Root endpoint - health ping",
+    responses={
+        200: {
+            "description": "Service is running",
+            "content": {"application/json": {"example": {"status": "ok", "service": "jarvis-api"}}},
+        }
+    },
+)
 def root() -> dict[str, str]:
-    """Root endpoint - simple health ping."""
+    """Root endpoint - simple health ping.
+
+    A lightweight endpoint to verify the API server is running.
+    Use `/health` for comprehensive system status.
+
+    **Example Response:**
+    ```json
+    {
+        "status": "ok",
+        "service": "jarvis-api"
+    }
+    ```
+
+    Returns:
+        dict: Simple status object with service name
+    """
     return {"status": "ok", "service": "jarvis-api"}
