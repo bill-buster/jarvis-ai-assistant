@@ -117,7 +117,6 @@ fi
 echo ""
 
 # Track benchmark status
-COVERAGE_OK=false
 MEMORY_OK=false
 HHEM_OK=false
 LATENCY_OK=false
@@ -156,27 +155,9 @@ log "Pre-flight checks complete"
 echo ""
 
 # ============================================
-# Benchmark 1: Template Coverage (G1)
+# Benchmark 1: Memory Profiling (G1)
 # ============================================
-log "[1/4] Template Coverage Analysis..."
-COVERAGE_CMD="python3 -m benchmarks.coverage.run --output $RESULTS_DIR/coverage.json"
-if [[ "$QUICK_MODE" == "true" ]]; then
-    COVERAGE_CMD="$COVERAGE_CMD --verbose"
-fi
-
-if run_benchmark "Coverage" "$COVERAGE_CMD" "$RESULTS_DIR/coverage.json" "false"; then
-    COVERAGE_OK=true
-    ((BENCHMARKS_RUN++))
-else
-    ((BENCHMARKS_FAILED++))
-    ((BENCHMARKS_RUN++))
-fi
-echo ""
-
-# ============================================
-# Benchmark 2: Memory Profiling (G2)
-# ============================================
-log "[2/4] Memory Profiling..."
+log "[1/3] Memory Profiling..."
 MEMORY_CMD="python3 -m benchmarks.memory.run --output $RESULTS_DIR/memory.json"
 if [[ "$QUICK_MODE" == "true" ]]; then
     MEMORY_CMD="$MEMORY_CMD --quick"
@@ -192,9 +173,9 @@ fi
 echo ""
 
 # ============================================
-# Benchmark 3: HHEM Hallucination Evaluation (G3)
+# Benchmark 2: HHEM Hallucination Evaluation (G2)
 # ============================================
-log "[3/4] HHEM Hallucination Benchmark..."
+log "[2/3] HHEM Hallucination Benchmark..."
 HHEM_CMD="python3 -m benchmarks.hallucination.run --output $RESULTS_DIR/hhem.json"
 if [[ "$QUICK_MODE" == "true" ]]; then
     HHEM_CMD="$HHEM_CMD --verbose"
@@ -210,9 +191,9 @@ fi
 echo ""
 
 # ============================================
-# Benchmark 4: Latency (G4, G5)
+# Benchmark 3: Latency (G3, G4)
 # ============================================
-log "[4/4] Latency Benchmarks..."
+log "[3/3] Latency Benchmarks..."
 LATENCY_CMD="python3 -m benchmarks.latency.run --output $RESULTS_DIR/latency.json --scenario all"
 if [[ "$QUICK_MODE" == "true" ]]; then
     LATENCY_CMD="$LATENCY_CMD --runs 3"
@@ -271,7 +252,6 @@ log "Completed: $(date)"
 log "Results directory: $RESULTS_DIR"
 echo ""
 echo "Benchmarks:"
-echo "  - Coverage:  $([[ "$COVERAGE_OK" == "true" ]] && echo 'COMPLETED' || echo 'FAILED/SKIPPED')"
 echo "  - Memory:    $([[ "$MEMORY_OK" == "true" ]] && echo 'COMPLETED' || echo 'FAILED/SKIPPED')"
 echo "  - HHEM:      $([[ "$HHEM_OK" == "true" ]] && echo 'COMPLETED' || echo 'FAILED/SKIPPED')"
 echo "  - Latency:   $([[ "$LATENCY_OK" == "true" ]] && echo 'COMPLETED' || echo 'FAILED/SKIPPED')"
@@ -281,7 +261,6 @@ echo ""
 echo "Output files:"
 echo "  - Log:       $LOG_FILE"
 echo "  - Report:    $RESULTS_DIR/BENCHMARKS.md"
-[[ -f "$RESULTS_DIR/coverage.json" ]] && echo "  - Coverage:  $RESULTS_DIR/coverage.json"
 [[ -f "$RESULTS_DIR/memory.json" ]] && echo "  - Memory:    $RESULTS_DIR/memory.json"
 [[ -f "$RESULTS_DIR/hhem.json" ]] && echo "  - HHEM:      $RESULTS_DIR/hhem.json"
 [[ -f "$RESULTS_DIR/latency.json" ]] && echo "  - Latency:   $RESULTS_DIR/latency.json"

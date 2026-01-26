@@ -4,7 +4,7 @@
 Usage:
     python scripts/generate_report.py --results-dir results/20240101_120000
 
-Reads JSON results from memory, hallucination, coverage, and latency benchmarks
+Reads JSON results from memory, hallucination, and latency benchmarks
 and produces a formatted Markdown report with tables and gate status.
 """
 
@@ -67,82 +67,67 @@ def generate_report(results_dir: Path) -> str:
 
     gate_statuses: list[str] = []
 
-    # G1: Coverage
-    coverage = load_json_safe(results_dir / "coverage.json")
-    if coverage and coverage.get("skipped"):
-        gate_statuses.append("SKIP")
-        reason = coverage.get("reason", "skipped")
-        lines.append(f"| G1 | Template Coverage @0.7 | {reason} | >=60% | SKIP |")
-    elif coverage and "coverage_at_70" in coverage:
-        cov_70 = coverage["coverage_at_70"]
-        status = format_gate_status(cov_70, (0.60, 0.40), higher_is_better=True)
-        gate_statuses.append(status)
-        lines.append(f"| G1 | Template Coverage @0.7 | {cov_70:.1%} | >=60% | {status} |")
-    else:
-        gate_statuses.append("SKIP")
-        lines.append("| G1 | Template Coverage @0.7 | N/A | >=60% | SKIP |")
-
-    # G2: Memory
+    # G1: Memory
     memory = load_json_safe(results_dir / "memory.json")
     if memory and memory.get("skipped"):
         gate_statuses.append("SKIP")
         reason = memory.get("reason", "skipped")
-        lines.append(f"| G2 | Model Stack Memory | {reason} | <5.5GB | SKIP |")
+        lines.append(f"| G1 | Model Stack Memory | {reason} | <5.5GB | SKIP |")
     elif memory and "profiles" in memory:
         total_mb = sum(p.get("rss_mb", 0) for p in memory["profiles"])
         status = format_gate_status(total_mb, (5500, 6500), higher_is_better=False)
         gate_statuses.append(status)
-        lines.append(f"| G2 | Model Stack Memory | {total_mb:.0f}MB | <5.5GB | {status} |")
+        lines.append(f"| G1 | Model Stack Memory | {total_mb:.0f}MB | <5.5GB | {status} |")
     else:
         gate_statuses.append("SKIP")
-        lines.append("| G2 | Model Stack Memory | N/A | <5.5GB | SKIP |")
+        lines.append("| G1 | Model Stack Memory | N/A | <5.5GB | SKIP |")
 
-    # G3: HHEM
+    # G2: HHEM
     hhem = load_json_safe(results_dir / "hhem.json")
     if hhem and hhem.get("skipped"):
         gate_statuses.append("SKIP")
         reason = hhem.get("reason", "skipped")
-        lines.append(f"| G3 | Mean HHEM Score | {reason} | >=0.5 | SKIP |")
+        lines.append(f"| G2 | Mean HHEM Score | {reason} | >=0.5 | SKIP |")
     elif hhem and "mean_score" in hhem:
         mean_score = hhem["mean_score"]
         status = format_gate_status(mean_score, (0.5, 0.4), higher_is_better=True)
         gate_statuses.append(status)
-        lines.append(f"| G3 | Mean HHEM Score | {mean_score:.3f} | >=0.5 | {status} |")
+        lines.append(f"| G2 | Mean HHEM Score | {mean_score:.3f} | >=0.5 | {status} |")
     else:
         gate_statuses.append("SKIP")
-        lines.append("| G3 | Mean HHEM Score | N/A | >=0.5 | SKIP |")
+        lines.append("| G2 | Mean HHEM Score | N/A | >=0.5 | SKIP |")
 
-    # G4 & G5: Latency
+    # G3 & G4: Latency
     latency = load_json_safe(results_dir / "latency.json")
     if latency and latency.get("skipped"):
         reason = latency.get("reason", "skipped")
         gate_statuses.extend(["SKIP", "SKIP"])
-        lines.append(f"| G4 | Warm-Start Latency (p95) | {reason} | <3s | SKIP |")
-        lines.append(f"| G5 | Cold-Start Latency (p95) | {reason} | <15s | SKIP |")
+        lines.append(f"| G3 | Warm-Start Latency (p95) | {reason} | <3s | SKIP |")
+        lines.append(f"| G4 | Cold-Start Latency (p95) | {reason} | <15s | SKIP |")
     elif latency and "results" in latency:
         warm_results = [r for r in latency["results"] if r.get("scenario") == "warm"]
         if warm_results:
             warm_p95 = warm_results[0].get("p95_ms", 0)
             status = format_gate_status(warm_p95, (3000, 5000), higher_is_better=False)
             gate_statuses.append(status)
-            lines.append(f"| G4 | Warm-Start Latency (p95) | {warm_p95:.0f}ms | <3s | {status} |")
+            lines.append(f"| G3 | Warm-Start Latency (p95) | {warm_p95:.0f}ms | <3s | {status} |")
         else:
             gate_statuses.append("SKIP")
-            lines.append("| G4 | Warm-Start Latency (p95) | N/A | <3s | SKIP |")
+            lines.append("| G3 | Warm-Start Latency (p95) | N/A | <3s | SKIP |")
 
         cold_results = [r for r in latency["results"] if r.get("scenario") == "cold"]
         if cold_results:
             cold_p95 = cold_results[0].get("p95_ms", 0)
             status = format_gate_status(cold_p95, (15000, 20000), higher_is_better=False)
             gate_statuses.append(status)
-            lines.append(f"| G5 | Cold-Start Latency (p95) | {cold_p95:.0f}ms | <15s | {status} |")
+            lines.append(f"| G4 | Cold-Start Latency (p95) | {cold_p95:.0f}ms | <15s | {status} |")
         else:
             gate_statuses.append("SKIP")
-            lines.append("| G5 | Cold-Start Latency (p95) | N/A | <15s | SKIP |")
+            lines.append("| G4 | Cold-Start Latency (p95) | N/A | <15s | SKIP |")
     else:
         gate_statuses.extend(["SKIP", "SKIP"])
-        lines.append("| G4 | Warm-Start Latency (p95) | N/A | <3s | SKIP |")
-        lines.append("| G5 | Cold-Start Latency (p95) | N/A | <15s | SKIP |")
+        lines.append("| G3 | Warm-Start Latency (p95) | N/A | <3s | SKIP |")
+        lines.append("| G4 | Cold-Start Latency (p95) | N/A | <15s | SKIP |")
 
     lines.append("")
 
@@ -162,38 +147,8 @@ def generate_report(results_dir: Path) -> str:
     lines.append("---")
     lines.append("")
 
-    # Coverage Details
-    lines.append("## Template Coverage (G1)")
-    lines.append("")
-    if coverage:
-        lines.append(f"- **Total Queries**: {coverage.get('total_queries', 'N/A')}")
-        lines.append(f"- **Coverage @0.5**: {coverage.get('coverage_at_50', 0):.1%}")
-        lines.append(f"- **Coverage @0.7**: {coverage.get('coverage_at_70', 0):.1%}")
-        lines.append(f"- **Coverage @0.9**: {coverage.get('coverage_at_90', 0):.1%}")
-
-        if coverage.get("template_usage"):
-            lines.append("")
-            lines.append("### Template Usage")
-            lines.append("")
-            lines.append("| Template | Matches |")
-            lines.append("|----------|---------|")
-            # Sort by usage, show top 10
-            usage = sorted(coverage["template_usage"].items(), key=lambda x: x[1], reverse=True)
-            for template, count in usage[:10]:
-                lines.append(f"| {template[:50]}{'...' if len(template) > 50 else ''} | {count} |")
-
-        if coverage.get("unmatched_examples"):
-            lines.append("")
-            lines.append("### Unmatched Query Examples")
-            lines.append("")
-            for example in coverage["unmatched_examples"][:5]:
-                lines.append(f"- `{example[:80]}{'...' if len(example) > 80 else ''}`")
-    else:
-        lines.append("*No coverage results available.*")
-    lines.append("")
-
     # Memory Details
-    lines.append("## Memory Profile (G2)")
+    lines.append("## Memory Profile (G1)")
     lines.append("")
     if memory and memory.get("profiles"):
         lines.append("| Component | RSS (MB) | Peak (MB) |")
@@ -211,7 +166,7 @@ def generate_report(results_dir: Path) -> str:
     lines.append("")
 
     # HHEM Details
-    lines.append("## Hallucination Evaluation (G3)")
+    lines.append("## Hallucination Evaluation (G2)")
     lines.append("")
     if hhem:
         lines.append(f"- **Mean Score**: {hhem.get('mean_score', 0):.3f}")
@@ -230,7 +185,7 @@ def generate_report(results_dir: Path) -> str:
     lines.append("")
 
     # Latency Details
-    lines.append("## Latency Benchmarks (G4, G5)")
+    lines.append("## Latency Benchmarks (G3, G4)")
     lines.append("")
     if latency and latency.get("results"):
         lines.append("| Scenario | Mean (ms) | p50 (ms) | p95 (ms) | p99 (ms) |")

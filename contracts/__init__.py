@@ -4,11 +4,6 @@ This module exports all Protocol interfaces that enable parallel workstream deve
 All implementations should code against these contracts, not concrete implementations.
 """
 
-from contracts.coverage import (
-    CoverageAnalyzer,
-    CoverageResult,
-    TemplateMatch,
-)
 from contracts.hallucination import (
     HallucinationEvaluator,
     HHEMBenchmarkResult,
@@ -59,10 +54,6 @@ __all__ = [
     "HHEMResult",
     "HHEMBenchmarkResult",
     "HallucinationEvaluator",
-    # Coverage (WS3)
-    "TemplateMatch",
-    "CoverageResult",
-    "CoverageAnalyzer",
     # Latency (WS4)
     "Scenario",
     "LatencyResult",

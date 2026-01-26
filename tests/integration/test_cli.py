@@ -236,7 +236,7 @@ class TestBenchmark:
         """Benchmark command propagates subprocess exit code."""
         mock_run.return_value = MagicMock(returncode=42)
 
-        exit_code = main(["benchmark", "coverage"])
+        exit_code = main(["benchmark", "hhem"])
 
         assert exit_code == 42
 

@@ -6,8 +6,7 @@ Local-first AI assistant for macOS with intelligent iMessage management using ML
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Contracts/Interfaces | Complete | All 8 protocol definitions |
-| Template Coverage (WS3) | Complete | 75 templates, 1000 test scenarios |
+| Contracts/Interfaces | Complete | All 7 protocol definitions |
 | Model Generator (WS8) | Complete | MLX loader, template fallback, RAG support |
 | iMessage Reader (WS10) | Complete | Schema detection, attachments, reactions |
 | Memory Profiler (WS1) | Complete | MLX memory profiling with model unload |
@@ -17,7 +16,6 @@ Local-first AI assistant for macOS with intelligent iMessage management using ML
 | Degradation Controller (WS6) | Complete | Circuit breaker pattern |
 | Setup Wizard | Complete | Environment validation, config init |
 | CLI Entry Point | Complete | Chat, search, health, benchmark commands |
-| Gmail Integration (WS9) | Not Started | Planned for future release |
 
 **Default Model**: Qwen2.5-0.5B-Instruct-4bit
 
@@ -27,16 +25,12 @@ Local-first AI assistant for macOS with intelligent iMessage management using ML
 
 - **iMessage Integration** - Read-only local database access with schema auto-detection (v14/v15)
 - **MLX Model Generation** - Local inference on Apple Silicon with memory-aware loading
-- **Template-First Generation** - Semantic matching against 75 templates (0.7 threshold)
+- **Template-First Generation** - Semantic matching against templates (0.7 threshold)
 - **Memory Controller** - Three-tier modes based on available RAM (FULL/LITE/MINIMAL)
 - **Graceful Degradation** - Circuit breaker pattern for feature failures
 - **HHEM Validation** - Post-generation hallucination scoring via Vectara model
 - **Setup Wizard** - Guided first-time setup with permission and environment validation
 - **CLI Interface** - Interactive chat, message search, health monitoring, benchmarks
-
-### Planned
-
-- Gmail API integration (WS9)
 
 ## Requirements
 
@@ -78,7 +72,6 @@ jarvis health
 jarvis benchmark memory
 jarvis benchmark latency
 jarvis benchmark hhem
-jarvis benchmark coverage
 
 # Version information
 jarvis --version
@@ -107,7 +100,6 @@ All benchmarks are implemented and functional:
 ./scripts/overnight_eval.sh --quick
 
 # Individual benchmarks
-python -m benchmarks.coverage.run --output results/coverage.json
 python -m benchmarks.memory.run --output results/memory.json
 python -m benchmarks.hallucination.run --output results/hhem.json
 python -m benchmarks.latency.run --output results/latency.json
@@ -120,11 +112,10 @@ python scripts/check_gates.py results/latest/
 
 | Gate | Metric | Pass | Conditional | Fail |
 |------|--------|------|-------------|------|
-| G1 | Template coverage @ 0.7 | >=60% | 40-60% | <40% |
-| G2 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB |
-| G3 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 |
-| G4 | Warm-start latency | <3s | 3-5s | >5s |
-| G5 | Cold-start latency | <15s | 15-20s | >20s |
+| G1 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB |
+| G2 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 |
+| G3 | Warm-start latency | <3s | 3-5s | >5s |
+| G4 | Cold-start latency | <15s | 15-20s | >20s |
 
 ## Project Structure
 
@@ -132,18 +123,17 @@ python scripts/check_gates.py results/latest/
 jarvis-ai-assistant/
 ├── jarvis/          # CLI entry point and setup wizard
 ├── benchmarks/      # Validation gate implementations
-│   ├── coverage/    # Template coverage analyzer
 │   ├── memory/      # MLX memory profiler
 │   ├── hallucination/  # HHEM benchmark
 │   └── latency/     # Latency benchmark
-├── contracts/       # Python Protocol interfaces (8 protocols)
+├── contracts/       # Python Protocol interfaces (7 protocols)
 ├── core/            # Infrastructure
 │   ├── health/      # Circuit breaker, degradation, permissions
 │   └── memory/      # Memory controller and monitoring
 ├── integrations/
 │   └── imessage/    # iMessage reader
 ├── models/          # MLX model loading and inference
-├── tests/           # Test suite (579 tests, 95% coverage)
+├── tests/           # Test suite
 ├── scripts/         # Benchmark and reporting utilities
 └── docs/            # Design docs and audit report
 ```

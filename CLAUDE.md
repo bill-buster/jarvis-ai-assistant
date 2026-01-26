@@ -10,10 +10,9 @@ JARVIS is a local-first AI assistant for macOS that provides intelligent iMessag
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Contracts/Interfaces | COMPLETE | All 8 protocol definitions in `contracts/` |
-| Template Coverage (WS3) | COMPLETE | 75 templates, 1000 test scenarios |
+| Contracts/Interfaces | COMPLETE | All 7 protocol definitions in `contracts/` |
 | Model Generator (WS8) | COMPLETE | MLX loader, template fallback, RAG support |
-| iMessage Reader (WS10) | MOSTLY COMPLETE | Has TODOs for attachments/reactions |
+| iMessage Reader (WS10) | COMPLETE | Schema detection, attachments, reactions |
 | Memory Profiler (WS1) | COMPLETE | MLX memory profiling with model unload |
 | HHEM Benchmark (WS2) | COMPLETE | Vectara HHEM model evaluation |
 | Latency Benchmark (WS4) | COMPLETE | Cold/warm/hot start scenarios |
@@ -79,6 +78,11 @@ make clean-all          # Clean + remove .venv
 ## Behavioral Hooks (MANDATORY)
 
 These are checkpoints that must be followed at every stage of development.
+
+### Shell Command Guidelines
+
+- **Always use `rm -f` or `rm -rf`** when removing files/directories to avoid interactive prompts that can hang
+- Use absolute paths when possible to avoid confusion about current directory
 
 ### Before Starting Any Task
 
@@ -342,15 +346,14 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 ## Validation Gates
 
-Five gates determine project viability. All benchmarks are now implemented.
+Four gates determine project viability. All benchmarks are implemented.
 
 | Gate | Metric | Pass | Conditional | Fail | How to Run |
 |------|--------|------|-------------|------|------------|
-| G1 | Template coverage @ 0.7 | >=60% | 40-60% | <40% | `python -m benchmarks.coverage.run` |
-| G2 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB | `python -m benchmarks.memory.run` |
-| G3 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 | `python -m benchmarks.hallucination.run` |
-| G4 | Warm-start latency | <3s | 3-5s | >5s | `python -m benchmarks.latency.run` |
-| G5 | Cold-start latency | <15s | 15-20s | >20s | `python -m benchmarks.latency.run` |
+| G1 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB | `python -m benchmarks.memory.run` |
+| G2 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 | `python -m benchmarks.hallucination.run` |
+| G3 | Warm-start latency | <3s | 3-5s | >5s | `python -m benchmarks.latency.run` |
+| G4 | Cold-start latency | <15s | 15-20s | >20s | `python -m benchmarks.latency.run` |
 
 ### Benchmark Scripts
 
@@ -372,7 +375,7 @@ Five gates determine project viability. All benchmarks are now implemented.
 - Results directory: `results/YYYYMMDD_HHMMSS/`
 - Log file: `results/YYYYMMDD_HHMMSS/eval.log`
 - Report: `results/YYYYMMDD_HHMMSS/BENCHMARKS.md`
-- JSON results: `coverage.json`, `memory.json`, `hhem.json`, `latency.json`
+- JSON results: `memory.json`, `hhem.json`, `latency.json`
 - Latest symlink: `results/latest/`
 
 **Exit Codes:**

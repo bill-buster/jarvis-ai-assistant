@@ -479,7 +479,6 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
         "memory": "benchmarks.memory.run",
         "latency": "benchmarks.latency.run",
         "hhem": "benchmarks.hallucination.run",
-        "coverage": "benchmarks.coverage.run",
     }
 
     if benchmark_type not in benchmark_modules:
@@ -597,7 +596,7 @@ Examples:
     )
     bench_parser.add_argument(
         "type",
-        choices=["memory", "latency", "hhem", "coverage"],
+        choices=["memory", "latency", "hhem"],
         help="Benchmark type to run",
     )
     bench_parser.add_argument(
