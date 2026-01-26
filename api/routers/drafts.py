@@ -2,6 +2,9 @@
 
 Provides endpoints for generating draft replies using the LLM with
 conversation context via RAG.
+
+NOTE: All prompts and examples are imported from jarvis/prompts.py,
+which is the single source of truth for all prompts in the JARVIS system.
 """
 
 from __future__ import annotations
@@ -23,40 +26,16 @@ from api.schemas import (
 from contracts.imessage import Message
 from contracts.models import GenerationRequest
 from integrations.imessage import ChatDBReader
+from jarvis.prompts import API_REPLY_EXAMPLES, API_SUMMARY_EXAMPLES
 from models import get_generator
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/drafts", tags=["drafts"])
 
-
-# Few-shot examples for reply generation
-REPLY_EXAMPLES: list[tuple[str, str]] = [
-    (
-        "Last message: 'Hey, are you free for dinner tomorrow?'\n"
-        "Instruction: accept enthusiastically",
-        "Yes, absolutely! I'd love to! What time works for you?",
-    ),
-    (
-        "Last message: 'Can you review this document by EOD?'\n"
-        "Instruction: confirm and ask for details",
-        "Sure, I can take a look. Which sections should I focus on?",
-    ),
-    (
-        "Last message: 'Thanks for your help yesterday!'\nInstruction: None",
-        "You're welcome! Happy I could help.",
-    ),
-]
-
-# Few-shot examples for summarization
-SUMMARY_EXAMPLES: list[tuple[str, str]] = [
-    (
-        "Conversation about planning a birthday party with 5 messages "
-        "discussing date, venue, and guest list.",
-        "Summary: Planning discussion for a birthday party.\n"
-        "Key points:\n- Deciding on date and venue\n- Creating guest list",
-    ),
-]
+# Use centralized prompts from jarvis/prompts.py
+REPLY_EXAMPLES = API_REPLY_EXAMPLES
+SUMMARY_EXAMPLES = API_SUMMARY_EXAMPLES
 
 
 def _format_messages_for_context(messages: list[Message]) -> str:

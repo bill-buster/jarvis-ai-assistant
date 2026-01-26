@@ -4,26 +4,40 @@ Tests cover prompt building, tone detection, and token limit checking
 for the jarvis/prompts.py module.
 """
 
+import pytest
+
 from jarvis.prompts import (
+    API_REPLY_EXAMPLES,
+    API_REPLY_EXAMPLES_METADATA,
+    API_SUMMARY_EXAMPLES,
+    API_SUMMARY_EXAMPLES_METADATA,
     CASUAL_INDICATORS,
     CASUAL_REPLY_EXAMPLES,
     MAX_CONTEXT_CHARS,
     MAX_PROMPT_TOKENS,
     PROFESSIONAL_INDICATORS,
     PROFESSIONAL_REPLY_EXAMPLES,
+    PROMPT_LAST_UPDATED,
+    PROMPT_VERSION,
+    REPLY_EXAMPLES,
     REPLY_TEMPLATE,
     SEARCH_ANSWER_EXAMPLES,
     SEARCH_ANSWER_TEMPLATE,
     SUMMARIZATION_EXAMPLES,
+    SUMMARY_EXAMPLES,
     SUMMARY_TEMPLATE,
     FewShotExample,
+    PromptMetadata,
+    PromptRegistry,
     PromptTemplate,
     build_reply_prompt,
     build_search_answer_prompt,
     build_summary_prompt,
     detect_tone,
     estimate_tokens,
+    get_prompt_registry,
     is_within_token_limit,
+    reset_prompt_registry,
 )
 
 
@@ -563,3 +577,231 @@ Line after blank"""
 
         # Should preserve multiline structure
         assert "Line 1" in result
+
+
+class TestPromptVersioning:
+    """Tests for prompt versioning and metadata."""
+
+    def test_prompt_version_defined(self):
+        """Verify PROMPT_VERSION is defined and valid."""
+        assert PROMPT_VERSION
+        # Should be semver format
+        parts = PROMPT_VERSION.split(".")
+        assert len(parts) == 3
+        assert all(p.isdigit() for p in parts)
+
+    def test_prompt_last_updated_defined(self):
+        """Verify PROMPT_LAST_UPDATED is defined and valid."""
+        assert PROMPT_LAST_UPDATED
+        # Should be ISO date format YYYY-MM-DD
+        parts = PROMPT_LAST_UPDATED.split("-")
+        assert len(parts) == 3
+        assert len(parts[0]) == 4  # Year
+        assert len(parts[1]) == 2  # Month
+        assert len(parts[2]) == 2  # Day
+
+
+class TestPromptMetadata:
+    """Tests for PromptMetadata dataclass."""
+
+    def test_prompt_metadata_creation(self):
+        """Test creating a PromptMetadata instance."""
+        metadata = PromptMetadata(
+            name="test",
+            version="1.0.0",
+            last_updated="2026-01-01",
+            description="Test description",
+        )
+
+        assert metadata.name == "test"
+        assert metadata.version == "1.0.0"
+        assert metadata.last_updated == "2026-01-01"
+        assert metadata.description == "Test description"
+
+    def test_prompt_metadata_defaults(self):
+        """Test PromptMetadata uses default version and date."""
+        metadata = PromptMetadata(name="test")
+
+        assert metadata.name == "test"
+        assert metadata.version == PROMPT_VERSION
+        assert metadata.last_updated == PROMPT_LAST_UPDATED
+        assert metadata.description == ""
+
+
+class TestAPIExamples:
+    """Tests for API-style prompt examples."""
+
+    def test_api_reply_examples_exist(self):
+        """Verify API reply examples are defined."""
+        assert len(API_REPLY_EXAMPLES) >= 3
+        assert all(isinstance(ex, tuple) and len(ex) == 2 for ex in API_REPLY_EXAMPLES)
+
+    def test_api_reply_examples_have_instruction_format(self):
+        """Verify API reply examples use instruction format."""
+        for context, _output in API_REPLY_EXAMPLES:
+            assert "Instruction:" in context or "Last message:" in context
+
+    def test_api_summary_examples_exist(self):
+        """Verify API summary examples are defined."""
+        assert len(API_SUMMARY_EXAMPLES) >= 1
+        assert all(isinstance(ex, tuple) and len(ex) == 2 for ex in API_SUMMARY_EXAMPLES)
+
+    def test_api_reply_examples_metadata_defined(self):
+        """Verify API reply examples have metadata."""
+        assert API_REPLY_EXAMPLES_METADATA.name == "api_reply_examples"
+        assert API_REPLY_EXAMPLES_METADATA.version == PROMPT_VERSION
+
+    def test_api_summary_examples_metadata_defined(self):
+        """Verify API summary examples have metadata."""
+        assert API_SUMMARY_EXAMPLES_METADATA.name == "api_summary_examples"
+        assert API_SUMMARY_EXAMPLES_METADATA.version == PROMPT_VERSION
+
+
+class TestCompatibilityExports:
+    """Tests for compatibility exports (REPLY_EXAMPLES, SUMMARY_EXAMPLES)."""
+
+    def test_reply_examples_are_tuples(self):
+        """Verify REPLY_EXAMPLES are tuples for GenerationRequest compatibility."""
+        assert all(isinstance(ex, tuple) and len(ex) == 2 for ex in REPLY_EXAMPLES)
+
+    def test_reply_examples_match_casual_examples(self):
+        """Verify REPLY_EXAMPLES are derived from CASUAL_REPLY_EXAMPLES."""
+        assert len(REPLY_EXAMPLES) == len(CASUAL_REPLY_EXAMPLES)
+        for (ctx, out), example in zip(REPLY_EXAMPLES, CASUAL_REPLY_EXAMPLES):
+            assert ctx == example.context
+            assert out == example.output
+
+    def test_summary_examples_are_tuples(self):
+        """Verify SUMMARY_EXAMPLES are tuples."""
+        assert all(isinstance(ex, tuple) and len(ex) == 2 for ex in SUMMARY_EXAMPLES)
+
+    def test_summary_examples_alias_summarization_examples(self):
+        """Verify SUMMARY_EXAMPLES is an alias for SUMMARIZATION_EXAMPLES."""
+        assert SUMMARY_EXAMPLES is SUMMARIZATION_EXAMPLES
+
+
+class TestPromptRegistry:
+    """Tests for PromptRegistry class."""
+
+    @pytest.fixture
+    def registry(self):
+        """Create a fresh PromptRegistry for each test."""
+        reset_prompt_registry()
+        return PromptRegistry()
+
+    def test_registry_initialization(self, registry):
+        """Test that registry initializes with all prompts."""
+        examples = registry.list_examples()
+        templates = registry.list_templates()
+
+        assert "casual_reply" in examples
+        assert "professional_reply" in examples
+        assert "api_reply" in examples
+        assert "api_summary" in examples
+        assert "summarization" in examples
+        assert "search_answer" in examples
+
+        assert "reply_generation" in templates
+        assert "conversation_summary" in templates
+        assert "search_answer" in templates
+
+    def test_get_examples(self, registry):
+        """Test retrieving examples by name."""
+        casual = registry.get_examples("casual_reply")
+        assert len(casual) == len(CASUAL_REPLY_EXAMPLES)
+        assert all(isinstance(ex, tuple) for ex in casual)
+
+    def test_get_examples_unknown_raises(self, registry):
+        """Test that unknown example set raises KeyError."""
+        with pytest.raises(KeyError, match="Unknown example set"):
+            registry.get_examples("nonexistent")
+
+    def test_get_template(self, registry):
+        """Test retrieving template by name."""
+        template = registry.get_template("reply_generation")
+        assert template.name == "reply_generation"
+        assert template is REPLY_TEMPLATE
+
+    def test_get_template_unknown_raises(self, registry):
+        """Test that unknown template raises KeyError."""
+        with pytest.raises(KeyError, match="Unknown template"):
+            registry.get_template("nonexistent")
+
+    def test_get_metadata(self, registry):
+        """Test retrieving metadata by name."""
+        metadata = registry.get_metadata("casual_reply")
+        assert metadata.name == "casual_reply"
+        assert metadata.version == PROMPT_VERSION
+
+    def test_get_metadata_unknown_raises(self, registry):
+        """Test that unknown metadata raises KeyError."""
+        with pytest.raises(KeyError, match="Unknown prompt"):
+            registry.get_metadata("nonexistent")
+
+    def test_register_examples(self, registry):
+        """Test registering new example sets."""
+        custom_examples = [("input1", "output1"), ("input2", "output2")]
+        registry.register_examples("custom", custom_examples)
+
+        retrieved = registry.get_examples("custom")
+        assert retrieved == custom_examples
+        assert "custom" in registry.list_examples()
+
+    def test_register_examples_with_metadata(self, registry):
+        """Test registering examples with custom metadata."""
+        custom_examples = [("input", "output")]
+        custom_metadata = PromptMetadata(
+            name="custom",
+            version="2.0.0",
+            description="Custom examples",
+        )
+        registry.register_examples("custom", custom_examples, custom_metadata)
+
+        metadata = registry.get_metadata("custom")
+        assert metadata.version == "2.0.0"
+        assert metadata.description == "Custom examples"
+
+    def test_register_template(self, registry):
+        """Test registering new templates."""
+        custom_template = PromptTemplate(
+            name="custom_template",
+            system_message="Custom system message",
+            template="Custom template {placeholder}",
+        )
+        registry.register_template(custom_template)
+
+        retrieved = registry.get_template("custom_template")
+        assert retrieved is custom_template
+        assert "custom_template" in registry.list_templates()
+
+    def test_registry_version_property(self, registry):
+        """Test registry version property."""
+        assert registry.version == PROMPT_VERSION
+
+    def test_registry_last_updated_property(self, registry):
+        """Test registry last_updated property."""
+        assert registry.last_updated == PROMPT_LAST_UPDATED
+
+
+class TestPromptRegistrySingleton:
+    """Tests for PromptRegistry singleton functions."""
+
+    def test_get_prompt_registry_returns_instance(self):
+        """Test that get_prompt_registry returns a PromptRegistry."""
+        reset_prompt_registry()
+        registry = get_prompt_registry()
+        assert isinstance(registry, PromptRegistry)
+
+    def test_get_prompt_registry_returns_same_instance(self):
+        """Test that get_prompt_registry returns the same instance."""
+        reset_prompt_registry()
+        registry1 = get_prompt_registry()
+        registry2 = get_prompt_registry()
+        assert registry1 is registry2
+
+    def test_reset_prompt_registry(self):
+        """Test that reset_prompt_registry creates a new instance."""
+        registry1 = get_prompt_registry()
+        reset_prompt_registry()
+        registry2 = get_prompt_registry()
+        assert registry1 is not registry2
