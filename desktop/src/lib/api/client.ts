@@ -6,6 +6,16 @@ import type {
   ActivateResponse,
   Conversation,
   ConversationStats,
+  CustomTemplate,
+  CustomTemplateCreateRequest,
+  CustomTemplateExportResponse,
+  CustomTemplateImportRequest,
+  CustomTemplateImportResponse,
+  CustomTemplateListResponse,
+  CustomTemplateTestRequest,
+  CustomTemplateTestResponse,
+  CustomTemplateUpdateRequest,
+  CustomTemplateUsageStats,
   DownloadStatus,
   DraftReplyResponse,
   HealthResponse,
@@ -419,6 +429,89 @@ class ApiClient {
 
     const blob = await response.blob();
     return { blob, filename };
+  }
+
+  // Custom Template endpoints
+  async getCustomTemplates(
+    category?: string,
+    tag?: string,
+    enabledOnly: boolean = false
+  ): Promise<CustomTemplateListResponse> {
+    const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    if (tag) params.set("tag", tag);
+    if (enabledOnly) params.set("enabled_only", "true");
+    const queryString = params.toString();
+    const url = queryString ? `/templates?${queryString}` : "/templates";
+    return this.request<CustomTemplateListResponse>(url);
+  }
+
+  async getCustomTemplate(templateId: string): Promise<CustomTemplate> {
+    return this.request<CustomTemplate>(
+      `/templates/${encodeURIComponent(templateId)}`
+    );
+  }
+
+  async createCustomTemplate(
+    template: CustomTemplateCreateRequest
+  ): Promise<CustomTemplate> {
+    return this.request<CustomTemplate>("/templates", {
+      method: "POST",
+      body: JSON.stringify(template),
+    });
+  }
+
+  async updateCustomTemplate(
+    templateId: string,
+    updates: CustomTemplateUpdateRequest
+  ): Promise<CustomTemplate> {
+    return this.request<CustomTemplate>(
+      `/templates/${encodeURIComponent(templateId)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      }
+    );
+  }
+
+  async deleteCustomTemplate(
+    templateId: string
+  ): Promise<{ status: string; template_id: string }> {
+    return this.request<{ status: string; template_id: string }>(
+      `/templates/${encodeURIComponent(templateId)}`,
+      { method: "DELETE" }
+    );
+  }
+
+  async getCustomTemplateUsageStats(): Promise<CustomTemplateUsageStats> {
+    return this.request<CustomTemplateUsageStats>("/templates/stats/usage");
+  }
+
+  async testCustomTemplate(
+    request: CustomTemplateTestRequest
+  ): Promise<CustomTemplateTestResponse> {
+    return this.request<CustomTemplateTestResponse>("/templates/test", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  }
+
+  async exportCustomTemplates(
+    templateIds?: string[]
+  ): Promise<CustomTemplateExportResponse> {
+    return this.request<CustomTemplateExportResponse>("/templates/export", {
+      method: "POST",
+      body: JSON.stringify({ template_ids: templateIds || null }),
+    });
+  }
+
+  async importCustomTemplates(
+    request: CustomTemplateImportRequest
+  ): Promise<CustomTemplateImportResponse> {
+    return this.request<CustomTemplateImportResponse>("/templates/import", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
   }
 }
 

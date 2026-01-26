@@ -307,3 +307,93 @@ export interface PDFExportResponse {
   message_count: number;
   size_bytes: number;
 }
+
+// Custom Template types
+export interface CustomTemplate {
+  id: string;
+  name: string;
+  template_text: string;
+  trigger_phrases: string[];
+  category: string;
+  tags: string[];
+  min_group_size: number | null;
+  max_group_size: number | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  usage_count: number;
+}
+
+export interface CustomTemplateCreateRequest {
+  name: string;
+  template_text: string;
+  trigger_phrases: string[];
+  category?: string;
+  tags?: string[];
+  min_group_size?: number | null;
+  max_group_size?: number | null;
+  enabled?: boolean;
+}
+
+export interface CustomTemplateUpdateRequest {
+  name?: string;
+  template_text?: string;
+  trigger_phrases?: string[];
+  category?: string;
+  tags?: string[];
+  min_group_size?: number | null;
+  max_group_size?: number | null;
+  enabled?: boolean;
+}
+
+export interface CustomTemplateListResponse {
+  templates: CustomTemplate[];
+  total: number;
+  categories: string[];
+  tags: string[];
+}
+
+export interface CustomTemplateUsageStats {
+  total_templates: number;
+  enabled_templates: number;
+  total_usage: number;
+  usage_by_category: Record<string, number>;
+  top_templates: Array<{ id: string; name: string; usage_count: number }>;
+}
+
+export interface CustomTemplateTestRequest {
+  trigger_phrases: string[];
+  test_inputs: string[];
+}
+
+export interface CustomTemplateTestResult {
+  input: string;
+  matched: boolean;
+  best_match: string | null;
+  similarity: number;
+}
+
+export interface CustomTemplateTestResponse {
+  results: CustomTemplateTestResult[];
+  match_rate: number;
+  threshold: number;
+}
+
+export interface CustomTemplateExportResponse {
+  version: number;
+  export_date: string;
+  template_count: number;
+  templates: Record<string, unknown>[];
+}
+
+export interface CustomTemplateImportRequest {
+  data: Record<string, unknown>;
+  overwrite?: boolean;
+}
+
+export interface CustomTemplateImportResponse {
+  imported: number;
+  skipped: number;
+  errors: number;
+  total_templates: number;
+}
