@@ -286,3 +286,24 @@ export interface TemplateAnalyticsDashboard {
   coverage: TemplateCoverage;
   pie_chart_data: PieChartData;
 }
+
+// PDF Export types
+export interface PDFExportDateRange {
+  start?: string;
+  end?: string;
+}
+
+export interface PDFExportRequest {
+  include_attachments?: boolean;
+  include_reactions?: boolean;
+  date_range?: PDFExportDateRange;
+  limit?: number;
+}
+
+export interface PDFExportResponse {
+  success: boolean;
+  filename: string;
+  data: string; // Base64-encoded PDF
+  message_count: number;
+  size_bytes: number;
+}

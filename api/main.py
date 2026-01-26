@@ -26,6 +26,7 @@ from api.routers import (
     export_router,
     health_router,
     metrics_router,
+    pdf_export_router,
     settings_router,
     stats_router,
     suggestions_router,
@@ -246,6 +247,7 @@ app.include_router(contacts_router)
 app.include_router(conversations_router)
 app.include_router(drafts_router)
 app.include_router(export_router)
+app.include_router(pdf_export_router)
 app.include_router(suggestions_router)
 app.include_router(settings_router)
 app.include_router(stats_router)

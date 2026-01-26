@@ -14,10 +14,13 @@
   import SummaryModal from "./SummaryModal.svelte";
   import SmartReplyChips from "./SmartReplyChips.svelte";
   import ConversationStats from "./ConversationStats.svelte";
+  import PDFExportModal from "./PDFExportModal.svelte";
 
   // Panel visibility state
   let showDraftPanel = $state(false);
   let showSummaryModal = $state(false);
+  let showStatsModal = $state(false);
+  let showPDFExportModal = $state(false);
   let messageViewFocused = $state(true);
 
   // Compute the last received message (for smart reply chips)
@@ -169,6 +172,11 @@
       event.preventDefault();
       if ($selectedConversation) {
         showSummaryModal = true;
+      }
+    } else if (isMod && event.key === "e") {
+      event.preventDefault();
+      if ($selectedConversation) {
+        showPDFExportModal = true;
       }
     }
   }
@@ -451,6 +459,15 @@
   <ConversationStats
     chatId={$selectedConversation.chat_id}
     onClose={() => showStatsModal = false}
+  />
+{/if}
+
+<!-- PDF Export Modal -->
+{#if showPDFExportModal && $selectedConversation}
+  <PDFExportModal
+    chatId={$selectedConversation.chat_id}
+    conversationName={$selectedConversation.display_name || $selectedConversation.participants.join(", ")}
+    onClose={() => showPDFExportModal = false}
   />
 {/if}
 

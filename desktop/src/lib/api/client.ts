@@ -11,6 +11,8 @@ import type {
   HealthResponse,
   Message,
   ModelInfo,
+  PDFExportRequest,
+  PDFExportResponse,
   SearchFilters,
   SettingsResponse,
   SettingsUpdateRequest,
@@ -329,6 +331,94 @@ class ApiClient {
       throw new APIError("Export failed", response.status, null);
     }
     return response.blob();
+  }
+
+  // PDF Export endpoints
+  async exportPDF(
+    chatId: string,
+    options: PDFExportRequest = {},
+    signal?: AbortSignal
+  ): Promise<PDFExportResponse> {
+    const body = {
+      include_attachments: options.include_attachments ?? true,
+      include_reactions: options.include_reactions ?? true,
+      date_range: options.date_range || null,
+      limit: options.limit ?? 1000,
+    };
+
+    const response = await fetch(
+      `${this.baseUrl}/export/pdf/${encodeURIComponent(chatId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal,
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Downloads a PDF export directly as a blob
+   */
+  async downloadPDF(
+    chatId: string,
+    options: PDFExportRequest = {},
+    signal?: AbortSignal
+  ): Promise<{ blob: Blob; filename: string }> {
+    const body = {
+      include_attachments: options.include_attachments ?? true,
+      include_reactions: options.include_reactions ?? true,
+      date_range: options.date_range || null,
+      limit: options.limit ?? 1000,
+    };
+
+    const response = await fetch(
+      `${this.baseUrl}/export/pdf/${encodeURIComponent(chatId)}/download`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal,
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
+    }
+
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = "conversation.pdf";
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (match) {
+        filename = match[1];
+      }
+    }
+
+    const blob = await response.blob();
+    return { blob, filename };
   }
 }
 
