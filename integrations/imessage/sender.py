@@ -2,17 +2,48 @@
 
 Sends iMessages via the Messages app using osascript subprocess calls.
 Requires Automation permission (user will be prompted on first use).
+
+.. deprecated::
+    This module relies on AppleScript automation which has significant
+    limitations imposed by Apple:
+
+    1. **Automation Permission Required**: The user must grant Automation
+       permission for the calling application (Terminal/IDE) to control
+       Messages.app. This is prompted on first use but can be unreliable.
+
+    2. **SIP Restrictions**: System Integrity Protection may block AppleScript
+       from interacting with Messages.app in certain contexts.
+
+    3. **No Background Sending**: Messages can only be sent when Messages.app
+       is running and the user is logged in.
+
+    4. **Sandboxing Issues**: Applications running in a sandbox may not be
+       able to use AppleScript automation at all.
+
+    5. **API Instability**: Apple may change or restrict AppleScript access
+       to Messages.app in future macOS versions without notice.
+
+    For these reasons, this module should be considered experimental and
+    unreliable for production use. Consider using alternative communication
+    methods or informing users of these limitations in the UI.
 """
 
 from __future__ import annotations
 
 import logging
 import subprocess
+import warnings
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+# Module-level deprecation warning for developers
+_DEPRECATION_MESSAGE = (
+    "IMessageSender is deprecated and may not work reliably due to Apple's "
+    "AppleScript automation restrictions. See module docstring for details."
+)
 
 
 class TapbackType(Enum):
@@ -35,7 +66,20 @@ class SendResult:
 
 
 class IMessageSender:
-    """Send iMessages via AppleScript."""
+    """Send iMessages via AppleScript.
+
+    .. deprecated::
+        This class relies on AppleScript automation which has significant
+        Apple-imposed limitations. See module docstring for details.
+        Consider this experimental and unreliable for production use.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the sender.
+
+        Emits a DeprecationWarning due to Apple's AppleScript restrictions.
+        """
+        warnings.warn(_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
 
     def send_message(
         self,

@@ -303,8 +303,8 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 | Directory | Purpose | Status |
 |-----------|---------|--------|
-| `jarvis/` | CLI entry point, config, and main application | COMPLETE |
-| `api/` | FastAPI REST layer for Tauri frontend | COMPLETE |
+| `jarvis/` | CLI entry point, config, main application, and `jarvis/api.py` (CLI API with `/chat` endpoint) | COMPLETE |
+| `api/` | FastAPI REST layer for Tauri frontend (drafts, suggestions, settings) | COMPLETE |
 | `benchmarks/memory/` | Memory profiling (WS1) | COMPLETE |
 | `benchmarks/hallucination/` | HHEM benchmark (WS2) | COMPLETE |
 | `benchmarks/latency/` | Latency benchmark (WS4) | COMPLETE |
@@ -322,7 +322,7 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 **Singleton Generator**: Use `get_generator()` to get the shared instance, `reset_generator()` to reinitialize.
 
-**iMessage Schema Detection**: ChatDBReader detects macOS schema versions (v14/v15) and uses version-specific SQL queries. Database is opened read-only with timeout handling for SQLITE_BUSY.
+**iMessage Schema Detection**: Schema detection is consolidated in `integrations/imessage/queries.py` (`detect_schema_version()`). Both `ChatDBReader` and `ChatDBSchemaDetector` in `core/health/schema.py` delegate to this single source of truth. Supports macOS v14 (Sonoma) and v15 (Sequoia) schema versions. Database is opened read-only with timeout handling for SQLITE_BUSY.
 
 **Circuit Breaker Degradation**: `GracefulDegradationController` in `core/health/degradation.py` implements the circuit breaker pattern with states CLOSED → OPEN → HALF_OPEN. Use `get_degradation_controller()` for singleton access.
 
@@ -405,3 +405,4 @@ Four gates determine project viability. All benchmarks are implemented.
 - **Read-Only Database Access**: iMessage chat.db must use `file:...?mode=ro` URI
 - **No Fine-Tuning**: Research shows it increases hallucinations - use RAG + few-shot instead
 - **Model Unloading**: Always unload models between profiles/benchmarks (`gc.collect()`, `mx.metal.clear_cache()`)
+- **iMessage Sender Limitations**: `IMessageSender` in `integrations/imessage/sender.py` is deprecated. Apple's AppleScript automation has significant restrictions: requires Automation permission, may be blocked by SIP, requires Messages.app running, and may break in future macOS versions. Consider this experimental and unreliable for production use.

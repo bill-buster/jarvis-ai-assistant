@@ -13,6 +13,7 @@ from pathlib import Path
 
 from contracts.health import SchemaInfo
 from integrations.imessage.queries import QUERIES
+from integrations.imessage.queries import detect_schema_version as imessage_detect_version
 from integrations.imessage.queries import get_query as imessage_get_query
 
 logger = logging.getLogger(__name__)
@@ -178,7 +179,9 @@ class ChatDBSchemaDetector:
     def _detect_version(self, conn: sqlite3.Connection) -> str:
         """Detect schema version based on table structure.
 
-        Uses column presence heuristics to determine macOS version.
+        Delegates to the canonical detect_schema_version function in
+        integrations/imessage/queries.py to maintain a single source of truth
+        for schema detection logic.
 
         Args:
             conn: SQLite connection
@@ -186,32 +189,9 @@ class ChatDBSchemaDetector:
         Returns:
             Schema version string (e.g., "v14", "v15", "unknown")
         """
-        cursor = conn.cursor()
-
-        # Check for macOS 15 indicators
-        try:
-            cursor.execute("PRAGMA table_info(chat)")
-            chat_columns = {row[1] for row in cursor.fetchall()}
-
-            # macOS 15 adds service_name to chat table
-            if "service_name" in chat_columns:
-                return "v15"
-
-            # Check message table for additional indicators
-            cursor.execute("PRAGMA table_info(message)")
-            message_columns = {row[1] for row in cursor.fetchall()}
-
-            # thread_originator_guid present in both v14 and v15
-            # but we've already checked for v15-specific columns
-            if "thread_originator_guid" in message_columns:
-                return "v14"
-
-            # Fallback to v14 for older schemas
-            return "v14"
-
-        except sqlite3.Error as e:
-            logger.warning("Error detecting schema version: %s", e)
-            return "unknown"
+        # Delegate to the canonical implementation in queries.py
+        # This ensures consistent schema detection across the codebase
+        return imessage_detect_version(conn)
 
     def get_query(self, query_name: str, schema_version: str) -> str:
         """Get appropriate SQL query for the detected schema.
