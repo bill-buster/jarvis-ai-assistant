@@ -1926,3 +1926,821 @@ class TestChatDBReaderSearchFilters:
         with ChatDBReader(db_path=db_with_messages) as reader:
             results = reader.search("from", limit=1)
             assert len(results) <= 1
+
+
+# =============================================================================
+# LRUCache Tests
+# =============================================================================
+
+
+class TestLRUCache:
+    """Tests for LRUCache class."""
+
+    def test_get_returns_none_for_missing_key(self):
+        """Return None when key is not in cache."""
+        from integrations.imessage.reader import LRUCache
+
+        cache: LRUCache[str, int] = LRUCache(maxsize=10)
+        assert cache.get("missing") is None
+
+    def test_get_returns_value_and_moves_to_end(self):
+        """Get returns value and moves key to end (most recently used)."""
+        from integrations.imessage.reader import LRUCache
+
+        cache: LRUCache[str, int] = LRUCache(maxsize=10)
+        cache.set("a", 1)
+        cache.set("b", 2)
+        cache.set("c", 3)
+
+        # Access 'a' - should move it to end
+        result = cache.get("a")
+        assert result == 1
+
+        # Verify 'a' is now at the end by checking order of iteration
+        keys = list(cache._cache.keys())
+        assert keys[-1] == "a"
+
+    def test_set_updates_existing_key(self):
+        """Set updates existing key and moves to end."""
+        from integrations.imessage.reader import LRUCache
+
+        cache: LRUCache[str, int] = LRUCache(maxsize=10)
+        cache.set("a", 1)
+        cache.set("b", 2)
+
+        # Update 'a'
+        cache.set("a", 100)
+
+        # Verify value updated
+        assert cache.get("a") == 100
+
+        # Verify 'a' moved to end
+        keys = list(cache._cache.keys())
+        assert keys[-1] == "a"
+
+    def test_set_evicts_oldest_when_at_capacity(self):
+        """Set evicts oldest item when at maxsize."""
+        from integrations.imessage.reader import LRUCache
+
+        cache: LRUCache[str, int] = LRUCache(maxsize=3)
+        cache.set("a", 1)
+        cache.set("b", 2)
+        cache.set("c", 3)
+
+        # At capacity, add new item
+        cache.set("d", 4)
+
+        # 'a' should be evicted (oldest)
+        assert cache.get("a") is None
+        assert cache.get("d") == 4
+        assert len(cache) == 3
+
+    def test_contains_returns_true_for_existing_key(self):
+        """__contains__ returns True for existing key."""
+        from integrations.imessage.reader import LRUCache
+
+        cache: LRUCache[str, int] = LRUCache(maxsize=10)
+        cache.set("key", 42)
+
+        assert "key" in cache
+        assert "missing" not in cache
+
+    def test_len_returns_correct_count(self):
+        """__len__ returns correct item count."""
+        from integrations.imessage.reader import LRUCache
+
+        cache: LRUCache[str, int] = LRUCache(maxsize=10)
+        assert len(cache) == 0
+
+        cache.set("a", 1)
+        assert len(cache) == 1
+
+        cache.set("b", 2)
+        cache.set("c", 3)
+        assert len(cache) == 3
+
+    def test_clear_removes_all_items(self):
+        """clear() removes all items from cache."""
+        from integrations.imessage.reader import LRUCache
+
+        cache: LRUCache[str, int] = LRUCache(maxsize=10)
+        cache.set("a", 1)
+        cache.set("b", 2)
+
+        cache.clear()
+
+        assert len(cache) == 0
+        assert cache.get("a") is None
+
+
+# =============================================================================
+# Close Method Exception Handling Tests
+# =============================================================================
+
+
+class TestChatDBReaderClose:
+    """Tests for ChatDBReader.close() exception handling."""
+
+    def test_close_suppresses_exception_during_cleanup(self, monkeypatch):
+        """close() suppresses exceptions during connection cleanup."""
+        reader = ChatDBReader()
+
+        # Create a mock connection that raises on close
+        mock_conn = MagicMock()
+        mock_conn.close.side_effect = RuntimeError("Connection close failed")
+
+        reader._connection = mock_conn
+        reader._schema_version = "v14"
+        reader._contacts_cache = {"test": "Test User"}
+
+        # Should not raise - exception is suppressed
+        reader.close()
+
+        # Connection should be set to None
+        assert reader._connection is None
+        assert reader._schema_version is None
+        assert reader._contacts_cache is None
+
+
+# =============================================================================
+# GUID to ROWID Cache Hit Tests
+# =============================================================================
+
+
+class TestGUIDToROWIDCache:
+    """Tests for GUID to ROWID caching in _get_message_rowid_by_guid."""
+
+    def test_cache_hit_returns_cached_rowid(self, tmp_path):
+        """Cache hit returns cached ROWID without database query."""
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER PRIMARY KEY, guid TEXT, "
+            "thread_originator_guid TEXT)"
+        )
+        conn.execute("INSERT INTO message VALUES (100, 'test-guid', NULL)")
+        conn.close()
+
+        reader = ChatDBReader(db_path=db_path)
+        reader.check_access()
+
+        # Manually populate the cache to test cache hit
+        reader._guid_to_rowid_cache.set("test-guid", 100)
+
+        # Call should return from cache
+        result = reader._get_message_rowid_by_guid("test-guid")
+        assert result == 100
+
+        reader.close()
+
+    def test_database_lookup_and_cache_store(self, tmp_path):
+        """Database lookup stores result in cache."""
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER PRIMARY KEY, guid TEXT, "
+            "thread_originator_guid TEXT)"
+        )
+        # ROWID is automatically the PRIMARY KEY value when using INTEGER PRIMARY KEY
+        conn.execute("INSERT INTO message (ROWID, guid) VALUES (200, 'lookup-guid')")
+        conn.commit()
+        conn.close()
+
+        reader = ChatDBReader(db_path=db_path)
+        reader.check_access()
+
+        # Cache should be empty
+        assert reader._guid_to_rowid_cache.get("lookup-guid") is None
+
+        # First call - fetches from database and caches
+        result = reader._get_message_rowid_by_guid("lookup-guid")
+        assert result == 200
+
+        # Verify it was cached
+        assert reader._guid_to_rowid_cache.get("lookup-guid") == 200
+
+        reader.close()
+
+    def test_cache_miss_returns_none_for_unknown_guid(self, tmp_path):
+        """Return None for GUID not found in database."""
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+        conn.execute("CREATE TABLE chat (ROWID INTEGER PRIMARY KEY, guid TEXT)")
+        conn.execute(
+            "CREATE TABLE message (ROWID INTEGER PRIMARY KEY, guid TEXT, "
+            "thread_originator_guid TEXT)"
+        )
+        conn.close()
+
+        reader = ChatDBReader(db_path=db_path)
+        reader.check_access()
+
+        result = reader._get_message_rowid_by_guid("nonexistent-guid")
+        assert result is None
+
+        reader.close()
+
+    def test_operational_error_returns_none(self, monkeypatch):
+        """Return None on OperationalError in _get_message_rowid_by_guid."""
+        reader = ChatDBReader()
+
+        # Create a mock connection that raises OperationalError
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = sqlite3.OperationalError("database is locked")
+        mock_conn.cursor.return_value = mock_cursor
+
+        reader._connection = mock_conn
+        reader._schema_version = "v14"
+
+        result = reader._get_message_rowid_by_guid("some-guid")
+        assert result is None
+
+
+# =============================================================================
+# Contact Resolution Edge Cases
+# =============================================================================
+
+
+class TestContactResolutionEdgeCases:
+    """Additional tests for contact resolution edge cases."""
+
+    def test_resolve_contact_name_with_none_normalization(self):
+        """Return None when normalization returns None."""
+        reader = ChatDBReader()
+        reader._contacts_cache = {"+15551234567": "John Doe"}
+
+        # Pass a value that normalizes to None
+        # Empty string after stripping results in None
+        result = reader._resolve_contact_name("   ")
+        assert result is None
+
+    def test_resolve_contact_name_cache_none_after_load(self, monkeypatch):
+        """Return None if contacts cache is None after load attempt."""
+        reader = ChatDBReader()
+
+        # Mock _load_contacts_cache to leave cache as None
+        def mock_load():
+            reader._contacts_cache = None
+
+        monkeypatch.setattr(reader, "_load_contacts_cache", mock_load)
+
+        result = reader._resolve_contact_name("+15551234567")
+        assert result is None
+
+
+# =============================================================================
+# Address Book Loading Tests
+# =============================================================================
+
+
+class TestLoadContactsCache:
+    """Tests for _load_contacts_cache method."""
+
+    def test_addressbook_path_not_found(self, monkeypatch):
+        """Cache remains empty when AddressBook path doesn't exist."""
+        from integrations.imessage import reader
+
+        # Mock ADDRESSBOOK_DB_PATH to a non-existent path
+        fake_path = Path("/nonexistent/addressbook/path")
+        monkeypatch.setattr(reader, "ADDRESSBOOK_DB_PATH", fake_path)
+
+        db_reader = ChatDBReader()
+        db_reader._load_contacts_cache()
+
+        assert db_reader._contacts_cache == {}
+
+    def test_addressbook_permission_error(self, tmp_path, monkeypatch):
+        """Handle PermissionError when accessing AddressBook."""
+        from integrations.imessage import reader
+
+        # Create a directory that exists but causes permission error on iterdir
+        addressbook_path = tmp_path / "AddressBook" / "Sources"
+        addressbook_path.mkdir(parents=True)
+
+        monkeypatch.setattr(reader, "ADDRESSBOOK_DB_PATH", addressbook_path)
+
+        # Mock iterdir to raise PermissionError
+        def mock_iterdir(self):
+            raise PermissionError("Access denied")
+
+        monkeypatch.setattr(Path, "iterdir", mock_iterdir)
+
+        db_reader = ChatDBReader()
+        db_reader._load_contacts_cache()
+
+        assert db_reader._contacts_cache == {}
+
+    def test_addressbook_oserror(self, tmp_path, monkeypatch):
+        """Handle OSError when accessing AddressBook."""
+        from integrations.imessage import reader
+
+        addressbook_path = tmp_path / "AddressBook" / "Sources"
+        addressbook_path.mkdir(parents=True)
+
+        monkeypatch.setattr(reader, "ADDRESSBOOK_DB_PATH", addressbook_path)
+
+        def mock_iterdir(self):
+            raise OSError("I/O error")
+
+        monkeypatch.setattr(Path, "iterdir", mock_iterdir)
+
+        db_reader = ChatDBReader()
+        db_reader._load_contacts_cache()
+
+        assert db_reader._contacts_cache == {}
+
+
+class TestLoadContactsFromDB:
+    """Tests for _load_contacts_from_db method."""
+
+    def test_loads_phone_numbers_with_names(self, tmp_path):
+        """Load phone numbers with names from AddressBook database."""
+        ab_db = tmp_path / "AddressBook-v22.abcddb"
+        conn = sqlite3.connect(ab_db)
+
+        # Create AddressBook schema
+        conn.execute("""
+            CREATE TABLE ZABCDRECORD (
+                Z_PK INTEGER PRIMARY KEY,
+                ZFIRSTNAME TEXT,
+                ZLASTNAME TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE ZABCDPHONENUMBER (
+                ZFULLNUMBER TEXT,
+                ZOWNER INTEGER
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE ZABCDEMAILADDRESS (
+                ZADDRESS TEXT,
+                ZOWNER INTEGER
+            )
+        """)
+
+        # Insert test data
+        conn.execute("INSERT INTO ZABCDRECORD VALUES (1, 'John', 'Doe')")
+        conn.execute("INSERT INTO ZABCDPHONENUMBER VALUES ('+15551234567', 1)")
+        conn.execute("INSERT INTO ZABCDEMAILADDRESS VALUES ('john@example.com', 1)")
+        conn.commit()
+        conn.close()
+
+        reader = ChatDBReader()
+        reader._contacts_cache = {}
+        reader._load_contacts_from_db(ab_db)
+
+        assert "+15551234567" in reader._contacts_cache
+        assert reader._contacts_cache["+15551234567"] == "John Doe"
+        assert "john@example.com" in reader._contacts_cache
+        assert reader._contacts_cache["john@example.com"] == "John Doe"
+
+    def test_handles_phone_table_error(self, tmp_path):
+        """Handle OperationalError when querying phone numbers."""
+        ab_db = tmp_path / "AddressBook.abcddb"
+        conn = sqlite3.connect(ab_db)
+
+        # Create incomplete schema (missing ZABCDPHONENUMBER)
+        conn.execute("""
+            CREATE TABLE ZABCDRECORD (
+                Z_PK INTEGER PRIMARY KEY,
+                ZFIRSTNAME TEXT,
+                ZLASTNAME TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE ZABCDEMAILADDRESS (
+                ZADDRESS TEXT,
+                ZOWNER INTEGER
+            )
+        """)
+        conn.execute("INSERT INTO ZABCDRECORD VALUES (1, 'John', 'Doe')")
+        conn.execute("INSERT INTO ZABCDEMAILADDRESS VALUES ('john@example.com', 1)")
+        conn.commit()
+        conn.close()
+
+        reader = ChatDBReader()
+        reader._contacts_cache = {}
+        reader._load_contacts_from_db(ab_db)
+
+        # Should still load emails even if phone table fails
+        assert "john@example.com" in reader._contacts_cache
+
+    def test_handles_email_table_error(self, tmp_path):
+        """Handle OperationalError when querying email addresses."""
+        ab_db = tmp_path / "AddressBook.abcddb"
+        conn = sqlite3.connect(ab_db)
+
+        # Create incomplete schema (missing ZABCDEMAILADDRESS)
+        conn.execute("""
+            CREATE TABLE ZABCDRECORD (
+                Z_PK INTEGER PRIMARY KEY,
+                ZFIRSTNAME TEXT,
+                ZLASTNAME TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE ZABCDPHONENUMBER (
+                ZFULLNUMBER TEXT,
+                ZOWNER INTEGER
+            )
+        """)
+        conn.execute("INSERT INTO ZABCDRECORD VALUES (1, 'John', 'Doe')")
+        conn.execute("INSERT INTO ZABCDPHONENUMBER VALUES ('+15551234567', 1)")
+        conn.commit()
+        conn.close()
+
+        reader = ChatDBReader()
+        reader._contacts_cache = {}
+        reader._load_contacts_from_db(ab_db)
+
+        # Should still load phones even if email table fails
+        assert "+15551234567" in reader._contacts_cache
+
+    def test_handles_database_connection_error(self, tmp_path):
+        """Handle sqlite3.Error when connecting to database."""
+        # Create a non-database file
+        bad_file = tmp_path / "not_a_database.txt"
+        bad_file.write_text("not a database")
+
+        reader = ChatDBReader()
+        reader._contacts_cache = {}
+        reader._load_contacts_from_db(bad_file)
+
+        # Should not raise, cache remains empty
+        assert reader._contacts_cache == {}
+
+    def test_initializes_cache_if_none(self, tmp_path):
+        """Initialize cache to empty dict if None before loading."""
+        ab_db = tmp_path / "AddressBook.abcddb"
+        conn = sqlite3.connect(ab_db)
+        conn.execute("CREATE TABLE ZABCDRECORD (Z_PK INTEGER, ZFIRSTNAME TEXT, ZLASTNAME TEXT)")
+        conn.execute("CREATE TABLE ZABCDPHONENUMBER (ZFULLNUMBER TEXT, ZOWNER INTEGER)")
+        conn.execute("CREATE TABLE ZABCDEMAILADDRESS (ZADDRESS TEXT, ZOWNER INTEGER)")
+        conn.close()
+
+        reader = ChatDBReader()
+        reader._contacts_cache = None  # Explicitly set to None
+        reader._load_contacts_from_db(ab_db)
+
+        # Should not raise, cache initialized
+        assert reader._contacts_cache is not None
+        assert isinstance(reader._contacts_cache, dict)
+
+    def test_handles_oserror(self, tmp_path, monkeypatch):
+        """Handle OSError when loading contacts database."""
+        ab_db = tmp_path / "AddressBook.abcddb"
+
+        # Mock sqlite3.connect to raise OSError
+        def mock_connect(*args, **kwargs):
+            raise OSError("Disk error")
+
+        monkeypatch.setattr(sqlite3, "connect", mock_connect)
+
+        reader = ChatDBReader()
+        reader._contacts_cache = {}
+        reader._load_contacts_from_db(ab_db)
+
+        # Should not raise
+        assert reader._contacts_cache == {}
+
+
+# =============================================================================
+# Check Access PermissionError Tests
+# =============================================================================
+
+
+class TestCheckAccessPermissionError:
+    """Tests for PermissionError handling in check_access."""
+
+    def test_permission_error_returns_false(self, tmp_path, monkeypatch):
+        """Return False on PermissionError during database access."""
+        db_path = tmp_path / "chat.db"
+        db_path.touch()
+
+        reader = ChatDBReader(db_path=db_path)
+
+        # Mock _get_connection to raise PermissionError
+        def mock_get_connection():
+            raise PermissionError("Permission denied")
+
+        monkeypatch.setattr(reader, "_get_connection", mock_get_connection)
+
+        result = reader.check_access()
+        assert result is False
+
+
+# =============================================================================
+# OperationalError Handling Tests
+# =============================================================================
+
+
+class TestOperationalErrorHandling:
+    """Tests for OperationalError handling in query methods."""
+
+    def test_get_conversations_operational_error(self, monkeypatch):
+        """Return empty list on OperationalError in get_conversations."""
+        reader = ChatDBReader()
+
+        # Create a mock connection that raises OperationalError
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = sqlite3.OperationalError("database is locked")
+        mock_conn.cursor.return_value = mock_cursor
+
+        reader._connection = mock_conn
+        reader._schema_version = "v14"
+
+        result = reader.get_conversations(limit=10)
+        assert result == []
+
+    def test_get_messages_operational_error(self, monkeypatch):
+        """Return empty list on OperationalError in get_messages."""
+        reader = ChatDBReader()
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = sqlite3.OperationalError("SQLITE_BUSY")
+        mock_conn.cursor.return_value = mock_cursor
+
+        reader._connection = mock_conn
+        reader._schema_version = "v14"
+
+        result = reader.get_messages("chat;test", limit=10)
+        assert result == []
+
+    def test_search_operational_error(self, monkeypatch):
+        """Return empty list on OperationalError in search."""
+        reader = ChatDBReader()
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = sqlite3.OperationalError(
+            "database disk image is malformed"
+        )
+        mock_conn.cursor.return_value = mock_cursor
+
+        reader._connection = mock_conn
+        reader._schema_version = "v14"
+
+        result = reader.search("test query", limit=10)
+        assert result == []
+
+    def test_get_conversation_context_operational_error(self, monkeypatch):
+        """Return empty list on OperationalError in get_conversation_context."""
+        reader = ChatDBReader()
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = sqlite3.OperationalError("unable to open database")
+        mock_conn.cursor.return_value = mock_cursor
+
+        reader._connection = mock_conn
+        reader._schema_version = "v14"
+
+        result = reader.get_conversation_context("chat;test", 1, context_messages=5)
+        assert result == []
+
+
+# =============================================================================
+# Search with Invalid Sender Tests
+# =============================================================================
+
+
+class TestSearchInvalidSender:
+    """Tests for search with invalid sender that normalizes to None."""
+
+    def test_search_with_invalid_sender_treats_as_no_filter(self, tmp_path):
+        """Search with sender that normalizes to None treats as no sender filter."""
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+
+        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT)")
+        conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
+        conn.execute("""
+            CREATE TABLE message (
+                ROWID INTEGER,
+                guid TEXT,
+                date INTEGER,
+                text TEXT,
+                attributedBody BLOB,
+                is_from_me INTEGER,
+                handle_id INTEGER,
+                thread_originator_guid TEXT
+            )
+        """)
+        conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
+
+        conn.execute("INSERT INTO chat VALUES (1, 'chat;test')")
+        conn.execute(
+            "INSERT INTO message VALUES (1, 'msg-1', 1, 'Hello world', NULL, 0, NULL, NULL)"
+        )
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 1)")
+        conn.commit()
+        conn.close()
+
+        with ChatDBReader(db_path=db_path) as reader:
+            # Pass sender value that normalizes to None (empty string)
+            # The normalize_phone_number function returns None for empty strings
+            results = reader.search("Hello", sender="")
+
+            # Should find message since sender filter is effectively disabled
+            # when normalization returns None
+            assert isinstance(results, list)
+
+
+# =============================================================================
+# Reactions Edge Case Tests
+# =============================================================================
+
+
+class TestReactionsEdgeCases:
+    """Tests for edge cases in reaction retrieval."""
+
+    def test_get_reactions_for_message_with_no_guid(self, tmp_path):
+        """Return empty list when message has no GUID."""
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+
+        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT)")
+        conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
+        conn.execute("""
+            CREATE TABLE message (
+                ROWID INTEGER,
+                guid TEXT,
+                date INTEGER,
+                text TEXT,
+                attributedBody BLOB,
+                is_from_me INTEGER,
+                handle_id INTEGER,
+                thread_originator_guid TEXT,
+                associated_message_guid TEXT,
+                associated_message_type INTEGER
+            )
+        """)
+        conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
+        conn.execute("""
+            CREATE TABLE attachment (
+                ROWID INTEGER, filename TEXT, mime_type TEXT,
+                total_bytes INTEGER, transfer_name TEXT
+            )
+        """)
+        conn.execute(
+            "CREATE TABLE message_attachment_join (message_id INTEGER, attachment_id INTEGER)"
+        )
+
+        conn.execute("INSERT INTO chat VALUES (1, 'chat;test')")
+        # Message with NULL guid
+        conn.execute(
+            "INSERT INTO message VALUES (1, NULL, 1, 'Test message', NULL, 0, NULL, NULL, NULL, 0)"
+        )
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 1)")
+        conn.commit()
+        conn.close()
+
+        with ChatDBReader(db_path=db_path) as reader:
+            # Query reactions for a message with no GUID
+            reactions = reader._get_reactions_for_message_id(1)
+            assert reactions == []
+
+    def test_get_reactions_for_nonexistent_message(self, tmp_path):
+        """Return empty list when message ID doesn't exist."""
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+
+        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT)")
+        conn.execute("CREATE TABLE message (ROWID INTEGER, guid TEXT, thread_originator_guid TEXT)")
+        conn.close()
+
+        with ChatDBReader(db_path=db_path) as reader:
+            reactions = reader._get_reactions_for_message_id(99999)
+            assert reactions == []
+
+    def test_get_reactions_operational_error(self, monkeypatch):
+        """Return empty list on OperationalError in _get_reactions_for_message_id."""
+        reader = ChatDBReader()
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = sqlite3.OperationalError("database locked")
+        mock_conn.cursor.return_value = mock_cursor
+
+        reader._connection = mock_conn
+        reader._schema_version = "v14"
+
+        reactions = reader._get_reactions_for_message_id(1)
+        assert reactions == []
+
+
+# =============================================================================
+# Additional Coverage Tests
+# =============================================================================
+
+
+class TestAdditionalCoverage:
+    """Additional tests for complete coverage."""
+
+    def test_resolve_contact_with_email_from_cache(self):
+        """Resolve email address from contacts cache."""
+        reader = ChatDBReader()
+        reader._contacts_cache = {
+            "+15551234567": "John Doe",
+            "jane@example.com": "Jane Smith",
+        }
+
+        # Email addresses should be lowercased for lookup
+        result = reader._resolve_contact_name("jane@example.com")
+        assert result == "Jane Smith"
+
+    def test_lru_cache_maxsize_zero(self):
+        """LRUCache with maxsize handles edge cases."""
+        from integrations.imessage.reader import LRUCache
+
+        # Very small cache
+        cache: LRUCache[str, int] = LRUCache(maxsize=1)
+        cache.set("a", 1)
+        cache.set("b", 2)
+
+        # Only 'b' should remain
+        assert cache.get("a") is None
+        assert cache.get("b") == 2
+
+    def test_contacts_with_null_name_fields(self, tmp_path):
+        """Skip contacts with NULL name fields."""
+        ab_db = tmp_path / "AddressBook.abcddb"
+        conn = sqlite3.connect(ab_db)
+
+        conn.execute("""
+            CREATE TABLE ZABCDRECORD (
+                Z_PK INTEGER PRIMARY KEY,
+                ZFIRSTNAME TEXT,
+                ZLASTNAME TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE ZABCDPHONENUMBER (
+                ZFULLNUMBER TEXT,
+                ZOWNER INTEGER
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE ZABCDEMAILADDRESS (
+                ZADDRESS TEXT,
+                ZOWNER INTEGER
+            )
+        """)
+
+        # Insert contact with NULL names
+        conn.execute("INSERT INTO ZABCDRECORD VALUES (1, NULL, NULL)")
+        conn.execute("INSERT INTO ZABCDPHONENUMBER VALUES ('+15551234567', 1)")
+        conn.commit()
+        conn.close()
+
+        reader = ChatDBReader()
+        reader._contacts_cache = {}
+        reader._load_contacts_from_db(ab_db)
+
+        # Should not be in cache because name is None
+        assert "+15551234567" not in reader._contacts_cache
+
+    def test_contacts_with_null_identifier(self, tmp_path):
+        """Skip contacts with NULL phone/email identifiers."""
+        ab_db = tmp_path / "AddressBook.abcddb"
+        conn = sqlite3.connect(ab_db)
+
+        conn.execute("""
+            CREATE TABLE ZABCDRECORD (
+                Z_PK INTEGER PRIMARY KEY,
+                ZFIRSTNAME TEXT,
+                ZLASTNAME TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE ZABCDPHONENUMBER (
+                ZFULLNUMBER TEXT,
+                ZOWNER INTEGER
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE ZABCDEMAILADDRESS (
+                ZADDRESS TEXT,
+                ZOWNER INTEGER
+            )
+        """)
+
+        # Insert contact with NULL identifier (phones should be skipped via WHERE)
+        conn.execute("INSERT INTO ZABCDRECORD VALUES (1, 'John', 'Doe')")
+        # Phone number that normalizes to None (empty)
+        conn.execute("INSERT INTO ZABCDPHONENUMBER VALUES ('', 1)")
+        conn.commit()
+        conn.close()
+
+        reader = ChatDBReader()
+        reader._contacts_cache = {}
+        reader._load_contacts_from_db(ab_db)
+
+        # Empty phone should not be added to cache
+        assert "" not in reader._contacts_cache

@@ -6,6 +6,7 @@ Provides commands for chat, iMessage search, health monitoring, and benchmarking
 import argparse
 import logging
 import sys
+from datetime import UTC, datetime
 from typing import Any, NoReturn
 
 from rich.console import Console
@@ -184,6 +185,30 @@ def _imessage_fallback() -> list[Any]:
     return []
 
 
+def _parse_date(date_str: str) -> datetime | None:
+    """Parse a date string into a datetime object.
+
+    Supports formats:
+    - YYYY-MM-DD (e.g., 2024-01-15)
+    - YYYY-MM-DD HH:MM (e.g., 2024-01-15 14:30)
+
+    Args:
+        date_str: Date string to parse.
+
+    Returns:
+        datetime object with UTC timezone, or None if parsing fails.
+    """
+    formats = ["%Y-%m-%d", "%Y-%m-%d %H:%M"]
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(date_str, fmt)
+            return dt.replace(tzinfo=UTC)
+        except ValueError:
+            continue
+    logger.warning(f"Could not parse date: {date_str}")
+    return None
+
+
 def cmd_chat(args: argparse.Namespace) -> int:
     """Interactive chat mode.
 
@@ -267,7 +292,27 @@ def cmd_search_messages(args: argparse.Namespace) -> int:
     query = args.query
     limit = args.limit
 
+    # Parse optional filter arguments
+    start_date = _parse_date(args.start_date) if args.start_date else None
+    end_date = _parse_date(args.end_date) if args.end_date else None
+    sender = args.sender
+    has_attachment = args.has_attachment
+
     console.print(f"[bold]Searching messages for:[/bold] {query}\n")
+
+    # Show active filters
+    filters_active = []
+    if start_date:
+        filters_active.append(f"after {start_date.strftime('%Y-%m-%d')}")
+    if end_date:
+        filters_active.append(f"before {end_date.strftime('%Y-%m-%d')}")
+    if sender:
+        filters_active.append(f"from {sender}")
+    if has_attachment is not None:
+        filters_active.append("with attachments" if has_attachment else "without attachments")
+
+    if filters_active:
+        console.print(f"[dim]Filters: {', '.join(filters_active)}[/dim]\n")
 
     deg_controller = get_degradation_controller()
 
@@ -277,7 +322,14 @@ def cmd_search_messages(args: argparse.Namespace) -> int:
         with ChatDBReader() as reader:
             if not reader.check_access():
                 raise PermissionError("Cannot access iMessage database")
-            return reader.search(search_query, limit=limit)
+            return reader.search(
+                search_query,
+                limit=limit,
+                after=start_date,
+                before=end_date,
+                sender=sender,
+                has_attachments=has_attachment,
+            )
 
     try:
         messages = deg_controller.execute(FEATURE_IMESSAGE, search_messages, query)
@@ -451,6 +503,45 @@ def cmd_version(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    """Start the API server.
+
+    Args:
+        args: Parsed arguments with host, port, and reload options.
+
+    Returns:
+        Exit code.
+    """
+    import uvicorn
+
+    host = args.host
+    port = args.port
+    reload = args.reload
+
+    console.print(
+        Panel(
+            f"[bold green]Starting JARVIS API Server[/bold green]\n"
+            f"Host: {host}\n"
+            f"Port: {port}\n"
+            f"Reload: {'Enabled' if reload else 'Disabled'}",
+            title="API Server",
+        )
+    )
+
+    try:
+        uvicorn.run(
+            "jarvis.api:app",
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info",
+        )
+        return 0
+    except Exception as e:
+        console.print(f"[red]Error starting server: {e}[/red]")
+        return 1
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create the argument parser with all subcommands.
 
@@ -467,6 +558,8 @@ Examples:
   jarvis search-messages "hello" Search iMessage for "hello"
   jarvis health                  Show system health status
   jarvis benchmark memory        Run memory benchmark
+  jarvis serve                   Start the API server
+  jarvis serve --port 3000       Start server on custom port
         """,
     )
 
@@ -508,6 +601,33 @@ Examples:
         default=20,
         help="Maximum number of results (default: 20)",
     )
+    search_parser.add_argument(
+        "--start-date",
+        dest="start_date",
+        help="Filter messages after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM)",
+    )
+    search_parser.add_argument(
+        "--end-date",
+        dest="end_date",
+        help="Filter messages before this date (YYYY-MM-DD or YYYY-MM-DD HH:MM)",
+    )
+    search_parser.add_argument(
+        "--sender",
+        help="Filter by sender phone number or email (use 'me' for your own messages)",
+    )
+    search_parser.add_argument(
+        "--has-attachment",
+        dest="has_attachment",
+        action="store_true",
+        default=None,
+        help="Show only messages with attachments",
+    )
+    search_parser.add_argument(
+        "--no-attachment",
+        dest="has_attachment",
+        action="store_false",
+        help="Show only messages without attachments",
+    )
     search_parser.set_defaults(func=cmd_search_messages)
 
     # Health command
@@ -540,6 +660,30 @@ Examples:
         help="Show version information",
     )
     version_parser.set_defaults(func=cmd_version)
+
+    # Serve command
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Start the API server",
+    )
+    serve_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind to (default: 127.0.0.1)",
+    )
+    serve_parser.add_argument(
+        "-p",
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind to (default: 8000)",
+    )
+    serve_parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development",
+    )
+    serve_parser.set_defaults(func=cmd_serve)
 
     return parser
 

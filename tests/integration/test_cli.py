@@ -188,6 +188,80 @@ class TestSearchMessages:
         # Should still return 0 (no results found) or 1 (permission error)
         assert exit_code in (0, 1)
 
+    def test_parser_search_messages_with_start_date(self):
+        """Parser parses search-messages with start-date filter."""
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--start-date", "2024-01-15"])
+        assert args.start_date == "2024-01-15"
+        assert args.query == "hello"
+
+    def test_parser_search_messages_with_end_date(self):
+        """Parser parses search-messages with end-date filter."""
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--end-date", "2024-12-31"])
+        assert args.end_date == "2024-12-31"
+
+    def test_parser_search_messages_with_sender(self):
+        """Parser parses search-messages with sender filter."""
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--sender", "+15551234567"])
+        assert args.sender == "+15551234567"
+
+    def test_parser_search_messages_with_sender_me(self):
+        """Parser parses search-messages with sender=me filter."""
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--sender", "me"])
+        assert args.sender == "me"
+
+    def test_parser_search_messages_with_has_attachment(self):
+        """Parser parses search-messages with has-attachment filter."""
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--has-attachment"])
+        assert args.has_attachment is True
+
+    def test_parser_search_messages_with_no_attachment(self):
+        """Parser parses search-messages with no-attachment filter."""
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--no-attachment"])
+        assert args.has_attachment is False
+
+    def test_parser_search_messages_default_has_attachment_is_none(self):
+        """Parser search-messages has_attachment defaults to None."""
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello"])
+        assert args.has_attachment is None
+
+    def test_parser_search_messages_with_all_filters(self):
+        """Parser parses search-messages with all filters combined."""
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "search-messages",
+                "meeting",
+                "--start-date",
+                "2024-01-01",
+                "--end-date",
+                "2024-06-30",
+                "--sender",
+                "+15551234567",
+                "--has-attachment",
+                "-l",
+                "50",
+            ]
+        )
+        assert args.query == "meeting"
+        assert args.start_date == "2024-01-01"
+        assert args.end_date == "2024-06-30"
+        assert args.sender == "+15551234567"
+        assert args.has_attachment is True
+        assert args.limit == 50
+
+    def test_parser_search_messages_with_datetime(self):
+        """Parser parses search-messages with datetime format."""
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--start-date", "2024-01-15 14:30"])
+        assert args.start_date == "2024-01-15 14:30"
+
 
 class TestBenchmark:
     """Tests for benchmark command."""
@@ -545,6 +619,58 @@ class TestChatCommandMocked:
         assert exit_code == 0
 
 
+class TestParseDateFunction:
+    """Tests for _parse_date helper function."""
+
+    def test_parse_date_valid_date(self):
+        """Parse valid YYYY-MM-DD format."""
+        from jarvis.cli import _parse_date
+
+        result = _parse_date("2024-01-15")
+        assert result is not None
+        assert result.year == 2024
+        assert result.month == 1
+        assert result.day == 15
+        assert result.hour == 0
+        assert result.minute == 0
+
+    def test_parse_date_valid_datetime(self):
+        """Parse valid YYYY-MM-DD HH:MM format."""
+        from jarvis.cli import _parse_date
+
+        result = _parse_date("2024-01-15 14:30")
+        assert result is not None
+        assert result.year == 2024
+        assert result.month == 1
+        assert result.day == 15
+        assert result.hour == 14
+        assert result.minute == 30
+
+    def test_parse_date_invalid_format(self):
+        """Return None for invalid date format."""
+        from jarvis.cli import _parse_date
+
+        result = _parse_date("01/15/2024")
+        assert result is None
+
+    def test_parse_date_empty_string(self):
+        """Return None for empty string."""
+        from jarvis.cli import _parse_date
+
+        result = _parse_date("")
+        assert result is None
+
+    def test_parse_date_has_utc_timezone(self):
+        """Parsed date has UTC timezone."""
+        from datetime import UTC
+
+        from jarvis.cli import _parse_date
+
+        result = _parse_date("2024-01-15")
+        assert result is not None
+        assert result.tzinfo == UTC
+
+
 class TestSearchMessagesExtended:
     """Extended tests for search-messages command."""
 
@@ -684,6 +810,157 @@ class TestSearchMessagesExtended:
         parser = create_parser()
         args = parser.parse_args(["search-messages", "test"])
 
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_with_start_date_filter(self, mock_console, mock_deg_ctrl):
+        """Search passes start_date filter to reader."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.return_value = []
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--start-date", "2024-01-15"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+        # Verify filter info was printed
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("after 2024-01-15" in c for c in print_calls)
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_with_end_date_filter(self, mock_console, mock_deg_ctrl):
+        """Search passes end_date filter to reader."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.return_value = []
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--end-date", "2024-12-31"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+        # Verify filter info was printed
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("before 2024-12-31" in c for c in print_calls)
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_with_sender_filter(self, mock_console, mock_deg_ctrl):
+        """Search passes sender filter to reader."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.return_value = []
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--sender", "+15551234567"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+        # Verify filter info was printed
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("from +15551234567" in c for c in print_calls)
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_with_has_attachment_filter(self, mock_console, mock_deg_ctrl):
+        """Search passes has_attachment=True filter to reader."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.return_value = []
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--has-attachment"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+        # Verify filter info was printed
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("with attachments" in c for c in print_calls)
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_with_no_attachment_filter(self, mock_console, mock_deg_ctrl):
+        """Search passes has_attachment=False filter to reader."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.return_value = []
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--no-attachment"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+        # Verify filter info was printed
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("without attachments" in c for c in print_calls)
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_with_all_filters_combined(self, mock_console, mock_deg_ctrl):
+        """Search with all filters shows all filter info."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.return_value = []
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "search-messages",
+                "meeting",
+                "--start-date",
+                "2024-01-01",
+                "--end-date",
+                "2024-06-30",
+                "--sender",
+                "me",
+                "--has-attachment",
+            ]
+        )
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+        # Verify all filter info was printed
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        filter_line = [c for c in print_calls if "Filters:" in c]
+        assert len(filter_line) >= 1
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_invalid_date_handled_gracefully(self, mock_console, mock_deg_ctrl):
+        """Search handles invalid date format gracefully."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.return_value = []
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello", "--start-date", "invalid-date"])
+
+        # Should not crash, date will be None
         exit_code = cmd_search_messages(args)
 
         assert exit_code == 0

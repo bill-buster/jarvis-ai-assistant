@@ -6,7 +6,8 @@
         test test-fast test-verbose test-coverage test-file \
         lint format format-check typecheck check \
         verify review health \
-        clean clean-all
+        clean clean-all \
+        api-dev desktop-setup desktop-dev desktop-build frontend-dev
 
 # ============================================================================
 # HELP
@@ -42,6 +43,13 @@ help:
 	@echo "Cleanup:"
 	@echo "  make clean         Remove generated files and caches"
 	@echo "  make clean-all     Clean + remove .venv"
+	@echo ""
+	@echo "Desktop App (Tauri + Svelte):"
+	@echo "  make api-dev       Start API server on port 8742"
+	@echo "  make desktop-setup Install desktop app npm dependencies"
+	@echo "  make desktop-dev   Instructions for dev mode"
+	@echo "  make desktop-build Build production desktop app"
+	@echo "  make frontend-dev  Run Svelte frontend in dev mode"
 
 # ============================================================================
 # SETUP
@@ -107,7 +115,7 @@ format-check:
 	uv run ruff format --check .
 
 typecheck:
-	uv run mypy core/ models/ integrations/ benchmarks/ --ignore-missing-imports
+	uv run mypy core/ models/ integrations/ benchmarks/ api/ --ignore-missing-imports
 
 check: lint format-check typecheck
 	@echo ""
@@ -184,3 +192,24 @@ clean:
 clean-all: clean
 	rm -rf .venv/
 	@echo "Cleaned everything including .venv/"
+
+# ============================================================================
+# DESKTOP APP (Tauri + Svelte)
+# ============================================================================
+
+api-dev:
+	uv run uvicorn api.main:app --reload --port 8742
+
+desktop-setup:
+	cd desktop && npm install
+
+desktop-dev:
+	@echo "Starting API server and Tauri dev mode..."
+	@echo "Run 'make api-dev' in a separate terminal first, then run:"
+	@echo "  cd desktop && npm run tauri dev"
+
+desktop-build:
+	cd desktop && npm run tauri build
+
+frontend-dev:
+	cd desktop && npm run dev
