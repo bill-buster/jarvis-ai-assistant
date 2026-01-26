@@ -2,6 +2,20 @@
 
 Handles model loading/unloading with thread-safety, memory tracking,
 and double-check locking patterns for lazy initialization.
+
+Supports model selection via the registry system:
+    from models.loader import MLXModelLoader, ModelConfig
+
+    # Use default model from registry
+    loader = MLXModelLoader()
+
+    # Use specific model from registry
+    config = ModelConfig(model_id="qwen-3b")
+    loader = MLXModelLoader(config)
+
+    # Use custom model path (not in registry)
+    config = ModelConfig(model_path="custom/model-path")
+    loader = MLXModelLoader(config)
 """
 
 from __future__ import annotations
@@ -10,13 +24,15 @@ import gc
 import logging
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import mlx.core as mx
 import psutil
 from mlx_lm import generate, load
 from mlx_lm.sample_utils import make_sampler
+
+from models.registry import DEFAULT_MODEL_ID, ModelSpec, get_model_spec
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +42,63 @@ BYTES_PER_MB = 1024 * 1024
 
 @dataclass
 class ModelConfig:
-    """Configuration for MLX model loading."""
+    """Configuration for MLX model loading.
 
-    model_path: str = "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+    Can be initialized with either model_id (from registry) or model_path.
+    If both are provided, model_id takes precedence. If neither is provided,
+    uses the default model from the registry.
+
+    Attributes:
+        model_id: Model identifier from registry (e.g., "qwen-1.5b").
+        model_path: Direct HuggingFace path (overridden by model_id if set).
+        estimated_memory_mb: Estimated memory usage (auto-set from registry if model_id used).
+        memory_buffer_multiplier: Safety buffer for memory checks.
+        default_max_tokens: Default max tokens for generation.
+        default_temperature: Default sampling temperature.
+    """
+
+    model_id: str | None = None
+    model_path: str = ""
     estimated_memory_mb: float = 800
     memory_buffer_multiplier: float = 1.5
     default_max_tokens: int = 100
     default_temperature: float = 0.7
+    _resolved_spec: ModelSpec | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        """Resolve model_id to model_path and estimated_memory_mb."""
+        if self.model_id:
+            spec = get_model_spec(self.model_id)
+            if spec:
+                self._resolved_spec = spec
+                self.model_path = spec.path
+                self.estimated_memory_mb = spec.estimated_memory_mb
+            else:
+                logger.warning("Unknown model_id '%s', using as-is", self.model_id)
+                self.model_path = self.model_id
+        elif not self.model_path:
+            # Neither model_id nor model_path specified, use default
+            spec = get_model_spec(DEFAULT_MODEL_ID)
+            if spec:
+                self._resolved_spec = spec
+                self.model_id = spec.id
+                self.model_path = spec.path
+                self.estimated_memory_mb = spec.estimated_memory_mb
+            else:
+                # Fallback to hardcoded default
+                self.model_path = "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+
+    @property
+    def display_name(self) -> str:
+        """Return a human-readable name for the model."""
+        if self._resolved_spec:
+            return self._resolved_spec.display_name
+        return self.model_path.split("/")[-1]
+
+    @property
+    def spec(self) -> ModelSpec | None:
+        """Return the resolved ModelSpec if available."""
+        return self._resolved_spec
 
 
 @dataclass
@@ -107,7 +173,11 @@ class MLXModelLoader:
                 return True
 
             try:
-                logger.info("Loading model: %s", self.config.model_path)
+                logger.info(
+                    "Loading model: %s (%s)",
+                    self.config.display_name,
+                    self.config.model_path,
+                )
                 start_time = time.perf_counter()
 
                 # mlx_lm.load returns (model, tokenizer) tuple
@@ -259,3 +329,46 @@ class MLXModelLoader:
             logger.exception("Generation failed")
             msg = f"Generation failed: {e}"
             raise RuntimeError(msg) from e
+
+    def switch_model(self, model_id: str) -> bool:
+        """Switch to a different model.
+
+        Unloads the current model (if any) and updates configuration to use
+        the new model. The new model will be loaded on the next generation request.
+
+        Args:
+            model_id: Model identifier from registry (e.g., "qwen-3b").
+
+        Returns:
+            True if configuration was updated successfully, False if model_id unknown.
+        """
+        spec = get_model_spec(model_id)
+        if spec is None:
+            logger.error("Unknown model_id: %s", model_id)
+            return False
+
+        # Unload current model if loaded
+        if self.is_loaded():
+            logger.info("Switching from %s to %s", self.config.display_name, spec.display_name)
+            self.unload()
+
+        # Update configuration
+        self.config = ModelConfig(model_id=model_id)
+        logger.info("Model configuration updated to %s", spec.display_name)
+        return True
+
+    def get_current_model_info(self) -> dict[str, Any]:
+        """Return information about the current model configuration.
+
+        Returns:
+            Dictionary with model information including id, display_name,
+            loaded status, and memory usage.
+        """
+        return {
+            "id": self.config.model_id,
+            "path": self.config.model_path,
+            "display_name": self.config.display_name,
+            "loaded": self.is_loaded(),
+            "memory_usage_mb": self.get_memory_usage_mb(),
+            "quality_tier": self.config.spec.quality_tier if self.config.spec else None,
+        }

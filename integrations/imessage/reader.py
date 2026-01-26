@@ -573,15 +573,23 @@ class ChatDBReader:
 
             # Replace all optional columns with NULL placeholders
             # Group event columns
-            fallback_query = fallback_query.replace(
-                "message.group_action_type,",
-                "NULL as group_action_type,",
-            ).replace(
-                "affected_handle.id as affected_handle_id",
-                "NULL as affected_handle_id",
-            ).replace(
-                "LEFT JOIN handle AS affected_handle ON message.other_handle = affected_handle.ROWID",
-                "",
+            affected_handle_join = (
+                "LEFT JOIN handle AS affected_handle "
+                "ON message.other_handle = affected_handle.ROWID"
+            )
+            fallback_query = (
+                fallback_query.replace(
+                    "message.group_action_type,",
+                    "NULL as group_action_type,",
+                )
+                .replace(
+                    "affected_handle.id as affected_handle_id",
+                    "NULL as affected_handle_id",
+                )
+                .replace(
+                    affected_handle_join,
+                    "",
+                )
             )
 
             # Read receipt columns
@@ -719,15 +727,23 @@ class ChatDBReader:
             fallback_query = query
 
             # Replace all optional columns with NULL placeholders
-            fallback_query = fallback_query.replace(
-                "message.group_action_type,",
-                "NULL as group_action_type,",
-            ).replace(
-                "affected_handle.id as affected_handle_id",
-                "NULL as affected_handle_id",
-            ).replace(
-                "LEFT JOIN handle AS affected_handle ON message.other_handle = affected_handle.ROWID",
-                "",
+            affected_handle_join = (
+                "LEFT JOIN handle AS affected_handle "
+                "ON message.other_handle = affected_handle.ROWID"
+            )
+            fallback_query = (
+                fallback_query.replace(
+                    "message.group_action_type,",
+                    "NULL as group_action_type,",
+                )
+                .replace(
+                    "affected_handle.id as affected_handle_id",
+                    "NULL as affected_handle_id",
+                )
+                .replace(
+                    affected_handle_join,
+                    "",
+                )
             )
 
             try:

@@ -8,13 +8,14 @@ import os
 import psutil
 from fastapi import APIRouter
 
-from api.schemas import HealthResponse
+from api.schemas import HealthResponse, ModelInfo
 from integrations.imessage import ChatDBReader
 
 router = APIRouter(tags=["health"])
 
 # Constants
 BYTES_PER_MB = 1024 * 1024
+BYTES_PER_GB = 1024**3
 
 
 def _get_process_memory() -> tuple[float, float]:
@@ -66,6 +67,48 @@ def _check_model_loaded() -> bool:
         return False
 
 
+def _get_model_info() -> ModelInfo | None:
+    """Get information about the current model.
+
+    Returns:
+        ModelInfo with current model details, or None if unavailable.
+    """
+    try:
+        from models import get_generator
+
+        generator = get_generator()
+        loader = generator._loader
+        info = loader.get_current_model_info()
+
+        return ModelInfo(
+            id=info.get("id"),
+            display_name=info.get("display_name", "Unknown"),
+            loaded=info.get("loaded", False),
+            memory_usage_mb=info.get("memory_usage_mb", 0.0),
+            quality_tier=info.get("quality_tier"),
+        )
+    except Exception:
+        return None
+
+
+def _get_recommended_model(total_ram_gb: float) -> str | None:
+    """Get the recommended model for the system's total RAM.
+
+    Args:
+        total_ram_gb: Total system RAM in GB.
+
+    Returns:
+        Model ID string, or None if unavailable.
+    """
+    try:
+        from models import get_recommended_model
+
+        spec = get_recommended_model(total_ram_gb)
+        return spec.id
+    except Exception:
+        return None
+
+
 @router.get("/health", response_model=HealthResponse)
 def get_health() -> HealthResponse:
     """Get comprehensive system health status.
@@ -75,13 +118,15 @@ def get_health() -> HealthResponse:
     - System memory usage (total system)
     - JARVIS process memory usage (what this app is using)
     - Memory controller mode
-    - Model loading state
+    - Model loading state and details
+    - Recommended model for this system
     - Overall system health
     """
     # System memory stats
     memory = psutil.virtual_memory()
-    available_gb = memory.available / (1024**3)
-    used_gb = memory.used / (1024**3)
+    available_gb = memory.available / BYTES_PER_GB
+    used_gb = memory.used / BYTES_PER_GB
+    total_gb = memory.total / BYTES_PER_GB
 
     # JARVIS process memory
     jarvis_rss_mb, jarvis_vms_mb = _get_process_memory()
@@ -90,6 +135,10 @@ def get_health() -> HealthResponse:
     imessage_access = _check_imessage_access()
     memory_mode = _get_memory_mode(available_gb)
     model_loaded = _check_model_loaded()
+
+    # Get model information
+    model_info = _get_model_info()
+    recommended_model = _get_recommended_model(total_gb)
 
     # Determine overall status
     details: dict[str, str] = {}
@@ -119,6 +168,9 @@ def get_health() -> HealthResponse:
         details=details if details else None,
         jarvis_rss_mb=round(jarvis_rss_mb, 1),
         jarvis_vms_mb=round(jarvis_vms_mb, 1),
+        model=model_info,
+        recommended_model=recommended_model,
+        system_ram_gb=round(total_gb, 2),
     )
 
 
