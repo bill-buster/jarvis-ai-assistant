@@ -173,6 +173,31 @@ export interface TopicsResponse {
   message_count_analyzed: number;
 }
 
+// Search types
+export interface SearchFilters {
+  sender?: string;
+  after?: string;
+  before?: string;
+  has_attachments?: boolean;
+}
+
+export interface SearchResult extends Message {
+  conversation_name?: string;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  query: string;
+  filters_applied: SearchFilters;
+}
+
+// Grouped search results by conversation
+export interface GroupedSearchResults {
+  chat_id: string;
+  conversation_name: string;
+  results: SearchResult[];
+}
+
 // Error types
 export interface ApiError {
   error: string;

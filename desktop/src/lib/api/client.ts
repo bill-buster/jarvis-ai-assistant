@@ -10,6 +10,7 @@ import type {
   HealthResponse,
   Message,
   ModelInfo,
+  SearchFilters,
   SettingsResponse,
   SettingsUpdateRequest,
   SmartReplySuggestionsResponse,
@@ -112,6 +113,51 @@ class ApiClient {
       url += "&refresh=true";
     }
     return this.request<TopicsResponse>(url, { method: "POST" });
+  }
+
+  // Search endpoint
+  async searchMessages(
+    query: string,
+    filters: SearchFilters = {},
+    limit: number = 50,
+    signal?: AbortSignal
+  ): Promise<Message[]> {
+    const params = new URLSearchParams();
+    params.set("q", query);
+    params.set("limit", limit.toString());
+
+    if (filters.sender) {
+      params.set("sender", filters.sender);
+    }
+    if (filters.after) {
+      params.set("after", filters.after);
+    }
+    if (filters.before) {
+      params.set("before", filters.before);
+    }
+    if (filters.has_attachments !== undefined) {
+      params.set("has_attachments", filters.has_attachments.toString());
+    }
+
+    const url = `/conversations/search?${params.toString()}`;
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      headers: { "Content-Type": "application/json" },
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: "Request failed",
+        detail: response.statusText,
+      }));
+      throw new APIError(
+        error.error || "Request failed",
+        response.status,
+        error.detail || null
+      );
+    }
+
+    return response.json();
   }
 
   // Settings endpoints

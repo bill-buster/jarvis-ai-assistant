@@ -6,6 +6,9 @@
     loadMoreMessages,
     pollMessages,
     stopMessagePolling,
+    highlightedMessageId,
+    scrollToMessageId,
+    clearScrollTarget,
   } from "../stores/conversations";
   import AIDraftPanel from "./AIDraftPanel.svelte";
   import SummaryModal from "./SummaryModal.svelte";
@@ -177,13 +180,30 @@
     showDraftPanel = false;
   }
 
+  // Handle scrolling to a message from search results
+  let unsubscribeScroll: (() => void) | null = null;
+
   onMount(() => {
     window.addEventListener("keydown", handleKeydown);
+
+    // Subscribe to scroll target changes
+    unsubscribeScroll = scrollToMessageId.subscribe(async (messageId) => {
+      if (messageId !== null) {
+        // Wait for DOM to update
+        await tick();
+        const element = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        clearScrollTarget();
+      }
+    });
   });
 
   onDestroy(() => {
     window.removeEventListener("keydown", handleKeydown);
     stopMessagePolling();
+    unsubscribeScroll?.();
   });
 
   function formatTime(dateStr: string): string {
@@ -331,7 +351,7 @@
           {/if}
 
           {#if message.is_system_message}
-            <div class="system-message">
+            <div class="system-message" data-message-id={message.id}>
               {message.text}
             </div>
           {:else}
@@ -339,6 +359,8 @@
               class="message"
               class:from-me={message.is_from_me}
               class:new-message={isNewMessage(message.id)}
+              class:highlighted={$highlightedMessageId === message.id}
+              data-message-id={message.id}
             >
               <div class="bubble" class:from-me={message.is_from_me}>
                 {#if !message.is_from_me && $selectedConversation.is_group}
@@ -589,6 +611,23 @@
 
   .message.from-me {
     align-self: flex-end;
+  }
+
+  .message.highlighted {
+    animation: highlightPulse 3s ease-out;
+  }
+
+  @keyframes highlightPulse {
+    0% {
+      background: rgba(251, 191, 36, 0.4);
+      border-radius: 12px;
+    }
+    50% {
+      background: rgba(251, 191, 36, 0.2);
+    }
+    100% {
+      background: transparent;
+    }
   }
 
   .bubble {

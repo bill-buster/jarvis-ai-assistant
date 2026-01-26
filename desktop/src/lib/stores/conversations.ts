@@ -3,7 +3,7 @@
  */
 
 import { writable, derived, get } from "svelte/store";
-import type { Conversation, Message } from "../api/types";
+import type { Conversation, Message, SearchFilters } from "../api/types";
 import { api } from "../api/client";
 
 /** Default number of messages to fetch per page */
@@ -22,6 +22,12 @@ interface MessageCacheEntry {
 }
 
 export type ConnectionStatus = "connected" | "disconnected" | "connecting";
+
+// Store for message highlighting (when navigating from search results)
+export const highlightedMessageId = writable<number | null>(null);
+
+// Store for triggering scroll to a specific message
+export const scrollToMessageId = writable<number | null>(null);
 
 export interface ConversationsState {
   conversations: Conversation[];
@@ -479,4 +485,29 @@ export function initializePolling(): () => void {
     window.removeEventListener("focus", handleFocus);
     window.removeEventListener("blur", handleBlur);
   };
+}
+
+/**
+ * Navigate to a specific message from search results
+ * Selects the conversation and highlights the target message
+ */
+export async function navigateToMessage(chatId: string, messageId: number): Promise<void> {
+  // First select the conversation
+  await selectConversation(chatId);
+
+  // Then trigger scroll and highlight
+  scrollToMessageId.set(messageId);
+  highlightedMessageId.set(messageId);
+
+  // Clear highlight after 3 seconds
+  setTimeout(() => {
+    highlightedMessageId.set(null);
+  }, 3000);
+}
+
+/**
+ * Clear the scroll target after scrolling is complete
+ */
+export function clearScrollTarget(): void {
+  scrollToMessageId.set(null);
 }
