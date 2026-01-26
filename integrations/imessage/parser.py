@@ -310,7 +310,8 @@ def parse_attachments(attachment_rows: list[dict[str, Any]] | None) -> list[Atta
 
     Args:
         attachment_rows: List of attachment rows from database query.
-            Each row should have: filename, mime_type, file_size, transfer_name
+            Each row should have: filename, mime_type, file_size, transfer_name,
+            and optionally: width, height, uti, is_sticker, created_date
 
     Returns:
         List of Attachment objects with metadata
@@ -335,15 +336,71 @@ def parse_attachments(attachment_rows: list[dict[str, Any]] | None) -> list[Atta
             full_path = None
             display_name = "unknown"
 
+        # Parse width and height (may be None or 0)
+        width = row.get("width")
+        height = row.get("height")
+        if width is not None and width <= 0:
+            width = None
+        if height is not None and height <= 0:
+            height = None
+
+        # Parse created_date
+        created_date = None
+        if row.get("created_date"):
+            created_date = parse_apple_timestamp(row["created_date"])
+
+        # Parse is_sticker (0 or 1 in database)
+        is_sticker = bool(row.get("is_sticker", 0))
+
         attachment = Attachment(
             filename=display_name,
             file_path=full_path,
             mime_type=row.get("mime_type"),
             file_size=row.get("file_size"),
+            width=width,
+            height=height,
+            duration_seconds=None,  # Will be extracted from file if needed
+            created_date=created_date,
+            is_sticker=is_sticker,
+            uti=row.get("uti"),
         )
         attachments.append(attachment)
 
     return attachments
+
+
+def categorize_attachment_type(mime_type: str | None) -> str:
+    """Categorize a MIME type into a general attachment category.
+
+    Args:
+        mime_type: The MIME type string (e.g., "image/jpeg")
+
+    Returns:
+        Category string: "images", "videos", "audio", "documents", or "other"
+    """
+    if not mime_type:
+        return "other"
+
+    mime_lower = mime_type.lower()
+
+    if mime_lower.startswith("image/"):
+        return "images"
+    elif mime_lower.startswith("video/"):
+        return "videos"
+    elif mime_lower.startswith("audio/"):
+        return "audio"
+    elif mime_lower in (
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+        "application/rtf",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ):
+        return "documents"
+    else:
+        return "other"
 
 
 def parse_reactions(reaction_rows: list[dict[str, Any]] | None) -> list[Reaction]:

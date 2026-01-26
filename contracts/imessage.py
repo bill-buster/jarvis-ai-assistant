@@ -16,6 +16,23 @@ class Attachment:
     file_path: str | None  # Full path to attachment file
     mime_type: str | None
     file_size: int | None  # Size in bytes
+    # Extended metadata
+    width: int | None = None  # Image/video width in pixels
+    height: int | None = None  # Image/video height in pixels
+    duration_seconds: float | None = None  # Audio/video duration in seconds
+    created_date: datetime | None = None  # When attachment was created/received
+    is_sticker: bool = False  # True if attachment is a sticker
+    uti: str | None = None  # Uniform Type Identifier (e.g., "public.jpeg")
+
+
+@dataclass
+class AttachmentSummary:
+    """Summary of attachments for a conversation."""
+
+    total_count: int
+    total_size_bytes: int
+    by_type: dict[str, int]  # Count by type (images, videos, audio, documents, other)
+    size_by_type: dict[str, int]  # Size in bytes by type
 
 
 @dataclass

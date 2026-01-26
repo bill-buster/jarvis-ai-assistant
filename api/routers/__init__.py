@@ -1,5 +1,6 @@
 """API routers for JARVIS endpoints."""
 
+from .attachments import router as attachments_router
 from .contacts import router as contacts_router
 from .conversations import router as conversations_router
 from .drafts import router as drafts_router
@@ -14,6 +15,7 @@ from .template_analytics import router as template_analytics_router
 from .topics import router as topics_router
 
 __all__ = [
+    "attachments_router",
     "contacts_router",
     "conversations_router",
     "drafts_router",

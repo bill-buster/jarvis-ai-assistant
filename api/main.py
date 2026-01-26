@@ -21,6 +21,7 @@ from fastapi.openapi.utils import get_openapi
 
 from api.errors import register_exception_handlers
 from api.routers import (
+    attachments_router,
     contacts_router,
     conversations_router,
     drafts_router,
@@ -244,6 +245,7 @@ async def metrics_middleware(request: Request, call_next):  # type: ignore[no-un
 
 # Include routers
 app.include_router(health_router)
+app.include_router(attachments_router)
 app.include_router(contacts_router)
 app.include_router(conversations_router)
 app.include_router(drafts_router)

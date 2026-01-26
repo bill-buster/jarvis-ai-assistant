@@ -4,6 +4,9 @@
 
 import type {
   ActivateResponse,
+  AttachmentStats,
+  AttachmentType,
+  AttachmentWithContext,
   Conversation,
   ConversationStats,
   DownloadStatus,
@@ -17,6 +20,7 @@ import type {
   SettingsResponse,
   SettingsUpdateRequest,
   SmartReplySuggestionsResponse,
+  StorageSummary,
   SummaryResponse,
   TemplateAnalyticsDashboard,
   TemplateAnalyticsSummary,
@@ -419,6 +423,72 @@ class ApiClient {
 
     const blob = await response.blob();
     return { blob, filename };
+  }
+
+  // Attachment Manager endpoints
+
+  /**
+   * List attachments with optional filtering
+   */
+  async getAttachments(
+    options: {
+      chatId?: string;
+      attachmentType?: AttachmentType;
+      after?: string;
+      before?: string;
+      limit?: number;
+    } = {}
+  ): Promise<AttachmentWithContext[]> {
+    const params = new URLSearchParams();
+    if (options.chatId) {
+      params.set("chat_id", options.chatId);
+    }
+    if (options.attachmentType && options.attachmentType !== "all") {
+      params.set("attachment_type", options.attachmentType);
+    }
+    if (options.after) {
+      params.set("after", options.after);
+    }
+    if (options.before) {
+      params.set("before", options.before);
+    }
+    if (options.limit) {
+      params.set("limit", options.limit.toString());
+    }
+
+    const queryString = params.toString();
+    const url = `/attachments${queryString ? `?${queryString}` : ""}`;
+    return this.request<AttachmentWithContext[]>(url);
+  }
+
+  /**
+   * Get attachment statistics for a conversation
+   */
+  async getAttachmentStats(chatId: string): Promise<AttachmentStats> {
+    return this.request<AttachmentStats>(
+      `/attachments/stats/${encodeURIComponent(chatId)}`
+    );
+  }
+
+  /**
+   * Get storage breakdown by conversation
+   */
+  async getStorageSummary(limit: number = 50): Promise<StorageSummary> {
+    return this.request<StorageSummary>(`/attachments/storage?limit=${limit}`);
+  }
+
+  /**
+   * Get thumbnail URL for an attachment
+   */
+  getThumbnailUrl(filePath: string): string {
+    return `${this.baseUrl}/attachments/thumbnail?file_path=${encodeURIComponent(filePath)}`;
+  }
+
+  /**
+   * Get download URL for an attachment
+   */
+  getAttachmentUrl(filePath: string): string {
+    return `${this.baseUrl}/attachments/file?file_path=${encodeURIComponent(filePath)}`;
   }
 }
 

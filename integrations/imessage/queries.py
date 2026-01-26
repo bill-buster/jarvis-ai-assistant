@@ -176,6 +176,89 @@ _BASE_QUERIES = {
         JOIN message_attachment_join ON attachment.ROWID = message_attachment_join.attachment_id
         WHERE message_attachment_join.message_id = ?
     """,
+    "attachments_extended": """
+        SELECT
+            attachment.ROWID as attachment_id,
+            attachment.filename,
+            attachment.mime_type,
+            attachment.total_bytes as file_size,
+            attachment.transfer_name,
+            attachment.width,
+            attachment.height,
+            attachment.uti,
+            attachment.is_sticker,
+            attachment.created_date
+        FROM attachment
+        JOIN message_attachment_join ON attachment.ROWID = message_attachment_join.attachment_id
+        WHERE message_attachment_join.message_id = ?
+    """,
+    "all_attachments": """
+        SELECT
+            attachment.ROWID as attachment_id,
+            attachment.filename,
+            attachment.mime_type,
+            attachment.total_bytes as file_size,
+            attachment.transfer_name,
+            attachment.width,
+            attachment.height,
+            attachment.uti,
+            attachment.is_sticker,
+            attachment.created_date,
+            message.ROWID as message_id,
+            message.date as message_date,
+            chat.guid as chat_id,
+            COALESCE(handle.id, 'me') as sender,
+            message.is_from_me
+        FROM attachment
+        JOIN message_attachment_join ON attachment.ROWID = message_attachment_join.attachment_id
+        JOIN message ON message_attachment_join.message_id = message.ROWID
+        JOIN chat_message_join ON message.ROWID = chat_message_join.message_id
+        JOIN chat ON chat_message_join.chat_id = chat.ROWID
+        LEFT JOIN handle ON message.handle_id = handle.ROWID
+        {chat_filter}
+        {type_filter}
+        {date_after_filter}
+        {date_before_filter}
+        ORDER BY message.date DESC
+        LIMIT ?
+    """,
+    "attachment_stats": """
+        SELECT
+            COUNT(*) as total_count,
+            COALESCE(SUM(attachment.total_bytes), 0) as total_size,
+            attachment.mime_type
+        FROM attachment
+        JOIN message_attachment_join ON attachment.ROWID = message_attachment_join.attachment_id
+        JOIN message ON message_attachment_join.message_id = message.ROWID
+        JOIN chat_message_join ON message.ROWID = chat_message_join.message_id
+        JOIN chat ON chat_message_join.chat_id = chat.ROWID
+        WHERE chat.guid = ?
+        GROUP BY
+            CASE
+                WHEN attachment.mime_type LIKE 'image/%' THEN 'images'
+                WHEN attachment.mime_type LIKE 'video/%' THEN 'videos'
+                WHEN attachment.mime_type LIKE 'audio/%' THEN 'audio'
+                WHEN attachment.mime_type IN ('application/pdf', 'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'text/plain', 'application/rtf') THEN 'documents'
+                ELSE 'other'
+            END
+    """,
+    "storage_by_conversation": """
+        SELECT
+            chat.guid as chat_id,
+            chat.display_name,
+            COUNT(DISTINCT attachment.ROWID) as attachment_count,
+            COALESCE(SUM(attachment.total_bytes), 0) as total_size
+        FROM chat
+        JOIN chat_message_join ON chat.ROWID = chat_message_join.chat_id
+        JOIN message ON chat_message_join.message_id = message.ROWID
+        JOIN message_attachment_join ON message.ROWID = message_attachment_join.message_id
+        JOIN attachment ON message_attachment_join.attachment_id = attachment.ROWID
+        GROUP BY chat.guid
+        ORDER BY total_size DESC
+        LIMIT ?
+    """,
     "reactions": """
         SELECT
             message.ROWID as id,
@@ -216,6 +299,11 @@ def get_query(
     with_search_before_filter: bool = False,
     with_chat_id_filter: bool = False,
     with_has_attachments_filter: bool | None = None,
+    # Attachment query filters
+    with_attachment_chat_filter: bool = False,
+    with_attachment_type_filter: str | None = None,
+    with_attachment_date_after_filter: bool = False,
+    with_attachment_date_before_filter: bool = False,
 ) -> str:
     """Get SQL query for the specified schema version.
 
@@ -286,6 +374,34 @@ def get_query(
     else:
         has_attachments_filter = ""
 
+    # Attachment query-specific filters
+    attachment_chat_filter = "WHERE chat.guid = ?" if with_attachment_chat_filter else "WHERE 1=1"
+
+    # Type filter for attachments (images, videos, audio, documents)
+    if with_attachment_type_filter == "images":
+        attachment_type_filter = "AND attachment.mime_type LIKE 'image/%'"
+    elif with_attachment_type_filter == "videos":
+        attachment_type_filter = "AND attachment.mime_type LIKE 'video/%'"
+    elif with_attachment_type_filter == "audio":
+        attachment_type_filter = "AND attachment.mime_type LIKE 'audio/%'"
+    elif with_attachment_type_filter == "documents":
+        attachment_type_filter = """AND attachment.mime_type IN (
+            'application/pdf', 'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain', 'application/rtf',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )"""
+    else:
+        attachment_type_filter = ""
+
+    attachment_date_after_filter = (
+        "AND message.date > ?" if with_attachment_date_after_filter else ""
+    )
+    attachment_date_before_filter = (
+        "AND message.date < ?" if with_attachment_date_before_filter else ""
+    )
+
     return query.format(
         since_filter=since_filter,
         before_filter=before_filter,
@@ -293,4 +409,8 @@ def get_query(
         after_filter=after_filter,
         chat_id_filter=chat_id_filter,
         has_attachments_filter=has_attachments_filter,
+        chat_filter=attachment_chat_filter,
+        type_filter=attachment_type_filter,
+        date_after_filter=attachment_date_after_filter,
+        date_before_filter=attachment_date_before_filter,
     )
