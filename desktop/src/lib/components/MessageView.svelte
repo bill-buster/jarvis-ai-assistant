@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, tick } from "svelte";
   import {
     conversationsStore,
     selectedConversation,
+    loadMoreMessages,
   } from "../stores/conversations";
   import AIDraftPanel from "./AIDraftPanel.svelte";
   import SummaryModal from "./SummaryModal.svelte";
@@ -28,6 +29,65 @@
     }
     return "";
   }
+
+  // Scroll container reference
+  let messagesContainer: HTMLDivElement | null = $state(null);
+
+  // Track previous message count and scroll height for position restoration
+  let previousMessageCount = $state(0);
+  let previousScrollHeight = $state(0);
+
+  // Threshold for triggering load (200px from top)
+  const SCROLL_THRESHOLD = 200;
+
+  // Handle scroll event for infinite scroll
+  async function handleScroll(event: Event) {
+    const container = event.target as HTMLDivElement;
+    if (!container) return;
+
+    // Check if user scrolled near the top
+    if (
+      container.scrollTop < SCROLL_THRESHOLD &&
+      $conversationsStore.hasMore &&
+      !$conversationsStore.loadingMore &&
+      $conversationsStore.messages.length > 0
+    ) {
+      // Save current scroll position info before loading
+      previousScrollHeight = container.scrollHeight;
+      previousMessageCount = $conversationsStore.messages.length;
+
+      await loadMoreMessages();
+    }
+  }
+
+  // Handle explicit load button click
+  async function handleLoadEarlier() {
+    if (messagesContainer) {
+      previousScrollHeight = messagesContainer.scrollHeight;
+      previousMessageCount = $conversationsStore.messages.length;
+    }
+    await loadMoreMessages();
+  }
+
+  // Restore scroll position after messages are prepended
+  $effect(() => {
+    const currentMessageCount = $conversationsStore.messages.length;
+    if (
+      messagesContainer &&
+      currentMessageCount > previousMessageCount &&
+      previousMessageCount > 0
+    ) {
+      // Messages were prepended, restore scroll position
+      tick().then(() => {
+        if (messagesContainer) {
+          const newScrollHeight = messagesContainer.scrollHeight;
+          const scrollDelta = newScrollHeight - previousScrollHeight;
+          messagesContainer.scrollTop += scrollDelta;
+        }
+      });
+    }
+    previousMessageCount = currentMessageCount;
+  });
 
   // Handle keyboard shortcuts
   function handleKeydown(event: KeyboardEvent) {
@@ -161,12 +221,42 @@
       </div>
     </div>
 
-    <div class="messages">
+    <div
+      class="messages"
+      bind:this={messagesContainer}
+      onscroll={handleScroll}
+    >
       {#if $conversationsStore.loadingMessages}
         <div class="loading">Loading messages...</div>
       {:else if $conversationsStore.messages.length === 0}
         <div class="empty">No messages in this conversation</div>
       {:else}
+        <!-- Load earlier messages section -->
+        <div class="load-earlier-section">
+          {#if $conversationsStore.loadingMore}
+            <div class="loading-more">
+              <div class="spinner"></div>
+              <span>Loading earlier messages...</span>
+            </div>
+          {:else if $conversationsStore.hasMore}
+            <button
+              class="load-earlier-btn"
+              onclick={handleLoadEarlier}
+              aria-label="Load earlier messages"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="17 11 12 6 7 11"></polyline>
+                <line x1="12" y1="6" x2="12" y2="18"></line>
+              </svg>
+              Load earlier messages
+            </button>
+          {:else}
+            <div class="end-of-history">
+              <span>Beginning of conversation</span>
+            </div>
+          {/if}
+        </div>
+
         {#each $conversationsStore.messages as message, index (message.id)}
           {#if shouldShowDateHeader($conversationsStore.messages, index)}
             <div class="date-header">
@@ -472,5 +562,74 @@
     text-align: center;
     color: var(--text-secondary);
     padding: 24px;
+  }
+
+  /* Load earlier messages section */
+  .load-earlier-section {
+    display: flex;
+    justify-content: center;
+    padding: 16px 0;
+    min-height: 48px;
+  }
+
+  .loading-more {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .load-earlier-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .load-earlier-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+  }
+
+  .load-earlier-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .end-of-history {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+  }
+
+  .end-of-history span {
+    background: var(--bg-secondary);
+    padding: 4px 12px;
+    border-radius: 12px;
   }
 </style>
