@@ -75,11 +75,17 @@ _BASE_QUERIES = {
                 FROM chat_message_join
                 JOIN message ON chat_message_join.message_id = message.ROWID
                 WHERE chat_message_join.chat_id = chat.ROWID
-                  AND message.text IS NOT NULL
-                  AND message.text != ''
                 ORDER BY message.date DESC
                 LIMIT 1
-            ) as last_message_text
+            ) as last_message_text,
+            (
+                SELECT message.attributedBody
+                FROM chat_message_join
+                JOIN message ON chat_message_join.message_id = message.ROWID
+                WHERE chat_message_join.chat_id = chat.ROWID
+                ORDER BY message.date DESC
+                LIMIT 1
+            ) as last_message_attributed_body
         FROM chat
         WHERE message_count > 0
         {since_filter}

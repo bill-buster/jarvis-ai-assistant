@@ -64,9 +64,11 @@ export async function selectConversation(chatId: string): Promise<void> {
 
   try {
     const messages = await api.getMessages(chatId);
+    // Reverse messages so oldest is at top, newest at bottom (API returns newest first)
+    const chronologicalMessages = [...messages].reverse();
     conversationsStore.update((state) => ({
       ...state,
-      messages,
+      messages: chronologicalMessages,
       loadingMessages: false,
     }));
   } catch (error) {

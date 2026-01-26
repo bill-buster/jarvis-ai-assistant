@@ -20,6 +20,18 @@ from api.routers.health import (
     _get_process_memory,
     _get_recommended_model,
 )
+from jarvis.metrics import get_health_cache, get_model_info_cache
+
+
+@pytest.fixture(autouse=True)
+def clear_caches():
+    """Clear TTL caches before each test to ensure test isolation."""
+    get_health_cache().invalidate()
+    get_model_info_cache().invalidate()
+    yield
+    # Also clear after test for good measure
+    get_health_cache().invalidate()
+    get_model_info_cache().invalidate()
 
 
 @pytest.fixture
@@ -76,7 +88,7 @@ class TestGetProcessMemory:
 class TestCheckImessageAccess:
     """Tests for _check_imessage_access helper."""
 
-    @patch("api.routers.health.ChatDBReader")
+    @patch("integrations.imessage.ChatDBReader")
     def test_returns_true_when_accessible(self, mock_reader_class):
         """Returns True when iMessage database is accessible."""
         mock_reader = MagicMock()
@@ -88,7 +100,7 @@ class TestCheckImessageAccess:
         assert result is True
         mock_reader.close.assert_called_once()
 
-    @patch("api.routers.health.ChatDBReader")
+    @patch("integrations.imessage.ChatDBReader")
     def test_returns_false_when_not_accessible(self, mock_reader_class):
         """Returns False when iMessage database is not accessible."""
         mock_reader = MagicMock()
@@ -99,7 +111,7 @@ class TestCheckImessageAccess:
 
         assert result is False
 
-    @patch("api.routers.health.ChatDBReader")
+    @patch("integrations.imessage.ChatDBReader")
     def test_returns_false_on_exception(self, mock_reader_class):
         """Returns False when checking access throws exception."""
         mock_reader_class.side_effect = RuntimeError("Database error")
