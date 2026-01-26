@@ -12,7 +12,14 @@ from pydantic import BaseModel, Field
 
 
 class MemoryModeEnum(str, Enum):
-    """Memory operating mode."""
+    """Memory operating mode for API serialization.
+
+    Note: This enum duplicates contracts.memory.MemoryMode intentionally.
+    We maintain a separate enum here for API serialization and OpenAPI schema
+    generation. The contracts module defines the internal protocol, while this
+    enum provides the external API representation with proper JSON serialization
+    support via str inheritance and Pydantic compatibility.
+    """
 
     FULL = "full"
     LITE = "lite"
@@ -62,18 +69,6 @@ class ChatStreamEvent(BaseModel):
 
 
 # --- Search Models ---
-
-
-class SearchRequest(BaseModel):
-    """Request for message search."""
-
-    query: str = Field(..., min_length=1, description="Search query string")
-    limit: int = Field(default=50, ge=1, le=500, description="Maximum results to return")
-    sender: str | None = Field(None, description="Filter by sender (phone/email or 'me')")
-    after: datetime | None = Field(None, description="Filter for messages after this date")
-    before: datetime | None = Field(None, description="Filter for messages before this date")
-    chat_id: str | None = Field(None, description="Filter by conversation ID")
-    has_attachments: bool | None = Field(None, description="Filter by attachment presence")
 
 
 class AttachmentResponse(BaseModel):

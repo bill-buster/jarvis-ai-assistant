@@ -141,6 +141,10 @@ class CircuitBreaker:
 
         Returns:
             True if request should proceed, False if circuit is open.
+
+        Note:
+            This method only checks state; it does not reserve an execution slot.
+            For atomic check-and-reserve, use _try_acquire_execution_slot() internally.
         """
         with self._lock:
             self._check_state_transition()
@@ -157,8 +161,41 @@ class CircuitBreaker:
 
             return False
 
-    def record_success(self) -> None:
-        """Record a successful execution."""
+    def _try_acquire_execution_slot(self) -> tuple[bool, bool]:
+        """Atomically check if execution is allowed and reserve a slot if in HALF_OPEN.
+
+        This method prevents race conditions in the execute() method by combining
+        the can_execute check with slot reservation in a single atomic operation.
+
+        Returns:
+            A tuple of (can_execute, slot_acquired):
+            - can_execute: True if execution should proceed, False if blocked
+            - slot_acquired: True if a HALF_OPEN slot was reserved (caller must
+              pass _slot_already_acquired=True to record_success/failure)
+        """
+        with self._lock:
+            self._check_state_transition()
+
+            if self._state == CircuitState.CLOSED:
+                return (True, False)
+
+            if self._state == CircuitState.OPEN:
+                return (False, False)
+
+            # HALF_OPEN - reserve slot atomically if available
+            if self._half_open_calls < self.config.half_open_max_calls:
+                self._half_open_calls += 1
+                return (True, True)
+
+            return (False, False)
+
+    def record_success(self, *, _slot_already_acquired: bool = False) -> None:
+        """Record a successful execution.
+
+        Args:
+            _slot_already_acquired: Internal flag, True if slot was reserved via
+                _try_acquire_execution_slot(). External callers should not use this.
+        """
         with self._lock:
             self._check_state_transition()
             self._stats.success_count += 1
@@ -167,7 +204,8 @@ class CircuitBreaker:
             self._stats.last_success_time = time.monotonic()
 
             if self._state == CircuitState.HALF_OPEN:
-                self._half_open_calls += 1
+                if not _slot_already_acquired:
+                    self._half_open_calls += 1
                 # Recovery successful - close the circuit
                 self._transition_to(CircuitState.CLOSED)
                 logger.info(
@@ -175,8 +213,13 @@ class CircuitBreaker:
                     self.name,
                 )
 
-    def record_failure(self) -> None:
-        """Record a failed execution."""
+    def record_failure(self, *, _slot_already_acquired: bool = False) -> None:
+        """Record a failed execution.
+
+        Args:
+            _slot_already_acquired: Internal flag, True if slot was reserved via
+                _try_acquire_execution_slot(). External callers should not use this.
+        """
         with self._lock:
             self._check_state_transition()
             self._stats.failure_count += 1
@@ -185,7 +228,8 @@ class CircuitBreaker:
             self._stats.last_failure_time = time.monotonic()
 
             if self._state == CircuitState.HALF_OPEN:
-                self._half_open_calls += 1
+                if not _slot_already_acquired:
+                    self._half_open_calls += 1
                 # Recovery failed - reopen the circuit
                 self._transition_to(CircuitState.OPEN)
                 logger.warning(
@@ -223,6 +267,9 @@ class CircuitBreaker:
     ) -> object:
         """Execute a function with circuit breaker protection.
 
+        This method is thread-safe. It atomically checks if execution is allowed
+        and reserves a slot (if in HALF_OPEN state) before executing the function.
+
         Args:
             func: Function to execute
             *args: Positional arguments for func
@@ -235,16 +282,17 @@ class CircuitBreaker:
             CircuitOpenError: If circuit is open and call is blocked
             Exception: If func raises and circuit allows the call
         """
-        if not self.can_execute():
+        can_exec, slot_acquired = self._try_acquire_execution_slot()
+        if not can_exec:
             msg = f"Circuit breaker '{self.name}' is open"
             raise CircuitOpenError(msg)
 
         try:
             result = func(*args, **kwargs)
-            self.record_success()
+            self.record_success(_slot_already_acquired=slot_acquired)
             return result
         except Exception:
-            self.record_failure()
+            self.record_failure(_slot_already_acquired=slot_acquired)
             raise
 
 

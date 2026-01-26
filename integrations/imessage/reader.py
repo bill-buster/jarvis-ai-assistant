@@ -5,6 +5,7 @@ Implements the iMessageReader protocol from contracts/imessage.py.
 
 import logging
 import sqlite3
+import threading
 from collections import OrderedDict
 from collections.abc import Sequence
 from datetime import datetime
@@ -34,6 +35,7 @@ class LRUCache(Generic[K, V]):
 
     Uses OrderedDict to maintain insertion/access order.
     Oldest entries are evicted when maxsize is exceeded.
+    Thread-safe via internal lock.
     """
 
     def __init__(self, maxsize: int = 1000) -> None:
@@ -44,36 +46,42 @@ class LRUCache(Generic[K, V]):
         """
         self._cache: OrderedDict[K, V] = OrderedDict()
         self._maxsize = maxsize
+        self._lock = threading.Lock()
 
     def get(self, key: K) -> V | None:
         """Get a value from the cache, returning None if not found.
 
         Moves the accessed item to the end (most recently used).
         """
-        if key in self._cache:
-            self._cache.move_to_end(key)
-            return self._cache[key]
-        return None
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                return self._cache[key]
+            return None
 
     def set(self, key: K, value: V) -> None:
         """Set a value in the cache, evicting oldest if at capacity."""
-        if key in self._cache:
-            self._cache.move_to_end(key)
-        self._cache[key] = value
-        if len(self._cache) > self._maxsize:
-            self._cache.popitem(last=False)
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+            self._cache[key] = value
+            if len(self._cache) > self._maxsize:
+                self._cache.popitem(last=False)
 
     def __contains__(self, key: K) -> bool:
         """Check if key is in cache."""
-        return key in self._cache
+        with self._lock:
+            return key in self._cache
 
     def clear(self) -> None:
         """Clear all items from the cache."""
-        self._cache.clear()
+        with self._lock:
+            self._cache.clear()
 
     def __len__(self) -> int:
         """Return the number of items in the cache."""
-        return len(self._cache)
+        with self._lock:
+            return len(self._cache)
 
 
 # Path to macOS AddressBook database for contact name resolution
@@ -302,7 +310,7 @@ class ChatDBReader:
                 if ab_db.exists():
                     self._load_contacts_from_db(ab_db)
                     return
-        except (PermissionError, OSError) as e:
+        except Exception as e:
             logger.debug(f"Cannot access AddressBook: {e}")
 
     def _load_contacts_from_db(self, db_path: Path) -> None:
@@ -320,53 +328,55 @@ class ChatDBReader:
         try:
             uri = f"file:{db_path}?mode=ro"
             conn = sqlite3.connect(uri, uri=True, timeout=DB_TIMEOUT_SECONDS)
-            conn.row_factory = sqlite3.Row
-
-            # Query for phone numbers and emails with associated names
-            # AddressBook schema: ZABCDRECORD has names, ZABCDPHONENUMBER has phones,
-            # ZABCDEMAILADDRESS has emails
-            cursor = conn.cursor()
-
-            # Load phone numbers with names
             try:
-                cursor.execute("""
-                    SELECT
-                        ZABCDPHONENUMBER.ZFULLNUMBER as identifier,
-                        ZABCDRECORD.ZFIRSTNAME as first_name,
-                        ZABCDRECORD.ZLASTNAME as last_name
-                    FROM ZABCDPHONENUMBER
-                    JOIN ZABCDRECORD ON ZABCDPHONENUMBER.ZOWNER = ZABCDRECORD.Z_PK
-                    WHERE ZABCDPHONENUMBER.ZFULLNUMBER IS NOT NULL
-                """)
-                for row in cursor.fetchall():
-                    identifier = normalize_phone_number(row["identifier"])
-                    name = self._format_name(row["first_name"], row["last_name"])
-                    if identifier and name:
-                        cache[identifier] = name
-            except sqlite3.OperationalError:
-                pass  # Table structure may differ
+                conn.row_factory = sqlite3.Row
 
-            # Load email addresses with names
-            try:
-                cursor.execute("""
-                    SELECT
-                        ZABCDEMAILADDRESS.ZADDRESS as identifier,
-                        ZABCDRECORD.ZFIRSTNAME as first_name,
-                        ZABCDRECORD.ZLASTNAME as last_name
-                    FROM ZABCDEMAILADDRESS
-                    JOIN ZABCDRECORD ON ZABCDEMAILADDRESS.ZOWNER = ZABCDRECORD.Z_PK
-                    WHERE ZABCDEMAILADDRESS.ZADDRESS IS NOT NULL
-                """)
-                for row in cursor.fetchall():
-                    identifier = row["identifier"]
-                    name = self._format_name(row["first_name"], row["last_name"])
-                    if identifier and name:
-                        cache[identifier.lower()] = name
-            except sqlite3.OperationalError:
-                pass  # Table structure may differ
+                # Query for phone numbers and emails with associated names
+                # AddressBook schema: ZABCDRECORD has names, ZABCDPHONENUMBER has phones,
+                # ZABCDEMAILADDRESS has emails
+                cursor = conn.cursor()
 
-            conn.close()
-            logger.debug(f"Loaded {len(cache)} contacts from AddressBook")
+                # Load phone numbers with names
+                try:
+                    cursor.execute("""
+                        SELECT
+                            ZABCDPHONENUMBER.ZFULLNUMBER as identifier,
+                            ZABCDRECORD.ZFIRSTNAME as first_name,
+                            ZABCDRECORD.ZLASTNAME as last_name
+                        FROM ZABCDPHONENUMBER
+                        JOIN ZABCDRECORD ON ZABCDPHONENUMBER.ZOWNER = ZABCDRECORD.Z_PK
+                        WHERE ZABCDPHONENUMBER.ZFULLNUMBER IS NOT NULL
+                    """)
+                    for row in cursor.fetchall():
+                        identifier = normalize_phone_number(row["identifier"])
+                        name = self._format_name(row["first_name"], row["last_name"])
+                        if identifier and name:
+                            cache[identifier] = name
+                except sqlite3.OperationalError:
+                    pass  # Table structure may differ
+
+                # Load email addresses with names
+                try:
+                    cursor.execute("""
+                        SELECT
+                            ZABCDEMAILADDRESS.ZADDRESS as identifier,
+                            ZABCDRECORD.ZFIRSTNAME as first_name,
+                            ZABCDRECORD.ZLASTNAME as last_name
+                        FROM ZABCDEMAILADDRESS
+                        JOIN ZABCDRECORD ON ZABCDEMAILADDRESS.ZOWNER = ZABCDRECORD.Z_PK
+                        WHERE ZABCDEMAILADDRESS.ZADDRESS IS NOT NULL
+                    """)
+                    for row in cursor.fetchall():
+                        identifier = row["identifier"]
+                        name = self._format_name(row["first_name"], row["last_name"])
+                        if identifier and name:
+                            cache[identifier.lower()] = name
+                except sqlite3.OperationalError:
+                    pass  # Table structure may differ
+
+                logger.debug(f"Loaded {len(cache)} contacts from AddressBook")
+            finally:
+                conn.close()
 
         except (sqlite3.Error, OSError) as e:
             logger.debug(f"Error loading contacts: {e}")

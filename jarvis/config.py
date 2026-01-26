@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Any, Literal
 
@@ -105,8 +106,9 @@ class JarvisConfig(BaseModel):
     chat: ChatConfig = Field(default_factory=ChatConfig)
 
 
-# Module-level singleton
+# Module-level singleton with thread safety
 _config: JarvisConfig | None = None
+_config_lock = threading.Lock()
 
 
 def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
@@ -148,6 +150,7 @@ def load_config(config_path: Path | None = None) -> JarvisConfig:
     """Load configuration from file, return defaults if missing/invalid.
 
     Automatically migrates older config versions while preserving existing values.
+    If migration occurs, the updated config is saved back to disk.
 
     Args:
         config_path: Optional path to config file. Defaults to ~/.jarvis/config.json.
@@ -171,11 +174,21 @@ def load_config(config_path: Path | None = None) -> JarvisConfig:
         logger.warning(f"Cannot read config file {path}: {e}, using defaults")
         return JarvisConfig()
 
+    # Track original version for migration detection
+    original_version = data.get("config_version", 1)
+
     # Migrate from older versions
     data = _migrate_config(data)
 
     try:
-        return JarvisConfig.model_validate(data)
+        config = JarvisConfig.model_validate(data)
+
+        # Persist migrated config so migration doesn't run on every startup
+        if original_version < CONFIG_VERSION:
+            logger.info(f"Persisting migrated config (v{original_version} -> v{CONFIG_VERSION})")
+            save_config(config, path)
+
+        return config
     except ValidationError as e:
         logger.warning(f"Config validation failed: {e}, using defaults")
         return JarvisConfig()
@@ -212,16 +225,21 @@ def save_config(config: JarvisConfig, config_path: Path | None = None) -> bool:
 def get_config() -> JarvisConfig:
     """Get singleton configuration instance.
 
+    Uses double-check locking for thread safety.
+
     Returns:
         Shared JarvisConfig instance.
     """
     global _config
     if _config is None:
-        _config = load_config()
+        with _config_lock:
+            if _config is None:
+                _config = load_config()
     return _config
 
 
 def reset_config() -> None:
     """Reset singleton configuration for testing."""
     global _config
-    _config = None
+    with _config_lock:
+        _config = None

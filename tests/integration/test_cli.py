@@ -356,7 +356,7 @@ class TestFallbackBehaviors:
 
     def test_template_only_response(self):
         """Template-only response works without model."""
-        from jarvis.cli import _template_only_response
+        from jarvis.system import _template_only_response
 
         # Should return something even without model
         result = _template_only_response("hello")
@@ -365,7 +365,7 @@ class TestFallbackBehaviors:
 
     def test_fallback_response(self):
         """Fallback response returns static message."""
-        from jarvis.cli import _fallback_response
+        from jarvis.system import _fallback_response
 
         result = _fallback_response()
         assert isinstance(result, str)
@@ -373,14 +373,14 @@ class TestFallbackBehaviors:
 
     def test_imessage_degraded(self):
         """iMessage degraded mode returns empty list."""
-        from jarvis.cli import _imessage_degraded
+        from jarvis.system import _imessage_degraded
 
         result = _imessage_degraded("test")
         assert result == []
 
     def test_imessage_fallback(self):
         """iMessage fallback returns empty list."""
-        from jarvis.cli import _imessage_fallback
+        from jarvis.system import _imessage_fallback
 
         result = _imessage_fallback()
         assert result == []
@@ -435,14 +435,14 @@ class TestAccessChecks:
 
     def test_check_imessage_access_returns_bool(self):
         """Check iMessage access returns boolean."""
-        from jarvis.cli import _check_imessage_access
+        from jarvis.system import _check_imessage_access
 
         result = _check_imessage_access()
         assert isinstance(result, bool)
 
     def test_check_imessage_access_exception_returns_false(self):
         """Check iMessage access returns False on exception."""
-        from jarvis.cli import _check_imessage_access
+        from jarvis.system import _check_imessage_access
 
         # Patch the import inside the function
         with patch("integrations.imessage.ChatDBReader") as mock_reader:
@@ -1120,7 +1120,7 @@ class TestMainExtended:
     @patch("jarvis.cli.console")
     def test_main_displays_warnings(self, mock_console):
         """Main displays initialization warnings."""
-        with patch("jarvis.cli._check_imessage_access", return_value=False):
+        with patch("jarvis.system._check_imessage_access", return_value=False):
             exit_code = main(["health"])
 
         assert exit_code == 0
@@ -1221,7 +1221,7 @@ class TestTemplateMatching:
         mock_templates_module.TemplateMatcher = mock_matcher_class
 
         with patch.dict("sys.modules", {"models.templates": mock_templates_module}):
-            from jarvis.cli import _template_only_response
+            from jarvis.system import _template_only_response
 
             result = _template_only_response("what time is it?")
 
@@ -1236,7 +1236,7 @@ class TestTemplateMatching:
         mock_templates_module.TemplateMatcher = mock_matcher_class
 
         with patch.dict("sys.modules", {"models.templates": mock_templates_module}):
-            from jarvis.cli import _template_only_response
+            from jarvis.system import _template_only_response
 
             result = _template_only_response("random query")
 
@@ -1249,7 +1249,7 @@ class TestTemplateMatching:
         mock_templates_module.TemplateMatcher.side_effect = Exception("Match failed")
 
         with patch.dict("sys.modules", {"models.templates": mock_templates_module}):
-            from jarvis.cli import _template_only_response
+            from jarvis.system import _template_only_response
 
             result = _template_only_response("test")
 

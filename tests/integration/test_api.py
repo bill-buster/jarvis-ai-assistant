@@ -715,14 +715,14 @@ class TestHelperFunctions:
 
     def test_check_imessage_access_returns_bool(self):
         """_check_imessage_access returns boolean."""
-        from jarvis.api import _check_imessage_access
+        from jarvis.system import _check_imessage_access
 
         result = _check_imessage_access()
         assert isinstance(result, bool)
 
     def test_template_only_response_returns_string(self):
         """_template_only_response returns string."""
-        from jarvis.api import _template_only_response
+        from jarvis.system import _template_only_response
 
         result = _template_only_response("hello")
         assert isinstance(result, str)
@@ -730,7 +730,7 @@ class TestHelperFunctions:
 
     def test_fallback_response_returns_string(self):
         """_fallback_response returns string."""
-        from jarvis.api import _fallback_response
+        from jarvis.system import _fallback_response
 
         result = _fallback_response()
         assert isinstance(result, str)
@@ -738,14 +738,14 @@ class TestHelperFunctions:
 
     def test_imessage_degraded_returns_empty_list(self):
         """_imessage_degraded returns empty list."""
-        from jarvis.api import _imessage_degraded
+        from jarvis.system import _imessage_degraded
 
         result = _imessage_degraded("test")
         assert result == []
 
     def test_imessage_fallback_returns_empty_list(self):
         """_imessage_fallback returns empty list."""
-        from jarvis.api import _imessage_fallback
+        from jarvis.system import _imessage_fallback
 
         result = _imessage_fallback()
         assert result == []

@@ -933,33 +933,11 @@ def _get_minimal_fallback_templates() -> list[ResponseTemplate]:
 
 
 def _load_templates() -> list[ResponseTemplate]:
-    """Load templates from WS3, fallback to minimal set.
+    """Load response templates.
 
-    WS3 templates are organized by category with response strings.
-    We convert them to ResponseTemplate objects, using the response
-    as both pattern and response for simple matching.
+    Returns the built-in template set for template matching.
     """
-    try:
-        from benchmarks.coverage.templates import get_templates_by_category
-
-        category_templates = get_templates_by_category()
-        templates = []
-
-        for category, responses in category_templates.items():
-            # Convert WS3 format: use responses as both patterns and responses
-            templates.append(
-                ResponseTemplate(
-                    name=category,
-                    patterns=responses,  # Use responses as matching patterns
-                    response=responses[0],  # Use first response as default
-                )
-            )
-
-        logger.info("Loaded %d template categories from WS3", len(templates))
-        return templates
-    except ImportError:
-        logger.warning("WS3 templates not available, using minimal fallback set")
-        return _get_minimal_fallback_templates()
+    return _get_minimal_fallback_templates()
 
 
 class TemplateMatcher:

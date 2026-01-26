@@ -60,7 +60,6 @@ class MLXModelLoader:
         self.config = config or ModelConfig()
         self._model: Any = None
         self._tokenizer: Any = None
-        self._adapter_path: str | None = None
         self._load_lock = threading.Lock()
         self._loaded_at: float | None = None
 
@@ -153,7 +152,6 @@ class MLXModelLoader:
         # Clear references
         self._model = None
         self._tokenizer = None
-        self._adapter_path = None
         self._loaded_at = None
 
         # Clear Metal GPU memory
@@ -197,14 +195,15 @@ class MLXModelLoader:
 
         Raises:
             RuntimeError: If model is not loaded or generation fails
+            ValueError: If prompt is empty
         """
-        if not self.is_loaded():
-            msg = "Model not loaded. Call load() first."
-            raise RuntimeError(msg)
-
         if not prompt or not prompt.strip():
             msg = "Prompt cannot be empty"
             raise ValueError(msg)
+
+        if not self.is_loaded():
+            msg = "Model not loaded. Call load() first."
+            raise RuntimeError(msg)
 
         max_tokens = max_tokens or self.config.default_max_tokens
         temperature = temperature if temperature is not None else self.config.default_temperature

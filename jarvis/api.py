@@ -14,11 +14,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
-from contracts.health import DegradationPolicy, FeatureState
+from contracts.health import FeatureState
 from contracts.imessage import Attachment, Conversation, Message, Reaction
 from contracts.models import GenerationRequest
 from core.health import get_degradation_controller, reset_degradation_controller
@@ -42,119 +42,14 @@ from jarvis.api_models import (
     ReactionResponse,
     SearchResponse,
 )
+from jarvis.system import (
+    FEATURE_CHAT,
+    FEATURE_IMESSAGE,
+    _check_imessage_access,
+    initialize_system,
+)
 
 logger = logging.getLogger(__name__)
-
-# Feature names for degradation controller
-FEATURE_CHAT = "chat"
-FEATURE_IMESSAGE = "imessage"
-
-
-def _check_imessage_access() -> bool:
-    """Check if iMessage database is accessible.
-
-    Returns:
-        True if accessible, False otherwise.
-    """
-    try:
-        from integrations.imessage import ChatDBReader
-
-        with ChatDBReader() as reader:
-            return reader.check_access()
-    except Exception:
-        return False
-
-
-def _template_only_response(prompt: str) -> str:
-    """Generate response using only template matching.
-
-    Args:
-        prompt: User prompt.
-
-    Returns:
-        Template response or degraded message.
-    """
-    try:
-        from models.templates import TemplateMatcher
-
-        matcher = TemplateMatcher()
-        match = matcher.match(prompt)
-        if match:
-            return match.template.response
-    except Exception:
-        pass
-    return "I'm operating in limited mode. Please try a simpler query."
-
-
-def _fallback_response() -> str:
-    """Return a fallback response when chat is unavailable."""
-    return "I'm currently unable to process your request. Please check system health."
-
-
-def _imessage_degraded(query: str) -> list[Any]:
-    """Return degraded iMessage search result."""
-    logger.warning("iMessage search running in degraded mode")
-    return []
-
-
-def _imessage_fallback() -> list[Any]:
-    """Return fallback for iMessage when unavailable."""
-    return []
-
-
-def _initialize_system() -> tuple[bool, list[str]]:
-    """Initialize JARVIS system components.
-
-    Returns:
-        Tuple of (success, list of warnings)
-    """
-    warnings: list[str] = []
-
-    # Initialize memory controller
-    mem_controller = get_memory_controller()
-    state = mem_controller.get_state()
-
-    logger.info(
-        "Memory mode: %s (%.0f MB available)",
-        state.current_mode.value,
-        state.available_mb,
-    )
-
-    # Initialize degradation controller and register features
-    deg_controller = get_degradation_controller()
-
-    # Register chat feature
-    deg_controller.register_feature(
-        DegradationPolicy(
-            feature_name=FEATURE_CHAT,
-            health_check=lambda: True,
-            degraded_behavior=lambda prompt: _template_only_response(prompt),
-            fallback_behavior=lambda prompt: _fallback_response(),
-            recovery_check=lambda: True,
-            max_failures=3,
-        )
-    )
-
-    # Register iMessage feature
-    deg_controller.register_feature(
-        DegradationPolicy(
-            feature_name=FEATURE_IMESSAGE,
-            health_check=_check_imessage_access,
-            degraded_behavior=lambda query: _imessage_degraded(query),
-            fallback_behavior=lambda query: _imessage_fallback(),
-            recovery_check=_check_imessage_access,
-            max_failures=3,
-        )
-    )
-
-    # Check for permission issues
-    if not _check_imessage_access():
-        warnings.append(
-            "iMessage access unavailable. Grant Full Disk Access in "
-            "System Settings > Privacy & Security > Full Disk Access."
-        )
-
-    return True, warnings
 
 
 def _cleanup() -> None:
@@ -179,7 +74,7 @@ def _cleanup() -> None:
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application lifecycle."""
     # Startup
-    success, warnings = _initialize_system()
+    success, warnings = initialize_system()
     if not success:
         logger.error("Failed to initialize JARVIS system")
     for warning in warnings:
@@ -202,11 +97,46 @@ app = FastAPI(
 # Add CORS middleware for Tauri frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["tauri://localhost", "http://localhost", "http://localhost:*"],
+    allow_origins=[
+        "tauri://localhost",
+        "http://localhost",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(PermissionError)
+async def permission_error_handler(request: Request, exc: PermissionError) -> JSONResponse:
+    """Handle permission errors with consistent ErrorResponse format."""
+    return JSONResponse(
+        status_code=403,
+        content={
+            "error": "permission_denied",
+            "message": str(exc),
+            "details": "Grant Full Disk Access in System Settings.",
+        },
+    )
+
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+    """Handle validation errors with consistent ErrorResponse format."""
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "invalid_request",
+            "message": str(exc),
+            "details": None,
+        },
+    )
 
 
 # --- Helper Functions ---
