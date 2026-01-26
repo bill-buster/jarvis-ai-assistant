@@ -307,3 +307,72 @@ export interface PDFExportResponse {
   message_count: number;
   size_bytes: number;
 }
+
+// A/B Testing Experiment types
+export type UserAction =
+  | "sent_unchanged"
+  | "sent_edited"
+  | "dismissed"
+  | "regenerated";
+
+export interface VariantConfig {
+  id: string;
+  weight: number;
+  config: Record<string, unknown>;
+}
+
+export interface Experiment {
+  name: string;
+  enabled: boolean;
+  description: string;
+  created_at: string;
+  variants: VariantConfig[];
+}
+
+export interface VariantResults {
+  variant_id: string;
+  total_impressions: number;
+  sent_unchanged: number;
+  sent_edited: number;
+  dismissed: number;
+  regenerated: number;
+  conversion_rate: number;
+}
+
+export interface ExperimentResults {
+  experiment_name: string;
+  variants: VariantResults[];
+  total_outcomes: number;
+  winner: string | null;
+  is_significant: boolean;
+  p_value: number | null;
+}
+
+export interface ExperimentListResponse {
+  experiments: Experiment[];
+  total: number;
+}
+
+export interface RecordOutcomeRequest {
+  variant_id: string;
+  contact_id: string;
+  action: UserAction;
+}
+
+export interface RecordOutcomeResponse {
+  success: boolean;
+  experiment_name: string;
+  variant_id: string;
+  action: string;
+}
+
+export interface CreateExperimentRequest {
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  variants: Array<{
+    id: string;
+    weight: number;
+    config?: Record<string, unknown>;
+  }>;
+}

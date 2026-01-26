@@ -24,6 +24,7 @@ from api.routers import (
     contacts_router,
     conversations_router,
     drafts_router,
+    experiments_router,
     export_router,
     health_router,
     metrics_router,
@@ -129,6 +130,11 @@ API_TAGS_METADATA = [
         "name": "template-analytics",
         "description": "Template matching analytics and optimization. "
         "Monitor template hit rates, view top templates, and identify optimization opportunities.",
+    },
+    {
+        "name": "experiments",
+        "description": "A/B testing infrastructure for prompt experimentation. "
+        "Create experiments, assign variants to contacts, record outcomes, and analyze results.",
     },
 ]
 
@@ -255,6 +261,7 @@ app.include_router(stats_router)
 app.include_router(metrics_router)
 app.include_router(template_analytics_router)
 app.include_router(topics_router)
+app.include_router(experiments_router)
 
 # Register JARVIS exception handlers for standardized error responses
 register_exception_handlers(app)
