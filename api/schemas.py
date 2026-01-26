@@ -1726,3 +1726,409 @@ class ConversationStatsResponse(BaseModel):
         description="List of conversation participants",
         examples=[["+15551234567", "+15559876543"]],
     )
+
+
+# =============================================================================
+# Relationship Schemas
+# =============================================================================
+
+
+class ToneProfileResponse(BaseModel):
+    """Communication tone characteristics for a relationship.
+
+    Example:
+        ```json
+        {
+            "formality_score": 0.3,
+            "emoji_frequency": 1.5,
+            "exclamation_frequency": 0.8,
+            "question_frequency": 0.2,
+            "avg_message_length": 45.5,
+            "uses_caps": false
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "formality_score": 0.3,
+                "emoji_frequency": 1.5,
+                "exclamation_frequency": 0.8,
+                "question_frequency": 0.2,
+                "avg_message_length": 45.5,
+                "uses_caps": False,
+            }
+        }
+    )
+
+    formality_score: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Formality score: 0.0 (very casual) to 1.0 (very formal)",
+        examples=[0.3, 0.7],
+    )
+    emoji_frequency: float = Field(
+        ...,
+        ge=0.0,
+        description="Average emojis per message",
+        examples=[1.5, 0.2],
+    )
+    exclamation_frequency: float = Field(
+        ...,
+        ge=0.0,
+        description="Average exclamation marks per message",
+        examples=[0.8, 0.1],
+    )
+    question_frequency: float = Field(
+        ...,
+        ge=0.0,
+        description="Average question marks per message",
+        examples=[0.2, 0.5],
+    )
+    avg_message_length: float = Field(
+        ...,
+        ge=0.0,
+        description="Average characters per message",
+        examples=[45.5, 120.0],
+    )
+    uses_caps: bool = Field(
+        ...,
+        description="Whether the person occasionally uses ALL CAPS",
+    )
+
+
+class ResponsePatternsResponse(BaseModel):
+    """Response time and behavior patterns.
+
+    Example:
+        ```json
+        {
+            "avg_response_time_minutes": 15.5,
+            "typical_response_length": "medium",
+            "greeting_style": ["hey", "hi"],
+            "signoff_style": ["thanks", "bye"],
+            "common_phrases": ["sounds good", "let me know"]
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "avg_response_time_minutes": 15.5,
+                "typical_response_length": "medium",
+                "greeting_style": ["hey", "hi"],
+                "signoff_style": ["thanks", "bye"],
+                "common_phrases": ["sounds good", "let me know"],
+            }
+        }
+    )
+
+    avg_response_time_minutes: float | None = Field(
+        default=None,
+        description="Average response time in minutes (within 24h window)",
+        examples=[15.5, 8.2],
+    )
+    typical_response_length: str = Field(
+        ...,
+        description="Typical message length: 'short', 'medium', or 'long'",
+        examples=["short", "medium", "long"],
+    )
+    greeting_style: list[str] = Field(
+        default_factory=list,
+        description="Common greeting phrases used",
+        examples=[["hey", "hi", "hello"]],
+    )
+    signoff_style: list[str] = Field(
+        default_factory=list,
+        description="Common sign-off phrases used",
+        examples=[["thanks", "bye", "later"]],
+    )
+    common_phrases: list[str] = Field(
+        default_factory=list,
+        description="Frequently used phrases",
+        examples=[["sounds good", "let me know"]],
+    )
+
+
+class TopicDistributionResponse(BaseModel):
+    """Distribution of conversation topics.
+
+    Example:
+        ```json
+        {
+            "topics": {
+                "scheduling": 0.35,
+                "food": 0.25,
+                "work": 0.2
+            },
+            "top_topics": ["scheduling", "food", "work"]
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "topics": {
+                    "scheduling": 0.35,
+                    "food": 0.25,
+                    "work": 0.2,
+                },
+                "top_topics": ["scheduling", "food", "work"],
+            }
+        }
+    )
+
+    topics: dict[str, float] = Field(
+        default_factory=dict,
+        description="Topic name to frequency (0.0-1.0) mapping",
+        examples=[{"scheduling": 0.35, "food": 0.25}],
+    )
+    top_topics: list[str] = Field(
+        default_factory=list,
+        description="Top 3 most discussed topics",
+        examples=[["scheduling", "food", "work"]],
+    )
+
+
+class RelationshipProfileResponse(BaseModel):
+    """Complete relationship profile for a contact.
+
+    Contains analyzed communication patterns, topic distribution,
+    and response behaviors learned from message history.
+
+    Example:
+        ```json
+        {
+            "contact_id": "a1b2c3d4e5f6g7h8",
+            "contact_name": "John Doe",
+            "tone_profile": {...},
+            "topic_distribution": {...},
+            "response_patterns": {...},
+            "message_count": 250,
+            "last_updated": "2024-01-15T10:30:00",
+            "version": "1.0.0"
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "contact_id": "a1b2c3d4e5f6g7h8",
+                "contact_name": "John Doe",
+                "tone_profile": {
+                    "formality_score": 0.3,
+                    "emoji_frequency": 1.5,
+                    "exclamation_frequency": 0.8,
+                    "question_frequency": 0.2,
+                    "avg_message_length": 45.5,
+                    "uses_caps": False,
+                },
+                "topic_distribution": {
+                    "topics": {"scheduling": 0.35, "food": 0.25},
+                    "top_topics": ["scheduling", "food"],
+                },
+                "response_patterns": {
+                    "avg_response_time_minutes": 15.5,
+                    "typical_response_length": "medium",
+                    "greeting_style": ["hey", "hi"],
+                    "signoff_style": ["thanks"],
+                    "common_phrases": ["sounds good"],
+                },
+                "message_count": 250,
+                "last_updated": "2024-01-15T10:30:00",
+                "version": "1.0.0",
+            }
+        }
+    )
+
+    contact_id: str = Field(
+        ...,
+        description="Hashed contact identifier",
+        examples=["a1b2c3d4e5f6g7h8"],
+    )
+    contact_name: str | None = Field(
+        default=None,
+        description="Display name of the contact",
+        examples=["John Doe", "Mom"],
+    )
+    tone_profile: ToneProfileResponse = Field(
+        ...,
+        description="Communication tone characteristics",
+    )
+    topic_distribution: TopicDistributionResponse = Field(
+        ...,
+        description="Topics typically discussed with this contact",
+    )
+    response_patterns: ResponsePatternsResponse = Field(
+        ...,
+        description="Response time and style patterns",
+    )
+    message_count: int = Field(
+        ...,
+        ge=0,
+        description="Total messages analyzed for this profile",
+        examples=[250, 50],
+    )
+    last_updated: str = Field(
+        ...,
+        description="ISO timestamp of last profile update",
+        examples=["2024-01-15T10:30:00"],
+    )
+    version: str = Field(
+        ...,
+        description="Profile format version",
+        examples=["1.0.0"],
+    )
+
+
+class StyleGuideResponse(BaseModel):
+    """Natural language style guide for a relationship.
+
+    Provides human-readable guidance on how to communicate
+    with a specific contact based on their relationship profile.
+
+    Example:
+        ```json
+        {
+            "contact_id": "a1b2c3d4e5f6g7h8",
+            "contact_name": "John Doe",
+            "style_guide": "Keep it very casual and relaxed, feel free to use emojis...",
+            "voice_guidance": {
+                "formality": "casual",
+                "use_emojis": true,
+                "emoji_level": "high",
+                ...
+            }
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "contact_id": "a1b2c3d4e5f6g7h8",
+                "contact_name": "John Doe",
+                "style_guide": "Keep it casual, use emojis, keep messages brief.",
+                "voice_guidance": {
+                    "formality": "casual",
+                    "use_emojis": True,
+                    "emoji_level": "high",
+                    "message_length": "short",
+                    "use_exclamations": True,
+                    "common_greetings": ["hey", "hi"],
+                    "common_signoffs": ["thanks", "bye"],
+                    "preferred_phrases": ["sounds good"],
+                    "top_topics": ["scheduling", "food"],
+                },
+            }
+        }
+    )
+
+    contact_id: str = Field(
+        ...,
+        description="Hashed contact identifier",
+        examples=["a1b2c3d4e5f6g7h8"],
+    )
+    contact_name: str | None = Field(
+        default=None,
+        description="Display name of the contact",
+        examples=["John Doe", "Mom"],
+    )
+    style_guide: str = Field(
+        ...,
+        description="Natural language style description",
+        examples=["Keep it very casual and relaxed, feel free to use emojis liberally."],
+    )
+    voice_guidance: dict[str, object] = Field(
+        ...,
+        description="Structured guidance parameters for prompt building",
+    )
+
+
+class RefreshProfileRequest(BaseModel):
+    """Request to refresh a relationship profile.
+
+    Example:
+        ```json
+        {
+            "message_limit": 500,
+            "force_refresh": true
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "message_limit": 500,
+                "force_refresh": True,
+            }
+        }
+    )
+
+    message_limit: int = Field(
+        default=500,
+        ge=50,
+        le=2000,
+        description="Maximum messages to analyze for profile building",
+        examples=[500, 1000],
+    )
+    force_refresh: bool = Field(
+        default=False,
+        description="Force refresh even if profile is recent",
+    )
+
+
+class RefreshProfileResponse(BaseModel):
+    """Response after refreshing a relationship profile.
+
+    Example:
+        ```json
+        {
+            "success": true,
+            "profile": {...},
+            "messages_analyzed": 500,
+            "previous_message_count": 250
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "messages_analyzed": 500,
+                "previous_message_count": 250,
+            }
+        }
+    )
+
+    success: bool = Field(
+        ...,
+        description="Whether the refresh was successful",
+    )
+    profile: RelationshipProfileResponse | None = Field(
+        default=None,
+        description="The refreshed profile (if successful)",
+    )
+    messages_analyzed: int = Field(
+        ...,
+        ge=0,
+        description="Number of messages analyzed",
+        examples=[500, 250],
+    )
+    previous_message_count: int | None = Field(
+        default=None,
+        description="Previous profile's message count (if existed)",
+        examples=[250, None],
+    )
+    error: str | None = Field(
+        default=None,
+        description="Error message if refresh failed",
+        examples=[None, "Insufficient messages for profile"],
+    )

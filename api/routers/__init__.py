@@ -7,6 +7,7 @@ from .export import router as export_router
 from .health import router as health_router
 from .metrics import router as metrics_router
 from .pdf_export import router as pdf_export_router
+from .relationships import router as relationships_router
 from .settings import router as settings_router
 from .stats import router as stats_router
 from .suggestions import router as suggestions_router
@@ -21,6 +22,7 @@ __all__ = [
     "health_router",
     "metrics_router",
     "pdf_export_router",
+    "relationships_router",
     "settings_router",
     "stats_router",
     "suggestions_router",
