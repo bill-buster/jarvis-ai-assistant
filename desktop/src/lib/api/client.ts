@@ -8,11 +8,15 @@ import type {
   ConversationStats,
   DownloadStatus,
   DraftReplyResponse,
+  FeedbackAction,
+  FeedbackStatsResponse,
   HealthResponse,
+  ImprovementsResponse,
   Message,
   ModelInfo,
   PDFExportRequest,
   PDFExportResponse,
+  RecordFeedbackResponse,
   SearchFilters,
   SettingsResponse,
   SettingsUpdateRequest,
@@ -419,6 +423,40 @@ class ApiClient {
 
     const blob = await response.blob();
     return { blob, filename };
+  }
+
+  // Feedback endpoints
+  async recordFeedback(
+    action: FeedbackAction,
+    suggestionText: string,
+    chatId: string,
+    contextMessages: string[],
+    editedText?: string | null,
+    includeEvaluation: boolean = true,
+    metadata?: Record<string, unknown>
+  ): Promise<RecordFeedbackResponse> {
+    return this.request<RecordFeedbackResponse>("/feedback/response", {
+      method: "POST",
+      body: JSON.stringify({
+        action,
+        suggestion_text: suggestionText,
+        chat_id: chatId,
+        context_messages: contextMessages,
+        edited_text: editedText,
+        include_evaluation: includeEvaluation,
+        metadata,
+      }),
+    });
+  }
+
+  async getFeedbackStats(): Promise<FeedbackStatsResponse> {
+    return this.request<FeedbackStatsResponse>("/feedback/stats");
+  }
+
+  async getFeedbackImprovements(limit: number = 10): Promise<ImprovementsResponse> {
+    return this.request<ImprovementsResponse>(
+      `/feedback/improvements?limit=${limit}`
+    );
   }
 }
 

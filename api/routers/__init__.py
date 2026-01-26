@@ -4,6 +4,7 @@ from .contacts import router as contacts_router
 from .conversations import router as conversations_router
 from .drafts import router as drafts_router
 from .export import router as export_router
+from .feedback import router as feedback_router
 from .health import router as health_router
 from .metrics import router as metrics_router
 from .pdf_export import router as pdf_export_router
@@ -18,6 +19,7 @@ __all__ = [
     "conversations_router",
     "drafts_router",
     "export_router",
+    "feedback_router",
     "health_router",
     "metrics_router",
     "pdf_export_router",

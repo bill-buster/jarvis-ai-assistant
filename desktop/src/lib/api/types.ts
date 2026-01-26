@@ -307,3 +307,53 @@ export interface PDFExportResponse {
   message_count: number;
   size_bytes: number;
 }
+
+// Feedback types
+export type FeedbackAction = "sent" | "edited" | "dismissed" | "copied";
+
+export interface EvaluationScores {
+  tone_score: number;
+  relevance_score: number;
+  naturalness_score: number;
+  length_score: number;
+  overall_score: number;
+}
+
+export interface RecordFeedbackRequest {
+  action: FeedbackAction;
+  suggestion_text: string;
+  chat_id: string;
+  context_messages: string[];
+  edited_text?: string | null;
+  include_evaluation?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RecordFeedbackResponse {
+  success: boolean;
+  suggestion_id: string;
+  evaluation: EvaluationScores | null;
+}
+
+export interface FeedbackStatsResponse {
+  total_feedback: number;
+  sent_unchanged: number;
+  edited: number;
+  dismissed: number;
+  copied: number;
+  acceptance_rate: number;
+  edit_rate: number;
+  avg_evaluation_scores: Record<string, number> | null;
+}
+
+export interface ImprovementSuggestion {
+  type: string;
+  suggestion: string;
+  detail: string;
+  confidence: number;
+}
+
+export interface ImprovementsResponse {
+  improvements: ImprovementSuggestion[];
+  based_on_entries: number;
+}
