@@ -483,15 +483,29 @@ class ChatDBReader:
 
         return self._rows_to_messages(rows, chat_id)
 
-    def search(self, query: str, limit: int = 50) -> list[Message]:
-        """Full-text search across messages.
+    def search(
+        self,
+        query: str,
+        limit: int = 50,
+        sender: str | None = None,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        chat_id: str | None = None,
+        has_attachments: bool | None = None,
+    ) -> list[Message]:
+        """Full-text search across messages with optional filters.
 
         Args:
             query: Search query string
             limit: Maximum number of results
+            sender: Filter by sender phone number or email (use "me" for own messages)
+            after: Filter for messages after this datetime
+            before: Filter for messages before this datetime
+            chat_id: Filter by conversation ID (chat.guid)
+            has_attachments: Filter for messages with (True) or without (False) attachments
 
         Returns:
-            List of Message objects matching the query
+            List of Message objects matching the query and filters
         """
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -500,10 +514,41 @@ class ChatDBReader:
         escaped_query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         like_pattern = f"%{escaped_query}%"
 
-        sql = get_query("search", self._schema_version or "v14")
+        # Build params list based on filters
+        # Order: like_pattern, [sender, sender], [after], [before], [chat_id], limit
+        params: list[Any] = [like_pattern]
+
+        # Normalize sender if provided
+        normalized_sender: str | None = None
+        if sender is not None:
+            normalized_sender = normalize_phone_number(sender) if sender != "me" else "me"
+            # Add sender param twice for the OR condition in the query
+            params.append(normalized_sender)
+            params.append(normalized_sender)
+
+        if after is not None:
+            params.append(datetime_to_apple_timestamp(after))
+
+        if before is not None:
+            params.append(datetime_to_apple_timestamp(before))
+
+        if chat_id is not None:
+            params.append(chat_id)
+
+        params.append(limit)
+
+        sql = get_query(
+            "search",
+            self._schema_version or "v14",
+            with_sender_filter=sender is not None,
+            with_after_filter=after is not None,
+            with_search_before_filter=before is not None,
+            with_chat_id_filter=chat_id is not None,
+            with_has_attachments_filter=has_attachments,
+        )
 
         try:
-            cursor.execute(sql, (like_pattern, limit))
+            cursor.execute(sql, params)
             rows = cursor.fetchall()
         except sqlite3.OperationalError as e:
             logger.warning(f"Query error in search: {e}")

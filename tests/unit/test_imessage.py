@@ -1633,3 +1633,296 @@ class TestChatDBReaderContactResolution:
 
         result = ChatDBReader._format_name("", "")
         assert result is None
+
+
+# =============================================================================
+# Search Filter Tests
+# =============================================================================
+
+
+class TestSearchFiltersQueryBuilder:
+    """Tests for search filter SQL query building."""
+
+    def test_search_query_with_sender_filter(self):
+        """Search query includes sender filter clause."""
+        result = get_query("search", "v14", with_sender_filter=True)
+        assert "handle.id = ?" in result
+        assert "is_from_me" in result
+
+    def test_search_query_with_after_filter(self):
+        """Search query includes after date filter clause."""
+        result = get_query("search", "v14", with_after_filter=True)
+        assert "message.date > ?" in result
+
+    def test_search_query_with_before_filter(self):
+        """Search query includes before date filter clause."""
+        result = get_query("search", "v14", with_search_before_filter=True)
+        assert "message.date < ?" in result
+
+    def test_search_query_with_chat_id_filter(self):
+        """Search query includes chat_id filter clause."""
+        result = get_query("search", "v14", with_chat_id_filter=True)
+        assert "chat.guid = ?" in result
+
+    def test_search_query_with_has_attachments_true(self):
+        """Search query includes EXISTS clause for attachments."""
+        result = get_query("search", "v14", with_has_attachments_filter=True)
+        assert "EXISTS" in result
+        assert "message_attachment_join" in result
+
+    def test_search_query_with_has_attachments_false(self):
+        """Search query includes NOT EXISTS clause for no attachments."""
+        result = get_query("search", "v14", with_has_attachments_filter=False)
+        assert "NOT EXISTS" in result
+        assert "message_attachment_join" in result
+
+    def test_search_query_with_no_filters(self):
+        """Search query without filters has no filter clauses."""
+        result = get_query("search", "v14")
+        assert "handle.id = ?" not in result
+        assert "message.date > ?" not in result
+        assert "message.date < ?" not in result
+        assert "chat.guid = ?" not in result
+        assert "EXISTS" not in result
+
+    def test_search_query_with_multiple_filters(self):
+        """Search query supports multiple filters simultaneously."""
+        result = get_query(
+            "search",
+            "v14",
+            with_sender_filter=True,
+            with_after_filter=True,
+            with_chat_id_filter=True,
+        )
+        assert "handle.id = ?" in result
+        assert "message.date > ?" in result
+        assert "chat.guid = ?" in result
+
+
+class TestChatDBReaderSearchFilters:
+    """Tests for ChatDBReader.search() with filters."""
+
+    @pytest.fixture
+    def db_with_messages(self, tmp_path):
+        """Create a test database with messages for filter testing."""
+        db_path = tmp_path / "chat.db"
+        conn = sqlite3.connect(db_path)
+
+        # Create schema
+        conn.execute("CREATE TABLE chat (ROWID INTEGER, guid TEXT)")
+        conn.execute("CREATE TABLE chat_message_join (chat_id INTEGER, message_id INTEGER)")
+        conn.execute("""
+            CREATE TABLE message (
+                ROWID INTEGER,
+                guid TEXT,
+                date INTEGER,
+                text TEXT,
+                attributedBody BLOB,
+                is_from_me INTEGER,
+                handle_id INTEGER,
+                thread_originator_guid TEXT
+            )
+        """)
+        conn.execute("CREATE TABLE handle (ROWID INTEGER, id TEXT)")
+        conn.execute("""
+            CREATE TABLE attachment (
+                ROWID INTEGER, filename TEXT, mime_type TEXT,
+                total_bytes INTEGER, transfer_name TEXT
+            )
+        """)
+        conn.execute(
+            "CREATE TABLE message_attachment_join (message_id INTEGER, attachment_id INTEGER)"
+        )
+
+        # Insert test data
+        # Chat 1: conversation with +15551234567
+        conn.execute("INSERT INTO chat VALUES (1, 'chat;+15551234567')")
+        conn.execute("INSERT INTO handle VALUES (1, '+15551234567')")
+
+        # Chat 2: conversation with +15559876543
+        conn.execute("INSERT INTO chat VALUES (2, 'chat;+15559876543')")
+        conn.execute("INSERT INTO handle VALUES (2, '+15559876543')")
+
+        # Messages with varying dates, senders, and content
+        # Date: 2024-01-10 (726580800000000000 ns)
+        conn.execute(
+            "INSERT INTO message VALUES (1, 'msg-1', 726580800000000000, "
+            "'Hello from John', NULL, 0, 1, NULL)"
+        )
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 1)")
+
+        # Date: 2024-01-12 (726753600000000000 ns) - from me
+        conn.execute(
+            "INSERT INTO message VALUES (2, 'msg-2', 726753600000000000, "
+            "'Hello back from me', NULL, 1, NULL, NULL)"
+        )
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 2)")
+
+        # Date: 2024-01-15 (727012800000000000 ns) - different chat
+        conn.execute(
+            "INSERT INTO message VALUES (3, 'msg-3', 727012800000000000, "
+            "'Hello from Jane', NULL, 0, 2, NULL)"
+        )
+        conn.execute("INSERT INTO chat_message_join VALUES (2, 3)")
+
+        # Date: 2024-01-20 (727444800000000000 ns) - with attachment
+        conn.execute(
+            "INSERT INTO message VALUES (4, 'msg-4', 727444800000000000, "
+            "'Photo from John', NULL, 0, 1, NULL)"
+        )
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 4)")
+        conn.execute(
+            "INSERT INTO attachment VALUES (1, '/path/photo.jpg', 'image/jpeg', 1000, 'photo.jpg')"
+        )
+        conn.execute("INSERT INTO message_attachment_join VALUES (4, 1)")
+
+        # Date: 2024-01-25 (727876800000000000 ns) - no text match
+        conn.execute(
+            "INSERT INTO message VALUES (5, 'msg-5', 727876800000000000, "
+            "'Goodbye world', NULL, 0, 1, NULL)"
+        )
+        conn.execute("INSERT INTO chat_message_join VALUES (1, 5)")
+
+        conn.commit()
+        conn.close()
+        return db_path
+
+    def test_search_with_sender_filter(self, db_with_messages):
+        """Filter search results by sender."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            # Search for "Hello" from +15551234567
+            results = reader.search("Hello", sender="+15551234567")
+
+            # Should find messages from John, not Jane
+            assert len(results) >= 1
+            for msg in results:
+                assert msg.sender == "+15551234567" or msg.is_from_me
+
+    def test_search_with_sender_me_filter(self, db_with_messages):
+        """Filter search results to only show own messages."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            results = reader.search("Hello", sender="me")
+
+            # Should only find "Hello back from me"
+            assert len(results) == 1
+            assert results[0].is_from_me is True
+            assert "from me" in results[0].text
+
+    def test_search_with_after_date_filter(self, db_with_messages):
+        """Filter search results to messages after a date."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            # After 2024-01-14 - should find Jan 15, 20, but not Jan 10, 12
+            after_date = dt(2024, 1, 14, tzinfo=UTC)
+            results = reader.search("Hello", after=after_date)
+
+            # Should find "Hello from Jane" (Jan 15) and "Photo from John" (Jan 20)
+            for msg in results:
+                assert msg.date > after_date
+
+    def test_search_with_before_date_filter(self, db_with_messages):
+        """Filter search results to messages before a date."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            # Before 2024-01-14 - should find Jan 10, 12, but not later
+            before_date = dt(2024, 1, 14, tzinfo=UTC)
+            results = reader.search("Hello", before=before_date)
+
+            for msg in results:
+                assert msg.date < before_date
+
+    def test_search_with_chat_id_filter(self, db_with_messages):
+        """Filter search results by conversation."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            results = reader.search("Hello", chat_id="chat;+15559876543")
+
+            # Should only find messages from chat 2 (Jane's chat)
+            assert len(results) == 1
+            assert results[0].chat_id == "chat;+15559876543"
+            assert "Jane" in results[0].text
+
+    def test_search_with_has_attachments_true(self, db_with_messages):
+        """Filter search results to only messages with attachments."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            results = reader.search("from", has_attachments=True)
+
+            # Should only find "Photo from John" which has an attachment
+            assert len(results) == 1
+            assert "Photo" in results[0].text
+            assert len(results[0].attachments) > 0
+
+    def test_search_with_has_attachments_false(self, db_with_messages):
+        """Filter search results to only messages without attachments."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            results = reader.search("Hello", has_attachments=False)
+
+            # Should find all "Hello" messages except the one with attachment
+            for msg in results:
+                assert len(msg.attachments) == 0
+
+    def test_search_with_combined_filters_sender_and_after(self, db_with_messages):
+        """Combine sender and date filters."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            after_date = dt(2024, 1, 14, tzinfo=UTC)
+            results = reader.search("from", sender="+15551234567", after=after_date)
+
+            # Should find "Photo from John" (Jan 20) but not earlier John messages
+            for msg in results:
+                assert msg.date > after_date
+                assert msg.sender == "+15551234567" or msg.is_from_me
+
+    def test_search_with_combined_filters_chat_and_before(self, db_with_messages):
+        """Combine chat_id and before date filters."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            before_date = dt(2024, 1, 18, tzinfo=UTC)
+            results = reader.search("Hello", chat_id="chat;+15551234567", before=before_date)
+
+            for msg in results:
+                assert msg.chat_id == "chat;+15551234567"
+                assert msg.date < before_date
+
+    def test_search_with_all_filters(self, db_with_messages):
+        """Apply all filters simultaneously."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            after_date = dt(2024, 1, 5, tzinfo=UTC)
+            before_date = dt(2024, 1, 30, tzinfo=UTC)
+            results = reader.search(
+                "from",
+                sender="+15551234567",
+                after=after_date,
+                before=before_date,
+                chat_id="chat;+15551234567",
+                has_attachments=False,
+            )
+
+            for msg in results:
+                assert msg.sender == "+15551234567" or msg.is_from_me
+                assert msg.date > after_date
+                assert msg.date < before_date
+                assert msg.chat_id == "chat;+15551234567"
+                assert len(msg.attachments) == 0
+
+    def test_search_with_normalized_sender(self, db_with_messages):
+        """Sender phone number is normalized before filtering."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            # Use different format for the same number
+            results = reader.search("Hello", sender="(555) 123-4567")
+
+            # Should still match +15551234567
+            assert len(results) >= 1
+
+    def test_search_filters_with_no_matches(self, db_with_messages):
+        """Return empty list when filters exclude all results."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            # Search for text that doesn't exist
+            results = reader.search("nonexistent", sender="+15551234567")
+            assert results == []
+
+            # Date range that excludes all messages
+            far_future = dt(2030, 1, 1, tzinfo=UTC)
+            results = reader.search("Hello", after=far_future)
+            assert results == []
+
+    def test_search_limit_with_filters(self, db_with_messages):
+        """Limit parameter works with filters."""
+        with ChatDBReader(db_path=db_with_messages) as reader:
+            results = reader.search("from", limit=1)
+            assert len(results) <= 1
