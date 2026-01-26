@@ -117,6 +117,15 @@ class GenerationResult:
     generation_time_ms: float
 
 
+@dataclass
+class StreamToken:
+    """A single token from streaming generation."""
+
+    token: str
+    token_index: int
+    is_final: bool = False
+
+
 class MLXModelLoader:
     """MLX model lifecycle manager with thread-safe loading and memory tracking.
 
@@ -364,6 +373,118 @@ class MLXModelLoader:
             logger.exception("Generation failed")
             raise ModelGenerationError(
                 f"Generation failed: {e}",
+                prompt=prompt,
+                model_name=self.config.display_name,
+                cause=e,
+            ) from e
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        stop_sequences: list[str] | None = None,
+    ) -> Any:
+        """Generate text with streaming output (yields tokens).
+
+        Args:
+            prompt: Input prompt text
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            stop_sequences: Strings that stop generation
+
+        Yields:
+            StreamToken objects with individual tokens
+
+        Raises:
+            ModelGenerationError: If model is not loaded, prompt is invalid, or generation fails.
+        """
+        if not prompt or not prompt.strip():
+            raise ModelGenerationError(
+                "Prompt cannot be empty",
+                model_name=self.config.display_name,
+                code=ErrorCode.MDL_INVALID_REQUEST,
+            )
+
+        if not self.is_loaded():
+            raise ModelGenerationError(
+                "Model not loaded. Call load() first.",
+                model_name=self.config.display_name,
+                code=ErrorCode.MDL_LOAD_FAILED,
+            )
+
+        max_tokens = max_tokens or self.config.default_max_tokens
+        temperature = temperature if temperature is not None else self.config.default_temperature
+
+        try:
+            # Format prompt for Qwen2.5-Instruct chat template
+            messages = [{"role": "user", "content": prompt}]
+            formatted_prompt = self._tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+
+            # Create sampler with temperature
+            sampler = make_sampler(temp=temperature)
+
+            # For streaming, we generate one token at a time
+            # MLX generate doesn't have native streaming, so we simulate it
+            # by generating incrementally
+            token_index = 0
+
+            # Generate full response first (MLX limitation)
+            response = generate(
+                model=self._model,
+                tokenizer=self._tokenizer,
+                prompt=formatted_prompt,
+                max_tokens=max_tokens,
+                sampler=sampler,
+                verbose=False,
+            )
+
+            # Strip the prompt from response
+            if response.startswith(formatted_prompt):
+                response = response[len(formatted_prompt):].strip()
+
+            # Apply stop sequences
+            if stop_sequences:
+                for stop_seq in stop_sequences:
+                    if stop_seq in response:
+                        response = response[:response.index(stop_seq)]
+
+            response = response.strip()
+
+            # Tokenize and yield each token
+            # Since MLX doesn't support true streaming, we simulate it
+            # by yielding words/tokens from the complete response
+            tokens = self._tokenizer.encode(response)
+            decoded_so_far = ""
+
+            for i, _token in enumerate(tokens):
+                # Decode up to current token
+                partial_tokens = tokens[: i + 1]
+                try:
+                    current_decoded = self._tokenizer.decode(partial_tokens)
+                except Exception:
+                    continue
+
+                # Get the new part
+                new_text = current_decoded[len(decoded_so_far):]
+                decoded_so_far = current_decoded
+
+                if new_text:
+                    yield StreamToken(
+                        token=new_text,
+                        token_index=token_index,
+                        is_final=(i == len(tokens) - 1),
+                    )
+                    token_index += 1
+
+        except ModelGenerationError:
+            raise
+        except Exception as e:
+            logger.exception("Streaming generation failed")
+            raise ModelGenerationError(
+                f"Streaming generation failed: {e}",
                 prompt=prompt,
                 model_name=self.config.display_name,
                 cause=e,

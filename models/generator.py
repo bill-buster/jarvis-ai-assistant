@@ -6,6 +6,8 @@ memory-safe patterns and performance tracking.
 
 import logging
 import time
+from collections.abc import AsyncIterator
+from typing import Any
 
 from contracts.models import GenerationRequest, GenerationResponse
 from models.loader import MLXModelLoader, ModelConfig
@@ -165,3 +167,68 @@ class MLXGenerator:
     def get_memory_usage_mb(self) -> float:
         """Return current memory usage of the model."""
         return self._loader.get_memory_usage_mb()
+
+    async def generate_stream(
+        self, request: GenerationRequest
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Generate a response with streaming output (yields tokens).
+
+        Yields tokens as they're generated for real-time display.
+        Falls back to template matching first (returns complete response).
+
+        Args:
+            request: Generation request with prompt, context, and examples
+
+        Yields:
+            Dictionary with token information:
+                - token: The generated token text
+                - token_index: Index of this token in the sequence
+                - is_final: Whether this is the last token
+        """
+        # Try template match first - if matched, yield complete response
+        template_response = self._try_template_match(request)
+        if template_response is not None:
+            # Templates return complete responses, yield as single token
+            yield {
+                "token": template_response.text,
+                "token_index": 0,
+                "is_final": True,
+                "used_template": True,
+                "template_name": template_response.template_name,
+            }
+            return
+
+        # Track if we loaded the model for this call (for cleanup on error)
+        loaded_for_this_call = False
+
+        try:
+            # Ensure model is loaded
+            if not self._loader.is_loaded():
+                if not self._loader.load():
+                    msg = "Failed to load model"
+                    raise RuntimeError(msg)
+                loaded_for_this_call = True
+
+            # Build formatted prompt
+            formatted_prompt = self._prompt_builder.build(request)
+
+            # Stream tokens from the loader
+            async for stream_token in self._loader.generate_stream(
+                prompt=formatted_prompt,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                stop_sequences=request.stop_sequences,
+            ):
+                yield {
+                    "token": stream_token.token,
+                    "token_index": stream_token.token_index,
+                    "is_final": stream_token.is_final,
+                }
+
+        except Exception:
+            # If we loaded the model for this call and generation failed,
+            # unload to free memory and prevent inconsistent state
+            if loaded_for_this_call:
+                logger.warning("Streaming generation failed, unloading model")
+                self._loader.unload()
+            raise

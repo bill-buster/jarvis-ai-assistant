@@ -307,3 +307,30 @@ export interface PDFExportResponse {
   message_count: number;
   size_bytes: number;
 }
+
+// WebSocket types
+export interface WebSocketStatus {
+  active_connections: number;
+  health_subscribers: number;
+  status: "operational" | "degraded" | "offline";
+}
+
+export interface GenerationStreamRequest {
+  prompt: string;
+  context_documents?: string[];
+  few_shot_examples?: Array<{ input: string; output: string }>;
+  max_tokens?: number;
+  temperature?: number;
+  stop_sequences?: string[];
+}
+
+export interface StreamingGenerationResult {
+  generation_id: string;
+  text: string;
+  tokens_used: number;
+  generation_time_ms: number;
+  model_name: string;
+  used_template: boolean;
+  template_name: string | null;
+  finish_reason: string;
+}

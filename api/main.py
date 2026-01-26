@@ -33,6 +33,7 @@ from api.routers import (
     suggestions_router,
     template_analytics_router,
     topics_router,
+    websocket_router,
 )
 from jarvis.metrics import get_latency_histogram, get_request_counter
 
@@ -129,6 +130,11 @@ API_TAGS_METADATA = [
         "name": "template-analytics",
         "description": "Template matching analytics and optimization. "
         "Monitor template hit rates, view top templates, and identify optimization opportunities.",
+    },
+    {
+        "name": "websocket",
+        "description": "Real-time WebSocket communication. "
+        "Stream model generation responses, receive health updates, and manage live connections.",
     },
 ]
 
@@ -255,6 +261,7 @@ app.include_router(stats_router)
 app.include_router(metrics_router)
 app.include_router(template_analytics_router)
 app.include_router(topics_router)
+app.include_router(websocket_router)
 
 # Register JARVIS exception handlers for standardized error responses
 register_exception_handlers(app)
