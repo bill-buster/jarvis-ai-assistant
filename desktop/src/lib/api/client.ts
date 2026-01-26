@@ -13,7 +13,8 @@ import type {
   SummaryResponse,
 } from "./types";
 
-const API_BASE_URL = "http://localhost:8000";
+// Allow configuration via environment variable, with fallback to localhost
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 class APIError extends Error {
   constructor(
@@ -180,11 +181,13 @@ export class JarvisClient {
    * @param chatId - The conversation ID
    * @param instruction - Optional instruction for what kind of reply to generate
    * @param numSuggestions - Number of suggestions to generate (default: 3)
+   * @param signal - Optional AbortSignal to cancel the request
    */
   async getDraftReplies(
     chatId: string,
     instruction?: string,
-    numSuggestions: number = 3
+    numSuggestions: number = 3,
+    signal?: AbortSignal
   ): Promise<DraftReplyResponse> {
     const response = await fetch(
       `${this.baseUrl}/conversations/${encodeURIComponent(chatId)}/draft-replies`,
@@ -195,6 +198,7 @@ export class JarvisClient {
           instruction: instruction || null,
           num_suggestions: numSuggestions,
         }),
+        signal,
       }
     );
     return handleResponse<DraftReplyResponse>(response);
@@ -205,10 +209,12 @@ export class JarvisClient {
    *
    * @param chatId - The conversation ID
    * @param numMessages - Number of recent messages to summarize (default: 50)
+   * @param signal - Optional AbortSignal to cancel the request
    */
   async getSummary(
     chatId: string,
-    numMessages: number = 50
+    numMessages: number = 50,
+    signal?: AbortSignal
   ): Promise<SummaryResponse> {
     const response = await fetch(
       `${this.baseUrl}/conversations/${encodeURIComponent(chatId)}/summary`,
@@ -218,6 +224,7 @@ export class JarvisClient {
         body: JSON.stringify({
           num_messages: numMessages,
         }),
+        signal,
       }
     );
     return handleResponse<SummaryResponse>(response);

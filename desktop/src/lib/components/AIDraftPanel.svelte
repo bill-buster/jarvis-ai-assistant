@@ -19,7 +19,14 @@
   let selectedIndex: number | null = $state(null);
   let errorMessage = $state("");
 
+  // AbortController for cancelling in-flight requests
+  let abortController: AbortController | null = null;
+
   async function generateReplies() {
+    // Cancel any existing request
+    abortController?.abort();
+    abortController = new AbortController();
+
     panelState = "loading";
     errorMessage = "";
     selectedIndex = null;
@@ -28,12 +35,17 @@
       const response = await apiClient.getDraftReplies(
         chatId,
         instruction.trim() || undefined,
-        3
+        3,
+        abortController.signal
       );
       suggestions = response.suggestions;
       contextUsed = response.context_used;
       panelState = "results";
     } catch (e) {
+      // Don't show error if request was aborted
+      if (e instanceof Error && e.name === "AbortError") {
+        return;
+      }
       panelState = "error";
       if (e instanceof APIError) {
         errorMessage = e.detail || e.message;
@@ -51,9 +63,15 @@
     }
   }
 
+  function handleClose() {
+    // Cancel any in-flight request when closing
+    abortController?.abort();
+    onClose();
+  }
+
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
-      onClose();
+      handleClose();
     }
   }
 </script>
@@ -61,7 +79,7 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
-<div class="panel-overlay" onclick={onClose} role="presentation">
+<div class="panel-overlay" onclick={handleClose} role="presentation">
   <!-- svelte-ignore a11y_interactive_supports_focus -->
   <div class="panel" onclick={(e) => e.stopPropagation()} role="dialog" aria-label="AI Draft Panel">
     <header class="panel-header">
@@ -69,7 +87,7 @@
         <span class="ai-icon">✨</span>
         <h2>AI Draft</h2>
       </div>
-      <button class="close-btn" onclick={onClose} aria-label="Close">
+      <button class="close-btn" onclick={handleClose} aria-label="Close">
         ×
       </button>
     </header>
