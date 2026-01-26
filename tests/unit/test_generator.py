@@ -15,6 +15,13 @@ from models.templates import (
     TemplateMatcher,
     _get_minimal_fallback_templates,
 )
+from tests.conftest import SENTENCE_TRANSFORMERS_AVAILABLE
+
+# Marker for tests requiring sentence_transformers
+requires_sentence_transformers = pytest.mark.skipif(
+    not SENTENCE_TRANSFORMERS_AVAILABLE,
+    reason="sentence_transformers not available (requires proper ML environment)",
+)
 
 
 class TestTemplateMatching:
@@ -34,6 +41,7 @@ class TestTemplateMatching:
             assert len(template.patterns) > 0
             assert template.response
 
+    @requires_sentence_transformers
     def test_matcher_high_similarity_match(self):
         """Test exact pattern match returns high similarity."""
         # Use fallback templates explicitly for consistent testing
@@ -44,6 +52,7 @@ class TestTemplateMatching:
         assert match.similarity >= 0.9
         assert match.template.name == "thank_you_acknowledgment"
 
+    @requires_sentence_transformers
     def test_matcher_semantic_similarity_match(self):
         """Test semantically similar query matches template."""
         # Use fallback templates explicitly for consistent testing
@@ -52,6 +61,7 @@ class TestTemplateMatching:
         assert match is not None
         assert match.similarity >= TemplateMatcher.SIMILARITY_THRESHOLD
 
+    @requires_sentence_transformers
     def test_matcher_no_match_below_threshold(self):
         """Test unrelated queries return no match."""
         # Use fallback templates explicitly for consistent testing
@@ -172,6 +182,7 @@ class TestMLXModelLoader:
 class TestMLXGenerator:
     """Tests for MLXGenerator."""
 
+    @requires_sentence_transformers
     def test_template_match_returns_response(self):
         """Test generator returns template response for matching query."""
         # Use fallback templates explicitly for consistent testing
@@ -189,6 +200,7 @@ class TestMLXGenerator:
         assert response.tokens_used == 0
         assert response.model_name == "template"
 
+    @requires_sentence_transformers
     def test_template_response_has_text(self):
         """Test template response includes response text."""
         # Use fallback templates explicitly for consistent testing
@@ -271,6 +283,7 @@ class TestGeneratorProtocolCompliance:
         assert hasattr(generator, "get_memory_usage_mb")
         assert callable(generator.get_memory_usage_mb)
 
+    @requires_sentence_transformers
     def test_generate_returns_generation_response(self):
         """Verify generate returns GenerationResponse."""
         # Use fallback templates explicitly for consistent testing
@@ -296,6 +309,7 @@ class TestSentenceModelLifecycle:
         unload_sentence_model()
         assert is_sentence_model_loaded() is False
 
+    @requires_sentence_transformers
     def test_sentence_model_loads_on_use(self):
         """Verify sentence model loads when used."""
         from models.templates import is_sentence_model_loaded, unload_sentence_model
@@ -313,6 +327,7 @@ class TestSentenceModelLifecycle:
         # Clean up
         unload_sentence_model()
 
+    @requires_sentence_transformers
     def test_unload_sentence_model(self):
         """Verify sentence model can be unloaded."""
         from models.templates import is_sentence_model_loaded, unload_sentence_model
@@ -338,6 +353,7 @@ class TestSentenceModelLifecycle:
 class TestTemplateMatcherCache:
     """Tests for TemplateMatcher cache management."""
 
+    @requires_sentence_transformers
     def test_clear_cache(self):
         """Verify clear_cache resets cached embeddings."""
         matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
@@ -352,6 +368,7 @@ class TestTemplateMatcherCache:
         assert matcher._pattern_embeddings is None
         assert len(matcher._pattern_to_template) == 0
 
+    @requires_sentence_transformers
     def test_cache_recomputes_after_clear(self):
         """Verify embeddings recompute after cache clear."""
         matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
@@ -1012,3 +1029,243 @@ class TestLoadTemplatesFromWS3:
         fallback = _get_minimal_fallback_templates()
         assert len(fallback) > 0
         assert all(hasattr(t, "name") and hasattr(t, "patterns") for t in fallback)
+
+
+class TestIMessageTemplatesCount:
+    """Tests for iMessage template count (no model needed)."""
+
+    def test_imessage_templates_count(self):
+        """Verify at least 25 iMessage-specific templates exist."""
+        templates = _get_minimal_fallback_templates()
+        # Should have 10 original + 25+ new iMessage templates
+        assert len(templates) >= 35
+
+
+@requires_sentence_transformers
+class TestIMessageTemplatesMatching:
+    """Tests for iMessage-specific templates (requires sentence_transformers)."""
+
+    def test_quick_acknowledgment_ok(self):
+        """Test 'ok' matches quick_ok template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("ok")
+        assert match is not None
+        assert match.template.name == "quick_ok"
+        assert match.similarity >= TemplateMatcher.SIMILARITY_THRESHOLD
+
+    def test_quick_acknowledgment_kk(self):
+        """Test 'kk' matches quick_ok template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("kk")
+        assert match is not None
+        assert match.template.name == "quick_ok"
+
+    def test_quick_thanks_thx(self):
+        """Test 'thx' matches quick_thanks template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("thx")
+        assert match is not None
+        assert match.template.name == "quick_thanks"
+
+    def test_quick_thanks_ty(self):
+        """Test 'ty' matches quick_thanks template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("ty")
+        assert match is not None
+        assert match.template.name == "quick_thanks"
+
+    def test_on_my_way_omw(self):
+        """Test 'omw' matches on_my_way template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("omw")
+        assert match is not None
+        assert match.template.name == "on_my_way"
+
+    def test_on_my_way_leaving_now(self):
+        """Test 'leaving now' matches on_my_way template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("leaving now")
+        assert match is not None
+        assert match.template.name == "on_my_way"
+
+    def test_running_late(self):
+        """Test 'running late' matches running_late template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("running late")
+        assert match is not None
+        assert match.template.name == "running_late"
+
+    def test_where_are_you_wya(self):
+        """Test 'wya' matches where_are_you template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("wya")
+        assert match is not None
+        assert match.template.name == "where_are_you"
+
+    def test_time_coordination(self):
+        """Test 'what time' matches what_time template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("what time works")
+        assert match is not None
+        assert match.template.name == "what_time"
+
+    def test_time_proposal_does_5_work(self):
+        """Test 'does 5 work' matches time_proposal template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("does 5 work")
+        assert match is not None
+        assert match.template.name == "time_proposal"
+
+    def test_hang_out_wanna_hang(self):
+        """Test 'wanna hang' matches hang_out_invite template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("wanna hang")
+        assert match is not None
+        assert match.template.name == "hang_out_invite"
+
+    def test_dinner_plans(self):
+        """Test 'wanna grab dinner' matches dinner_plans template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("wanna grab dinner")
+        assert match is not None
+        assert match.template.name == "dinner_plans"
+
+    def test_free_tonight(self):
+        """Test 'free tonight' matches free_tonight template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("free tonight")
+        assert match is not None
+        assert match.template.name == "free_tonight"
+
+    def test_coffee_drinks(self):
+        """Test 'let's grab coffee' matches coffee_drinks template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("let's grab coffee")
+        assert match is not None
+        assert match.template.name == "coffee_drinks"
+
+    def test_laughter_lol(self):
+        """Test 'lol' matches laughter template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("lol")
+        assert match is not None
+        assert match.template.name == "laughter"
+
+    def test_laughter_haha(self):
+        """Test 'haha' matches laughter template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("haha")
+        assert match is not None
+        assert match.template.name == "laughter"
+
+    def test_positive_reaction_nice(self):
+        """Test 'nice' matches positive_reaction template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("nice")
+        assert match is not None
+        assert match.template.name == "positive_reaction"
+
+    def test_positive_reaction_awesome(self):
+        """Test 'awesome' matches positive_reaction template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("awesome")
+        assert match is not None
+        assert match.template.name == "positive_reaction"
+
+    def test_check_in_you_there(self):
+        """Test 'you there?' matches check_in template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("you there?")
+        assert match is not None
+        assert match.template.name == "check_in"
+
+    def test_did_you_see(self):
+        """Test 'did you see my text' matches did_you_see template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("did you see my text")
+        assert match is not None
+        assert match.template.name == "did_you_see"
+
+    def test_talk_later_ttyl(self):
+        """Test 'ttyl' matches talk_later template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("ttyl")
+        assert match is not None
+        assert match.template.name == "talk_later"
+
+    def test_goodnight_gn(self):
+        """Test 'gn' matches goodnight template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("gn")
+        assert match is not None
+        assert match.template.name == "goodnight"
+
+    def test_goodbye_bye(self):
+        """Test 'bye' matches goodbye template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("bye")
+        assert match is not None
+        assert match.template.name == "goodbye"
+
+    def test_goodbye_cya(self):
+        """Test 'cya' matches goodbye template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("cya")
+        assert match is not None
+        assert match.template.name == "goodbye"
+
+    def test_appreciation_youre_the_best(self):
+        """Test 'you're the best' matches appreciation template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("you're the best")
+        assert match is not None
+        assert match.template.name == "appreciation"
+
+    def test_appreciation_appreciate_it(self):
+        """Test 'appreciate it' matches appreciation template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("appreciate it")
+        assert match is not None
+        assert match.template.name == "appreciation"
+
+    def test_brb(self):
+        """Test 'brb' matches brb template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("brb")
+        assert match is not None
+        assert match.template.name == "brb"
+
+    def test_agreement_same(self):
+        """Test 'same' matches agreement template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("same")
+        assert match is not None
+        assert match.template.name == "agreement"
+
+    def test_question_response_idk(self):
+        """Test 'idk' matches question_response template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("idk")
+        assert match is not None
+        assert match.template.name == "question_response"
+
+    def test_quick_affirmative_yep(self):
+        """Test 'yep' matches quick_affirmative template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("yep")
+        assert match is not None
+        assert match.template.name == "quick_affirmative"
+
+    def test_quick_no_problem_np(self):
+        """Test 'np' matches quick_no_problem template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("np")
+        assert match is not None
+        assert match.template.name == "quick_no_problem"
+
+    def test_be_there_soon_almost_there(self):
+        """Test 'almost there' matches be_there_soon template."""
+        matcher = TemplateMatcher(templates=_get_minimal_fallback_templates())
+        match = matcher.match("almost there")
+        assert match is not None
+        assert match.template.name == "be_there_soon"
