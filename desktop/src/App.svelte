@@ -11,12 +11,15 @@
 
   let currentView: "messages" | "dashboard" | "health" = "messages";
 
-  onMount(async () => {
+  onMount(() => {
     // Check API connection on start
-    await checkApiConnection();
+    checkApiConnection();
+
+    // Store unlisten function for cleanup
+    let unlisten: (() => void) | undefined;
 
     // Listen for navigation events from tray menu
-    const unlisten = await listen<string>("navigate", (event) => {
+    listen<string>("navigate", (event) => {
       if (
         event.payload === "health" ||
         event.payload === "dashboard" ||
@@ -27,11 +30,13 @@
           clearSelection();
         }
       }
+    }).then((fn) => {
+      unlisten = fn;
     });
 
     // Cleanup on unmount
     return () => {
-      unlisten();
+      unlisten?.();
     };
   });
 </script>

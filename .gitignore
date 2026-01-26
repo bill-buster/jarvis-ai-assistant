@@ -10,8 +10,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# Python compiled library (not desktop/src/lib/)
+/lib/
 lib64/
+!desktop/src/lib/
 parts/
 sdist/
 var/
