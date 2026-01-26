@@ -2,15 +2,23 @@
 
 Orchestrates template matching and model-based generation with
 memory-safe patterns and performance tracking.
+
+Also provides ThreadAwareGenerator for thread-context-aware reply generation.
 """
+
+from __future__ import annotations
 
 import logging
 import time
+from typing import TYPE_CHECKING
 
 from contracts.models import GenerationRequest, GenerationResponse
 from models.loader import MLXModelLoader, ModelConfig
 from models.prompt_builder import PromptBuilder
 from models.templates import TemplateMatcher
+
+if TYPE_CHECKING:
+    from jarvis.threading import ThreadContext, ThreadTopic
 
 logger = logging.getLogger(__name__)
 
@@ -165,3 +173,288 @@ class MLXGenerator:
     def get_memory_usage_mb(self) -> float:
         """Return current memory usage of the model."""
         return self._loader.get_memory_usage_mb()
+
+
+class ThreadAwareGenerator:
+    """Thread-context-aware generator for improved reply generation.
+
+    Uses thread analysis to:
+    - Select topic-specific few-shot examples
+    - Adjust response length based on thread type
+    - Provide context-appropriate prompts for group chats
+    - Include action items for planning/logistics threads
+
+    Wraps MLXGenerator and adds thread-awareness to generation.
+
+    Example:
+        >>> from jarvis.threading import get_thread_analyzer
+        >>> analyzer = get_thread_analyzer()
+        >>> thread_context = analyzer.analyze(messages)
+        >>> generator = ThreadAwareGenerator()
+        >>> response = generator.generate_threaded(
+        ...     thread_context=thread_context,
+        ...     instruction="be friendly",
+        ... )
+    """
+
+    def __init__(
+        self,
+        base_generator: MLXGenerator | None = None,
+        config: ModelConfig | None = None,
+    ) -> None:
+        """Initialize the thread-aware generator.
+
+        Args:
+            base_generator: Optional base MLXGenerator. Creates one if not provided.
+            config: Optional model config for creating base generator.
+        """
+        self._generator = base_generator or MLXGenerator(config=config)
+
+    def generate_threaded(
+        self,
+        thread_context: ThreadContext,
+        instruction: str | None = None,
+        temperature: float | None = None,
+    ) -> GenerationResponse:
+        """Generate a thread-aware reply.
+
+        Analyzes the thread context to build an appropriate prompt and
+        adjust generation parameters for the thread type.
+
+        Args:
+            thread_context: Analyzed thread context from ThreadAnalyzer
+            instruction: Optional custom instruction for the reply
+            temperature: Optional temperature override (auto-selected if not provided)
+
+        Returns:
+            GenerationResponse with generated reply and metadata
+        """
+        from jarvis.prompts import build_threaded_reply_prompt, get_thread_max_tokens
+        from jarvis.threading import ThreadTopic, get_thread_analyzer
+
+        start_time = time.perf_counter()
+
+        # Get response config for this thread type
+        analyzer = get_thread_analyzer()
+        config = analyzer.get_response_config(thread_context)
+
+        # Build thread-aware prompt
+        prompt = build_threaded_reply_prompt(
+            thread_context=thread_context,
+            config=config,
+            instruction=instruction,
+        )
+
+        # Determine max tokens based on thread type
+        max_tokens = get_thread_max_tokens(config)
+
+        # Determine temperature based on thread type
+        if temperature is None:
+            temperature = self._get_temperature_for_topic(thread_context.topic)
+
+        # Try template match first for quick exchanges
+        if thread_context.topic == ThreadTopic.QUICK_EXCHANGE:
+            template_response = self._try_quick_template(thread_context)
+            if template_response is not None:
+                return template_response
+
+        # Build generation request
+        # Include thread-specific examples as few-shot
+        examples = self._get_thread_examples(thread_context.topic)
+
+        request = GenerationRequest(
+            prompt=prompt,
+            context_documents=[],  # Context is already in the prompt
+            few_shot_examples=examples,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        # Generate with base generator
+        response = self._generator.generate(request)
+
+        # Post-process for thread type
+        processed_text = self._post_process_response(
+            response.text, thread_context, config
+        )
+
+        total_time = (time.perf_counter() - start_time) * 1000
+
+        return GenerationResponse(
+            text=processed_text,
+            tokens_used=response.tokens_used,
+            generation_time_ms=total_time,
+            model_name=response.model_name,
+            used_template=response.used_template,
+            template_name=response.template_name,
+            finish_reason=response.finish_reason,
+        )
+
+    def _get_temperature_for_topic(self, topic: ThreadTopic) -> float:
+        """Get appropriate temperature for thread topic.
+
+        Args:
+            topic: The thread topic
+
+        Returns:
+            Temperature value (lower = more deterministic)
+        """
+        from jarvis.threading import ThreadTopic
+
+        # Lower temperature for logistics (need precision)
+        # Higher for emotional support (need warmth/variety)
+        temperature_map = {
+            ThreadTopic.LOGISTICS: 0.3,
+            ThreadTopic.QUICK_EXCHANGE: 0.2,
+            ThreadTopic.INFORMATION: 0.3,
+            ThreadTopic.PLANNING: 0.5,
+            ThreadTopic.DECISION_MAKING: 0.5,
+            ThreadTopic.EMOTIONAL_SUPPORT: 0.7,
+            ThreadTopic.CATCHING_UP: 0.7,
+            ThreadTopic.CELEBRATION: 0.7,
+            ThreadTopic.UNKNOWN: 0.6,
+        }
+
+        return temperature_map.get(topic, 0.6)
+
+    def _try_quick_template(
+        self, thread_context: ThreadContext
+    ) -> GenerationResponse | None:
+        """Try to match quick exchange to a template.
+
+        Args:
+            thread_context: The thread context
+
+        Returns:
+            GenerationResponse if matched, None otherwise
+        """
+        if not thread_context.messages:
+            return None
+
+        # Get last message
+        last_msg = thread_context.messages[-1]
+        last_text = last_msg.text if hasattr(last_msg, "text") else str(last_msg)
+
+        if not last_text:
+            return None
+
+        # Try template matching
+        match = self._generator._template_matcher.match(last_text)
+        if match is not None:
+            return GenerationResponse(
+                text=match.template.response,
+                tokens_used=0,
+                generation_time_ms=0.0,
+                model_name="template",
+                used_template=True,
+                template_name=match.template.name,
+                finish_reason="template",
+            )
+
+        return None
+
+    def _get_thread_examples(
+        self, topic: ThreadTopic
+    ) -> list[tuple[str, str]]:
+        """Get few-shot examples for thread topic.
+
+        Args:
+            topic: The thread topic
+
+        Returns:
+            List of (input, output) example tuples
+        """
+        from jarvis.prompts import THREAD_EXAMPLES
+
+        topic_to_key = {
+            "logistics": "logistics",
+            "planning": "planning",
+            "catching_up": "catching_up",
+            "emotional_support": "emotional_support",
+            "quick_exchange": "quick_exchange",
+        }
+
+        key = topic_to_key.get(topic.value, "catching_up")
+        examples = THREAD_EXAMPLES.get(key, [])
+
+        return [(ex.context, ex.output) for ex in examples[:2]]
+
+    def _post_process_response(
+        self,
+        text: str,
+        thread_context: ThreadContext,
+        config: object,
+    ) -> str:
+        """Post-process generated response for thread type.
+
+        Args:
+            text: Generated text
+            thread_context: Thread context
+            config: Response configuration
+
+        Returns:
+            Processed text
+        """
+        from jarvis.threading import ThreadTopic
+
+        # Clean up common issues
+        text = text.strip()
+
+        # Remove any prompt artifacts
+        if "###" in text:
+            text = text.split("###")[0].strip()
+
+        # For quick exchanges, ensure brevity
+        if thread_context.topic == ThreadTopic.QUICK_EXCHANGE:
+            # Take only first sentence/line
+            lines = text.split("\n")
+            text = lines[0].strip()
+            # Limit length
+            if len(text) > 50:
+                # Try to cut at a natural break within first 60 chars
+                found_break = False
+                for sep in [". ", "! ", "? "]:
+                    idx = text[:60].find(sep)
+                    if idx != -1:
+                        text = text[: idx + 1]
+                        found_break = True
+                        break
+                # If no natural break found, hard truncate
+                if not found_break:
+                    text = text[:50].rstrip() + "..."
+
+        # For logistics, ensure we're specific
+        # (no post-processing needed, prompt handles this)
+
+        # For emotional support, ensure warmth
+        # (no post-processing needed, prompt handles this)
+
+        return text
+
+    # Delegate to base generator for standard operations
+    def is_loaded(self) -> bool:
+        """Check if model is loaded in memory."""
+        return self._generator.is_loaded()
+
+    def load(self) -> bool:
+        """Load model into memory."""
+        return self._generator.load()
+
+    def unload(self) -> None:
+        """Unload model to free memory."""
+        self._generator.unload()
+
+    def get_memory_usage_mb(self) -> float:
+        """Return current memory usage of the model."""
+        return self._generator.get_memory_usage_mb()
+
+    def generate(self, request: GenerationRequest) -> GenerationResponse:
+        """Standard generation (delegates to base generator).
+
+        Args:
+            request: Generation request
+
+        Returns:
+            GenerationResponse
+        """
+        return self._generator.generate(request)

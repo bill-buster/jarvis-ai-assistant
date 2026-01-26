@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from jarvis.threading import ThreadContext, ThreadedReplyConfig
 
 # =============================================================================
 # Prompt Metadata & Versioning
@@ -177,6 +180,148 @@ SEARCH_ANSWER_EXAMPLES: list[tuple[str, str, str]] = [
 
 
 # =============================================================================
+# Thread-Specific Few-Shot Examples
+# =============================================================================
+
+# Examples for logistics/coordination threads - concise responses
+LOGISTICS_THREAD_EXAMPLES: list[FewShotExample] = [
+    FewShotExample(
+        context="[14:00] Sarah: What time works for pickup?\n[14:05] Me: How about 5pm?",
+        output="5pm works! See you then.",
+        tone="casual",
+    ),
+    FewShotExample(
+        context="[10:00] John: Running late, stuck in traffic\n[10:05] John: Be there in 15",
+        output="No worries, take your time!",
+        tone="casual",
+    ),
+    FewShotExample(
+        context="[18:30] Mom: Which entrance should I use?",
+        output="Use the main entrance on Oak Street. I'll meet you there.",
+        tone="casual",
+    ),
+]
+
+# Examples for emotional support threads - empathetic responses
+EMOTIONAL_SUPPORT_THREAD_EXAMPLES: list[FewShotExample] = [
+    FewShotExample(
+        context=(
+            "[20:00] Sarah: Had the worst day at work today\n"
+            "[20:05] Sarah: My project got cancelled"
+        ),
+        output=(
+            "I'm so sorry to hear that. That's really frustrating, "
+            "especially after all your hard work. Want to talk about it?"
+        ),
+        tone="casual",
+    ),
+    FewShotExample(
+        context=(
+            "[15:00] John: Just found out I didn't get the job\n"
+            "[15:02] John: Feeling pretty down"
+        ),
+        output=(
+            "That's really disappointing, I know you were excited about it. "
+            "Their loss though - something better will come along. I'm here if you need to vent."
+        ),
+        tone="casual",
+    ),
+    FewShotExample(
+        context="[09:00] Mom: Missing dad a lot today",
+        output=(
+            "I know, I miss him too. It's okay to have those days. "
+            "Want to look through some old photos together later?"
+        ),
+        tone="casual",
+    ),
+]
+
+# Examples for planning threads - includes action items
+PLANNING_THREAD_EXAMPLES: list[FewShotExample] = [
+    FewShotExample(
+        context=(
+            "[14:00] Alex: Want to do dinner Saturday?\n"
+            "[14:05] Me: Sure!\n"
+            "[14:10] Alex: Any restaurant preferences?"
+        ),
+        output=(
+            "How about Italian? There's a new place downtown I've been wanting to try. "
+            "I can make a reservation for 7pm if that works?"
+        ),
+        tone="casual",
+    ),
+    FewShotExample(
+        context=(
+            "[10:00] Sarah: We should plan a birthday surprise for Mike\n"
+            "[10:05] Sarah: Any ideas?"
+        ),
+        output=(
+            "Definitely! We could do a small surprise at his favorite bar. "
+            "I can coordinate with Lisa on decorations. Should we aim for next Friday?"
+        ),
+        tone="casual",
+    ),
+    FewShotExample(
+        context=(
+            "[16:00] John: Thinking about a camping trip next month\n"
+            "[16:05] John: You interested?"
+        ),
+        output=(
+            "Count me in! I can bring the tent and cooler. "
+            "What dates are you thinking? Should I check with the others too?"
+        ),
+        tone="casual",
+    ),
+]
+
+# Examples for catching up threads - warm, conversational
+CATCHING_UP_THREAD_EXAMPLES: list[FewShotExample] = [
+    FewShotExample(
+        context="[19:00] Lisa: Haven't heard from you in ages! How are things?",
+        output=(
+            "I know, it's been too long! Things are good - busy with work but can't complain. "
+            "How about you? Still enjoying the new job?"
+        ),
+        tone="casual",
+    ),
+    FewShotExample(
+        context=(
+            "[11:00] College Friend: Just saw your post about the promotion!\n"
+            "[11:02] College Friend: So proud of you!"
+        ),
+        output=(
+            "Thanks so much! It's been a wild ride. "
+            "We should catch up properly soon - coffee this weekend?"
+        ),
+        tone="casual",
+    ),
+]
+
+# Examples for quick exchange threads - brief responses
+QUICK_EXCHANGE_THREAD_EXAMPLES: list[FewShotExample] = [
+    FewShotExample(
+        context="[12:00] Tom: Got the tickets!",
+        output="Awesome, thanks!",
+        tone="casual",
+    ),
+    FewShotExample(
+        context="[09:00] Boss: Can you join the 2pm call?",
+        output="Yes, I'll be there.",
+        tone="professional",
+    ),
+]
+
+# Thread examples organized by topic for the registry
+THREAD_EXAMPLES: dict[str, list[FewShotExample]] = {
+    "logistics": LOGISTICS_THREAD_EXAMPLES,
+    "emotional_support": EMOTIONAL_SUPPORT_THREAD_EXAMPLES,
+    "planning": PLANNING_THREAD_EXAMPLES,
+    "catching_up": CATCHING_UP_THREAD_EXAMPLES,
+    "quick_exchange": QUICK_EXCHANGE_THREAD_EXAMPLES,
+}
+
+
+# =============================================================================
 # Prompt Templates
 # =============================================================================
 
@@ -267,6 +412,39 @@ If the answer isn't in the messages, say so.
 {examples}
 
 ### Answer:""",
+    max_output_tokens=100,
+)
+
+
+THREADED_REPLY_TEMPLATE = PromptTemplate(
+    name="threaded_reply",
+    system_message=(
+        "You are helping draft a text message reply based on the conversation thread context. "
+        "Match the tone and respond appropriately to the thread type."
+    ),
+    template="""### Thread Context:
+Topic: {thread_topic}
+State: {thread_state}
+Your role: {user_role}
+{participants_info}
+
+### Relevant Messages:
+{context}
+
+### Instructions:
+Generate a natural reply that:
+- Matches the thread's {response_style} tone
+- Is {length_guidance}
+{additional_instructions}
+{custom_instruction}
+
+### Examples:
+{examples}
+
+### Last message to reply to:
+{last_message}
+
+### Your reply:""",
     max_output_tokens=100,
 )
 
@@ -648,6 +826,219 @@ def build_search_answer_prompt(
     return prompt
 
 
+def _get_thread_examples(topic_name: str) -> list[FewShotExample]:
+    """Get few-shot examples for a thread topic.
+
+    Args:
+        topic_name: The thread topic name (e.g., "logistics", "emotional_support")
+
+    Returns:
+        List of relevant FewShotExample instances
+    """
+    # Map topic enum values to example keys
+    topic_map = {
+        "logistics": "logistics",
+        "planning": "planning",
+        "catching_up": "catching_up",
+        "emotional_support": "emotional_support",
+        "quick_exchange": "quick_exchange",
+        "information": "logistics",  # Use logistics as fallback
+        "decision_making": "planning",  # Similar to planning
+        "celebration": "catching_up",  # Similar tone
+        "unknown": "catching_up",  # Default to conversational
+    }
+
+    key = topic_map.get(topic_name, "catching_up")
+    return THREAD_EXAMPLES.get(key, CATCHING_UP_THREAD_EXAMPLES)
+
+
+def _format_thread_context(messages: list[object]) -> str:
+    """Format thread messages for prompt context.
+
+    Args:
+        messages: List of Message objects
+
+    Returns:
+        Formatted string of messages
+    """
+    lines = []
+    for msg in messages:
+        # Handle Message objects (duck typing)
+        if hasattr(msg, "date") and hasattr(msg, "text"):
+            timestamp = msg.date.strftime("%H:%M") if hasattr(msg.date, "strftime") else ""
+            sender = "Me" if getattr(msg, "is_from_me", False) else getattr(
+                msg, "sender_name", None
+            ) or getattr(msg, "sender", "Unknown")
+            text = msg.text or ""
+            lines.append(f"[{timestamp}] {sender}: {text}")
+        # Handle raw strings
+        elif isinstance(msg, str):
+            lines.append(msg)
+
+    return "\n".join(lines)
+
+
+def _get_length_guidance(response_style: str, max_length: int) -> str:
+    """Get length guidance based on response style.
+
+    Args:
+        response_style: The recommended response style
+        max_length: Maximum response length
+
+    Returns:
+        Human-readable length guidance string
+    """
+    if response_style in ("concise", "brief"):
+        return "brief and to the point (1-2 sentences)"
+    elif response_style == "empathetic":
+        return "warm and supportive (2-3 sentences, show you care)"
+    elif response_style == "detailed":
+        return "complete but not lengthy (2-3 sentences with relevant details)"
+    elif response_style == "enthusiastic":
+        return "upbeat and celebratory (1-2 sentences)"
+    else:
+        return "natural and conversational (1-2 sentences)"
+
+
+def _get_additional_instructions(
+    topic_name: str,
+    state_name: str,
+    config: ThreadedReplyConfig,
+) -> str:
+    """Get additional instructions based on thread context.
+
+    Args:
+        topic_name: Thread topic name
+        state_name: Thread state name
+        config: Thread response configuration
+
+    Returns:
+        Additional instruction string
+    """
+    instructions = []
+
+    # State-specific instructions
+    if state_name == "open_question":
+        instructions.append("- Answer the question directly")
+    elif state_name == "awaiting_response":
+        instructions.append("- Acknowledge their message and respond appropriately")
+
+    # Topic-specific instructions
+    if topic_name == "emotional_support":
+        instructions.append("- Show empathy and understanding")
+        instructions.append("- Offer support without being preachy")
+    elif topic_name == "logistics":
+        instructions.append("- Be clear and specific about times/places")
+        instructions.append("- Confirm key details")
+    elif topic_name == "planning":
+        instructions.append("- Be constructive and suggest next steps")
+        if config.include_action_items:
+            instructions.append("- Include any commitments you're making")
+    elif topic_name == "decision_making":
+        instructions.append("- Provide your input clearly")
+        instructions.append("- Help move the decision forward")
+
+    # Config-specific instructions
+    if config.suggest_follow_up:
+        instructions.append("- End with a question or invitation to continue")
+
+    return "\n".join(instructions) if instructions else ""
+
+
+def build_threaded_reply_prompt(
+    thread_context: ThreadContext,
+    config: ThreadedReplyConfig,
+    instruction: str | None = None,
+    tone: Literal["casual", "professional", "mixed"] = "casual",
+) -> str:
+    """Build a prompt for thread-aware reply generation.
+
+    Constructs a prompt that includes thread context, topic-specific examples,
+    and appropriate instructions for the thread type and state.
+
+    Args:
+        thread_context: Analyzed thread context from ThreadAnalyzer
+        config: Response configuration based on thread type
+        instruction: Optional custom instruction for the reply
+        tone: Overall tone preference (default: casual)
+
+    Returns:
+        Formatted prompt string ready for model input
+    """
+    # Get topic and state names
+    topic_name = thread_context.topic.value
+    state_name = thread_context.state.value
+    user_role = thread_context.user_role.value
+
+    # Get appropriate examples for this thread type
+    examples = _get_thread_examples(topic_name)[:2]
+
+    # Format the relevant messages (not all messages)
+    relevant_msgs = thread_context.relevant_messages or thread_context.messages[-5:]
+    context = _format_thread_context(relevant_msgs)
+
+    # Get the last message to reply to
+    last_message = ""
+    if thread_context.messages:
+        last_msg = thread_context.messages[-1]
+        if hasattr(last_msg, "text"):
+            last_message = last_msg.text or ""
+        elif isinstance(last_msg, str):
+            last_message = last_msg
+
+    # Build participants info for group chats
+    participants_info = ""
+    if thread_context.participants_count > 1:
+        participants_info = f"Group chat with {thread_context.participants_count} participants"
+
+    # Get length guidance
+    length_guidance = _get_length_guidance(config.response_style, config.max_response_length)
+
+    # Get additional instructions
+    additional_instructions = _get_additional_instructions(topic_name, state_name, config)
+
+    # Format custom instruction
+    custom_instruction = ""
+    if instruction:
+        custom_instruction = f"- Additional guidance: {instruction}"
+
+    # Truncate context if needed
+    truncated_context = _truncate_context(context, max_chars=2000)
+
+    # Build the prompt
+    prompt = THREADED_REPLY_TEMPLATE.template.format(
+        thread_topic=topic_name.replace("_", " ").title(),
+        thread_state=state_name.replace("_", " ").title(),
+        user_role=user_role.replace("_", " ").title(),
+        participants_info=participants_info,
+        context=truncated_context,
+        response_style=config.response_style,
+        length_guidance=length_guidance,
+        additional_instructions=additional_instructions,
+        custom_instruction=custom_instruction,
+        examples=_format_examples(examples),
+        last_message=last_message,
+    )
+
+    return prompt
+
+
+def get_thread_max_tokens(config: ThreadedReplyConfig) -> int:
+    """Get max tokens for generation based on thread config.
+
+    Args:
+        config: Thread response configuration
+
+    Returns:
+        Recommended max tokens for generation
+    """
+    # Rough estimate: ~4 chars per token
+    base_tokens = config.max_response_length // 4
+
+    # Add buffer for safety
+    return max(30, min(base_tokens + 20, 150))
+
+
 # =============================================================================
 # Utility Functions
 # =============================================================================
@@ -768,12 +1159,22 @@ class PromptRegistry:
             ],
             "api_reply": API_REPLY_EXAMPLES,
             "api_summary": API_SUMMARY_EXAMPLES,
+            "thread_logistics": [(ex.context, ex.output) for ex in LOGISTICS_THREAD_EXAMPLES],
+            "thread_emotional_support": [
+                (ex.context, ex.output) for ex in EMOTIONAL_SUPPORT_THREAD_EXAMPLES
+            ],
+            "thread_planning": [(ex.context, ex.output) for ex in PLANNING_THREAD_EXAMPLES],
+            "thread_catching_up": [(ex.context, ex.output) for ex in CATCHING_UP_THREAD_EXAMPLES],
+            "thread_quick_exchange": [
+                (ex.context, ex.output) for ex in QUICK_EXCHANGE_THREAD_EXAMPLES
+            ],
         }
 
         self._templates: dict[str, PromptTemplate] = {
             "reply_generation": REPLY_TEMPLATE,
             "conversation_summary": SUMMARY_TEMPLATE,
             "search_answer": SEARCH_ANSWER_TEMPLATE,
+            "threaded_reply": THREADED_REPLY_TEMPLATE,
         }
 
         self._metadata: dict[str, PromptMetadata] = {
@@ -806,6 +1207,30 @@ class PromptRegistry:
             "search_answer_template": PromptMetadata(
                 name="search_answer_template",
                 description="Template for answering questions about conversations",
+            ),
+            "threaded_reply": PromptMetadata(
+                name="threaded_reply",
+                description="Template for thread-aware reply generation",
+            ),
+            "thread_logistics": PromptMetadata(
+                name="thread_logistics",
+                description="Examples for logistics/coordination thread replies",
+            ),
+            "thread_emotional_support": PromptMetadata(
+                name="thread_emotional_support",
+                description="Examples for emotional support thread replies",
+            ),
+            "thread_planning": PromptMetadata(
+                name="thread_planning",
+                description="Examples for planning thread replies with action items",
+            ),
+            "thread_catching_up": PromptMetadata(
+                name="thread_catching_up",
+                description="Examples for catching up/casual thread replies",
+            ),
+            "thread_quick_exchange": PromptMetadata(
+                name="thread_quick_exchange",
+                description="Examples for quick exchange thread replies",
             ),
         }
 
