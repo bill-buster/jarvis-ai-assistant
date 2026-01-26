@@ -1121,7 +1121,7 @@ class TemplateMatcher:
         model = _get_sentence_model()
         embedding = model.encode([query], convert_to_numpy=True)[0]
         self._query_cache.set(cache_key, embedding)
-        return embedding  # type: ignore[no-any-return]
+        return embedding
 
     def match(self, query: str, track_analytics: bool = True) -> TemplateMatch | None:
         """Find best matching template for a query.

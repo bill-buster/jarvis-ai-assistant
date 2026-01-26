@@ -294,6 +294,38 @@ async def resource_error_handler(request: Request, exc: ResourceError) -> JSONRe
     )
 
 
+async def timeout_error_handler(request: Request, exc: TimeoutError) -> JSONResponse:
+    """Handle timeout errors with 408 Request Timeout.
+
+    This handler catches asyncio.TimeoutError and similar timeout exceptions
+    and returns an appropriate 408 response.
+
+    Args:
+        request: The FastAPI request object.
+        exc: The timeout error that was raised.
+
+    Returns:
+        JSONResponse with 408 status and retry information.
+    """
+    logger.warning(
+        "Request timeout for %s %s",
+        request.method,
+        request.url.path,
+    )
+
+    response_body = {
+        "error": "RequestTimeout",
+        "code": "REQUEST_TIMEOUT",
+        "detail": "The request timed out. Please try again.",
+    }
+
+    return JSONResponse(
+        status_code=408,
+        content=response_body,
+        headers={"Retry-After": "5"},  # Suggest retry after 5 seconds
+    )
+
+
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle unexpected exceptions with a generic error response.
 
@@ -340,14 +372,16 @@ def register_exception_handlers(app: FastAPI) -> None:
         register_exception_handlers(app)
     """
     # Register specific handlers first (most specific to least specific)
-    # Type ignores needed due to FastAPI/Starlette typing limitations with specific exception types
-    app.add_exception_handler(ValidationError, validation_error_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(iMessageAccessError, imessage_access_error_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(ModelLoadError, model_load_error_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(ResourceError, resource_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(ValidationError, validation_error_handler)
+    app.add_exception_handler(iMessageAccessError, imessage_access_error_handler)
+    app.add_exception_handler(ModelLoadError, model_load_error_handler)
+    app.add_exception_handler(ResourceError, resource_error_handler)
 
     # Register the base JarvisError handler (catches all JarvisError subclasses)
-    app.add_exception_handler(JarvisError, jarvis_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(JarvisError, jarvis_error_handler)
+
+    # Register timeout handler for asyncio.TimeoutError
+    app.add_exception_handler(TimeoutError, timeout_error_handler)
 
     # Optionally register a generic exception handler for unexpected errors
     # Uncomment the following line to catch all unhandled exceptions:
@@ -364,6 +398,7 @@ __all__ = [
     "imessage_access_error_handler",
     "model_load_error_handler",
     "resource_error_handler",
+    "timeout_error_handler",
     "generic_exception_handler",
     "get_status_code_for_error",
     "build_error_response",

@@ -9,9 +9,10 @@ import os
 from typing import Any
 
 import psutil
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 
+from api.ratelimit import RATE_LIMIT_READ, RATE_LIMIT_WRITE, limiter
 from jarvis.metrics import (
     force_gc,
     get_latency_histogram,
@@ -60,7 +61,8 @@ def _format_prometheus_metric(
 
 
 @router.get("", response_class=PlainTextResponse)
-def get_prometheus_metrics() -> str:
+@limiter.limit(RATE_LIMIT_READ)
+async def get_prometheus_metrics(request: Request) -> str:
     """Get all metrics in Prometheus text format.
 
     Returns metrics compatible with Prometheus scraping:
@@ -162,7 +164,8 @@ def get_prometheus_metrics() -> str:
 
 
 @router.get("/memory")
-def get_memory_metrics() -> dict[str, Any]:
+@limiter.limit(RATE_LIMIT_READ)
+async def get_memory_metrics(request: Request) -> dict[str, Any]:
     """Get detailed memory breakdown.
 
     Returns:
@@ -218,7 +221,8 @@ def get_memory_metrics() -> dict[str, Any]:
 
 
 @router.get("/latency")
-def get_latency_metrics() -> dict[str, Any]:
+@limiter.limit(RATE_LIMIT_READ)
+async def get_latency_metrics(request: Request) -> dict[str, Any]:
     """Get request latency percentiles.
 
     Returns:
@@ -257,7 +261,8 @@ def get_latency_metrics() -> dict[str, Any]:
 
 
 @router.get("/requests")
-def get_request_metrics() -> dict[str, Any]:
+@limiter.limit(RATE_LIMIT_READ)
+async def get_request_metrics(request: Request) -> dict[str, Any]:
     """Get request count metrics by endpoint.
 
     Returns:
@@ -271,7 +276,8 @@ def get_request_metrics() -> dict[str, Any]:
 
 
 @router.post("/gc")
-def trigger_gc() -> dict[str, Any]:
+@limiter.limit(RATE_LIMIT_WRITE)
+async def trigger_gc(request: Request) -> dict[str, Any]:
     """Trigger garbage collection and return memory delta.
 
     Returns:
@@ -281,7 +287,8 @@ def trigger_gc() -> dict[str, Any]:
 
 
 @router.post("/sample")
-def take_memory_sample() -> dict[str, Any]:
+@limiter.limit(RATE_LIMIT_WRITE)
+async def take_memory_sample(request: Request) -> dict[str, Any]:
     """Take an immediate memory sample.
 
     Returns:
@@ -299,7 +306,8 @@ def take_memory_sample() -> dict[str, Any]:
 
 
 @router.post("/reset")
-def reset_metrics() -> dict[str, str]:
+@limiter.limit(RATE_LIMIT_WRITE)
+async def reset_metrics(request: Request) -> dict[str, str]:
     """Reset all metrics counters (not memory sampler).
 
     Returns:

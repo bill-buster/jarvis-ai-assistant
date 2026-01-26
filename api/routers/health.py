@@ -10,8 +10,10 @@ display appropriate warnings or errors to the user.
 import os
 
 import psutil
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from starlette.concurrency import run_in_threadpool
 
+from api.ratelimit import RATE_LIMIT_READ, limiter
 from api.schemas import HealthResponse, ModelInfo
 from jarvis.metrics import get_health_cache, get_model_info_cache
 
@@ -148,10 +150,14 @@ def _get_recommended_model(total_ram_gb: float) -> str | None:
                     }
                 }
             },
-        }
+        },
+        429: {
+            "description": "Rate limit exceeded",
+        },
     },
 )
-def get_health() -> HealthResponse:
+@limiter.limit(RATE_LIMIT_READ)
+async def get_health(request: Request) -> HealthResponse:
     """Get comprehensive system health status.
 
     Uses TTL cache (5s) for fast repeated checks.
@@ -211,8 +217,8 @@ def get_health() -> HealthResponse:
     # JARVIS process memory
     jarvis_rss_mb, jarvis_vms_mb = _get_process_memory()
 
-    # Check various components
-    imessage_access = _check_imessage_access()
+    # Check various components (run blocking I/O in threadpool)
+    imessage_access = await run_in_threadpool(_check_imessage_access)
     memory_mode = _get_memory_mode(available_gb)
     model_loaded = _check_model_loaded()
 
@@ -266,14 +272,21 @@ def get_health() -> HealthResponse:
         200: {
             "description": "Service is running",
             "content": {"application/json": {"example": {"status": "ok", "service": "jarvis-api"}}},
-        }
+        },
+        429: {
+            "description": "Rate limit exceeded",
+        },
     },
 )
-def root() -> dict[str, str]:
+@limiter.limit(RATE_LIMIT_READ)
+async def root(request: Request) -> dict[str, str]:
     """Root endpoint - simple health ping.
 
     A lightweight endpoint to verify the API server is running.
     Use `/health` for comprehensive system status.
+
+    **Rate Limiting:**
+    This endpoint is rate limited to 60 requests per minute.
 
     **Example Response:**
     ```json

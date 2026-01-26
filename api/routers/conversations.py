@@ -8,11 +8,19 @@ Uses TTL caching for frequently accessed data.
 All endpoints require Full Disk Access permission to read the iMessage database.
 """
 
+import asyncio
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from starlette.concurrency import run_in_threadpool
 
 from api.dependencies import get_imessage_reader
+from api.ratelimit import (
+    RATE_LIMIT_READ,
+    RATE_LIMIT_WRITE,
+    TIMEOUT_READ,
+    limiter,
+)
 from api.schemas import (
     ConversationResponse,
     ErrorResponse,
@@ -56,9 +64,19 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
             "description": "Full Disk Access not granted",
             "model": ErrorResponse,
         },
+        408: {
+            "description": "Request timed out",
+            "model": ErrorResponse,
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "model": ErrorResponse,
+        },
     },
 )
-def list_conversations(
+@limiter.limit(RATE_LIMIT_READ)
+async def list_conversations(
+    request: Request,
     limit: int = Query(
         default=50,
         ge=1,
@@ -84,6 +102,9 @@ def list_conversations(
     Returns conversations sorted by last message date (newest first).
     Supports pagination using the `before` parameter with the last conversation's
     `last_message_date` value.
+
+    **Rate Limiting:**
+    This endpoint is rate limited to 60 requests per minute.
 
     **Pagination Example:**
     1. First request: `GET /conversations?limit=50`
@@ -119,6 +140,7 @@ def list_conversations(
     ```
 
     Args:
+        http_request: FastAPI request object (for rate limiting)
         limit: Maximum conversations to return (1-500, default 50)
         since: Only conversations with messages after this date
         before: Pagination cursor for older conversations
@@ -128,6 +150,8 @@ def list_conversations(
 
     Raises:
         HTTPException 403: Full Disk Access permission not granted
+        HTTPException 408: Request timed out
+        HTTPException 429: Rate limit exceeded
     """
     # Build cache key from parameters
     since_str = since.isoformat() if since else "none"
@@ -140,8 +164,17 @@ def list_conversations(
     if found:
         return cached  # type: ignore[no-any-return]
 
-    conversations = reader.get_conversations(limit=limit, since=since, before=before)
-    result = [ConversationResponse.model_validate(c) for c in conversations]
+    try:
+        async with asyncio.timeout(TIMEOUT_READ):
+            conversations = await run_in_threadpool(
+                reader.get_conversations, limit=limit, since=since, before=before
+            )
+            result = [ConversationResponse.model_validate(c) for c in conversations]
+    except TimeoutError:
+        raise HTTPException(
+            status_code=408,
+            detail=f"Request timed out after {TIMEOUT_READ} seconds",
+        ) from None
 
     cache.set(cache_key, result)
     return result
@@ -178,10 +211,20 @@ def list_conversations(
             "description": "Full Disk Access not granted",
             "model": ErrorResponse,
         },
+        408: {
+            "description": "Request timed out",
+            "model": ErrorResponse,
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "model": ErrorResponse,
+        },
     },
 )
-def get_messages(
+@limiter.limit(RATE_LIMIT_READ)
+async def get_messages(
     chat_id: str,
+    request: Request,
     limit: int = Query(
         default=100,
         ge=1,
@@ -200,6 +243,9 @@ def get_messages(
 
     Returns messages sorted by date (newest first). Includes attachments,
     reactions (tapbacks), and threading information (reply_to_id).
+
+    **Rate Limiting:**
+    This endpoint is rate limited to 60 requests per minute.
 
     **Pagination:**
     Use the `before` parameter with the `date` of the last message to
@@ -239,6 +285,7 @@ def get_messages(
 
     Args:
         chat_id: The unique conversation identifier
+        http_request: FastAPI request object (for rate limiting)
         limit: Maximum messages to return (1-1000, default 100)
         before: Only messages before this date (for pagination)
 
@@ -247,9 +294,20 @@ def get_messages(
 
     Raises:
         HTTPException 403: Full Disk Access permission not granted
+        HTTPException 408: Request timed out
+        HTTPException 429: Rate limit exceeded
     """
-    messages = reader.get_messages(chat_id=chat_id, limit=limit, before=before)
-    return [MessageResponse.model_validate(m) for m in messages]
+    try:
+        async with asyncio.timeout(TIMEOUT_READ):
+            messages = await run_in_threadpool(
+                reader.get_messages, chat_id=chat_id, limit=limit, before=before
+            )
+            return [MessageResponse.model_validate(m) for m in messages]
+    except TimeoutError:
+        raise HTTPException(
+            status_code=408,
+            detail=f"Request timed out after {TIMEOUT_READ} seconds",
+        ) from None
 
 
 @router.get(
@@ -283,9 +341,19 @@ def get_messages(
             "description": "Full Disk Access not granted",
             "model": ErrorResponse,
         },
+        408: {
+            "description": "Request timed out",
+            "model": ErrorResponse,
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "model": ErrorResponse,
+        },
     },
 )
-def search_messages(
+@limiter.limit(RATE_LIMIT_READ)
+async def search_messages(
+    request: Request,
     q: str = Query(
         ...,
         min_length=1,
@@ -330,6 +398,9 @@ def search_messages(
     Performs a text search across all message content with optional filters
     for sender, date range, conversation, and attachments.
 
+    **Rate Limiting:**
+    This endpoint is rate limited to 60 requests per minute.
+
     **Search Tips:**
     - The query is case-insensitive
     - Use specific phrases for better results
@@ -358,6 +429,7 @@ def search_messages(
     ```
 
     Args:
+        http_request: FastAPI request object (for rate limiting)
         q: Search query (required, min 1 character)
         limit: Maximum results to return (1-500, default 50)
         sender: Filter by sender phone/email
@@ -371,17 +443,27 @@ def search_messages(
 
     Raises:
         HTTPException 403: Full Disk Access permission not granted
+        HTTPException 408: Request timed out
+        HTTPException 429: Rate limit exceeded
     """
-    messages = reader.search(
-        query=q,
-        limit=limit,
-        sender=sender,
-        after=after,
-        before=before,
-        chat_id=chat_id,
-        has_attachments=has_attachments,
-    )
-    return [MessageResponse.model_validate(m) for m in messages]
+    try:
+        async with asyncio.timeout(TIMEOUT_READ):
+            messages = await run_in_threadpool(
+                reader.search,
+                query=q,
+                limit=limit,
+                sender=sender,
+                after=after,
+                before=before,
+                chat_id=chat_id,
+                has_attachments=has_attachments,
+            )
+            return [MessageResponse.model_validate(m) for m in messages]
+    except TimeoutError:
+        raise HTTPException(
+            status_code=408,
+            detail=f"Request timed out after {TIMEOUT_READ} seconds",
+        ) from None
 
 
 @router.post(
@@ -399,17 +481,30 @@ def search_messages(
             "description": "Invalid request (missing recipient for individual chat)",
             "model": ErrorResponse,
         },
+        408: {
+            "description": "Request timed out",
+            "model": ErrorResponse,
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "model": ErrorResponse,
+        },
     },
 )
-def send_message(
+@limiter.limit(RATE_LIMIT_WRITE)
+async def send_message(
     chat_id: str,
-    request: SendMessageRequest,
+    message_request: SendMessageRequest,
+    request: Request,
 ) -> SendMessageResponse:
     """Send a text message to a conversation.
 
     Sends an iMessage to either an individual contact or a group chat.
     Requires Automation permission for the Messages app, which will be
     prompted on first use.
+
+    **Rate Limiting:**
+    This endpoint is rate limited to 30 requests per minute.
 
     **For Individual Chats:**
     - Set `is_group` to `false` (default)
@@ -449,33 +544,45 @@ def send_message(
     Args:
         chat_id: The conversation ID
         request: Message text, recipient (for individual), and is_group flag
+        http_request: FastAPI request object (for rate limiting)
 
     Returns:
         SendMessageResponse indicating success or failure
 
     Raises:
         HTTPException 400: Recipient required for individual chats
+        HTTPException 408: Request timed out
+        HTTPException 429: Rate limit exceeded
     """
     sender = IMessageSender()
 
-    if request.is_group:
-        # For group chats, send to the chat ID directly
-        result = sender.send_message(
-            text=request.text,
-            chat_id=chat_id,
-            is_group=True,
-        )
-    else:
-        # For individual chats, send to the recipient
-        if not request.recipient:
-            raise HTTPException(
-                status_code=400,
-                detail="Recipient is required for individual chats",
-            )
-        result = sender.send_message(
-            text=request.text,
-            recipient=request.recipient,
-        )
+    try:
+        async with asyncio.timeout(TIMEOUT_READ):
+            if message_request.is_group:
+                # For group chats, send to the chat ID directly
+                result = await run_in_threadpool(
+                    sender.send_message,
+                    text=message_request.text,
+                    chat_id=chat_id,
+                    is_group=True,
+                )
+            else:
+                # For individual chats, send to the recipient
+                if not message_request.recipient:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Recipient is required for individual chats",
+                    )
+                result = await run_in_threadpool(
+                    sender.send_message,
+                    text=message_request.text,
+                    recipient=message_request.recipient,
+                )
+    except TimeoutError:
+        raise HTTPException(
+            status_code=408,
+            detail=f"Request timed out after {TIMEOUT_READ} seconds",
+        ) from None
 
     return SendMessageResponse(success=result.success, error=result.error)
 
@@ -495,17 +602,30 @@ def send_message(
             "description": "Invalid request (missing recipient for individual chat)",
             "model": ErrorResponse,
         },
+        408: {
+            "description": "Request timed out",
+            "model": ErrorResponse,
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "model": ErrorResponse,
+        },
     },
 )
-def send_attachment(
+@limiter.limit(RATE_LIMIT_WRITE)
+async def send_attachment(
     chat_id: str,
-    request: SendAttachmentRequest,
+    attachment_request: SendAttachmentRequest,
+    request: Request,
 ) -> SendMessageResponse:
     """Send a file attachment to a conversation.
 
     Sends a file (image, video, document, etc.) via iMessage to either
     an individual contact or a group chat. Requires Automation permission
     for the Messages app.
+
+    **Rate Limiting:**
+    This endpoint is rate limited to 30 requests per minute.
 
     **Supported File Types:**
     - Images: jpg, png, gif, heic
@@ -541,30 +661,42 @@ def send_attachment(
     Args:
         chat_id: The conversation ID
         request: File path, recipient (for individual), and is_group flag
+        http_request: FastAPI request object (for rate limiting)
 
     Returns:
         SendMessageResponse indicating success or failure
 
     Raises:
         HTTPException 400: Recipient required for individual chats
+        HTTPException 408: Request timed out
+        HTTPException 429: Rate limit exceeded
     """
     sender = IMessageSender()
 
-    if request.is_group:
-        result = sender.send_attachment(
-            file_path=request.file_path,
-            chat_id=chat_id,
-            is_group=True,
-        )
-    else:
-        if not request.recipient:
-            raise HTTPException(
-                status_code=400,
-                detail="Recipient is required for individual chats",
-            )
-        result = sender.send_attachment(
-            file_path=request.file_path,
-            recipient=request.recipient,
-        )
+    try:
+        async with asyncio.timeout(TIMEOUT_READ):
+            if attachment_request.is_group:
+                result = await run_in_threadpool(
+                    sender.send_attachment,
+                    file_path=attachment_request.file_path,
+                    chat_id=chat_id,
+                    is_group=True,
+                )
+            else:
+                if not attachment_request.recipient:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Recipient is required for individual chats",
+                    )
+                result = await run_in_threadpool(
+                    sender.send_attachment,
+                    file_path=attachment_request.file_path,
+                    recipient=attachment_request.recipient,
+                )
+    except TimeoutError:
+        raise HTTPException(
+            status_code=408,
+            detail=f"Request timed out after {TIMEOUT_READ} seconds",
+        ) from None
 
     return SendMessageResponse(success=result.success, error=result.error)

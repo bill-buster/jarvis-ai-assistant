@@ -13,8 +13,9 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 import psutil
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
+from api.ratelimit import RATE_LIMIT_READ, RATE_LIMIT_WRITE, limiter
 from api.schemas import (
     ActivateResponse,
     AvailableModelInfo,
@@ -239,10 +240,14 @@ def _get_recommended_model() -> str:
                     }
                 }
             },
-        }
+        },
+        429: {
+            "description": "Rate limit exceeded",
+        },
     },
 )
-def get_settings() -> SettingsResponse:
+@limiter.limit(RATE_LIMIT_READ)
+async def get_settings(request: Request) -> SettingsResponse:
     """Get current settings including model, generation, behavior, and system info.
 
     Returns the complete settings state including:
@@ -304,9 +309,15 @@ def get_settings() -> SettingsResponse:
             "description": "Invalid model ID",
             "model": ErrorResponse,
         },
+        429: {
+            "description": "Rate limit exceeded",
+        },
     },
 )
-def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
+@limiter.limit(RATE_LIMIT_WRITE)
+async def update_settings(
+    settings_request: SettingsUpdateRequest, request: Request
+) -> SettingsResponse:
     """Update settings.
 
     Performs a partial update - only the provided fields are changed.
@@ -337,7 +348,8 @@ def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
     ```
 
     Args:
-        request: SettingsUpdateRequest with fields to update
+        settings_request: SettingsUpdateRequest with fields to update
+        request: FastAPI request object (for rate limiting)
 
     Returns:
         SettingsResponse with the new settings state
@@ -349,21 +361,23 @@ def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
     settings = _load_settings()
 
     # Update model if provided
-    if request.model_id is not None:
+    if settings_request.model_id is not None:
         # Validate model_id is in our registry
         valid_ids = [m["model_id"] for m in AVAILABLE_MODELS]
-        if request.model_id not in valid_ids:
-            raise HTTPException(status_code=400, detail=f"Unknown model: {request.model_id}")
-        config.model_path = request.model_id
+        if settings_request.model_id not in valid_ids:
+            raise HTTPException(
+                status_code=400, detail=f"Unknown model: {settings_request.model_id}"
+            )
+        config.model_path = settings_request.model_id
         save_config(config)
 
     # Update generation settings if provided
-    if request.generation is not None:
-        settings["generation"] = request.generation.model_dump()
+    if settings_request.generation is not None:
+        settings["generation"] = settings_request.generation.model_dump()
 
     # Update behavior settings if provided
-    if request.behavior is not None:
-        settings["behavior"] = request.behavior.model_dump()
+    if settings_request.behavior is not None:
+        settings["behavior"] = settings_request.behavior.model_dump()
 
     # Save updated settings
     _save_settings(settings)
@@ -402,10 +416,14 @@ def update_settings(request: SettingsUpdateRequest) -> SettingsResponse:
                     ]
                 }
             },
-        }
+        },
+        429: {
+            "description": "Rate limit exceeded",
+        },
     },
 )
-def list_models() -> list[AvailableModelInfo]:
+@limiter.limit(RATE_LIMIT_READ)
+async def list_models(request: Request) -> list[AvailableModelInfo]:
     """List available models with their status.
 
     Returns information about all supported models including download status,
@@ -511,9 +529,13 @@ def list_models() -> list[AvailableModelInfo]:
             "description": "Unknown model ID",
             "model": ErrorResponse,
         },
+        429: {
+            "description": "Rate limit exceeded",
+        },
     },
 )
-def download_model(model_id: str) -> DownloadStatus:
+@limiter.limit(RATE_LIMIT_WRITE)
+async def download_model(model_id: str, request: Request) -> DownloadStatus:
     """Start downloading a model.
 
     Downloads the specified model from HuggingFace Hub to the local cache.
@@ -625,9 +647,13 @@ def download_model(model_id: str) -> DownloadStatus:
             "description": "Unknown model ID",
             "model": ErrorResponse,
         },
+        429: {
+            "description": "Rate limit exceeded",
+        },
     },
 )
-def activate_model(model_id: str) -> ActivateResponse:
+@limiter.limit(RATE_LIMIT_WRITE)
+async def activate_model(model_id: str, request: Request) -> ActivateResponse:
     """Switch to a different model.
 
     Updates the configuration and reloads the generator with the new model.

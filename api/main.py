@@ -18,8 +18,10 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from slowapi.errors import RateLimitExceeded
 
 from api.errors import register_exception_handlers
+from api.ratelimit import limiter, rate_limit_exceeded_handler
 from api.routers import (
     contacts_router,
     conversations_router,
@@ -63,7 +65,12 @@ No authentication is required as the API only binds to localhost.
 
 ## Rate Limiting
 
-No rate limiting is applied. The API is designed for single-user local access.
+Rate limiting is applied to protect system resources:
+- **Read endpoints** (GET, search): 60 requests per minute
+- **Write endpoints** (POST, PUT): 30 requests per minute
+- **Generation endpoints** (AI-powered): 10 requests per minute
+
+Exceeding these limits returns HTTP 429 with a `Retry-After` header.
 
 ## Error Handling
 
@@ -201,8 +208,12 @@ app = FastAPI(
     license_info=API_LICENSE,
 )
 
+# Configure rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
 # Use custom OpenAPI schema
-app.openapi = custom_openapi  # type: ignore[method-assign]
+app.openapi = custom_openapi
 
 # Configure CORS for Tauri and development
 app.add_middleware(

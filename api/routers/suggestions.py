@@ -13,8 +13,10 @@ from __future__ import annotations
 import logging
 import re
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
+
+from api.ratelimit import RATE_LIMIT_READ, limiter
 
 logger = logging.getLogger(__name__)
 
@@ -215,10 +217,16 @@ def _compute_match_score(message: str, keywords: list[str], base_score: float) -
                     }
                 }
             },
-        }
+        },
+        429: {
+            "description": "Rate limit exceeded",
+        },
     },
 )
-def get_suggestions(request: SuggestionRequest) -> SuggestionResponse:
+@limiter.limit(RATE_LIMIT_READ)
+async def get_suggestions(
+    suggestion_request: SuggestionRequest, request: Request
+) -> SuggestionResponse:
     """Get smart reply suggestions based on the last message.
 
     Returns contextually appropriate quick replies ranked by relevance.
@@ -262,12 +270,13 @@ def get_suggestions(request: SuggestionRequest) -> SuggestionResponse:
     ```
 
     Args:
-        request: SuggestionRequest with last_message and num_suggestions
+        suggestion_request: SuggestionRequest with last_message and num_suggestions
+        request: FastAPI request object (for rate limiting)
 
     Returns:
         SuggestionResponse with ranked list of suggestions
     """
-    message = request.last_message.strip()
+    message = suggestion_request.last_message.strip()
     if not message:
         return SuggestionResponse(suggestions=[])
 
@@ -289,7 +298,8 @@ def get_suggestions(request: SuggestionRequest) -> SuggestionResponse:
 
     # Take top N
     suggestions = [
-        Suggestion(text=text, score=score) for text, score in scored[: request.num_suggestions]
+        Suggestion(text=text, score=score)
+        for text, score in scored[: suggestion_request.num_suggestions]
     ]
 
     logger.debug("Generated %d suggestions for message", len(suggestions))

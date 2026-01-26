@@ -13,11 +13,18 @@ which is the single source of truth for all prompts in the JARVIS system.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from starlette.concurrency import run_in_threadpool
 
 from api.dependencies import get_imessage_reader
+from api.ratelimit import (
+    RATE_LIMIT_GENERATION,
+    TIMEOUT_GENERATION,
+    limiter,
+)
 from api.schemas import (
     ContextInfo,
     DateRange,
@@ -145,6 +152,40 @@ def _parse_summary_response(response_text: str) -> tuple[str, list[str]]:
     return summary, key_points
 
 
+def _generate_single_suggestion(
+    generator: object,
+    prompt: str,
+    context_text: str,
+    temperature: float,
+) -> str | None:
+    """Generate a single reply suggestion synchronously.
+
+    This runs in a thread pool to avoid blocking the event loop.
+
+    Args:
+        generator: The MLX generator instance.
+        prompt: The prompt to generate from.
+        context_text: Conversation context.
+        temperature: Sampling temperature.
+
+    Returns:
+        Generated text or None if generation failed.
+    """
+    gen_request = GenerationRequest(
+        prompt=prompt,
+        context_documents=[context_text],
+        few_shot_examples=REPLY_EXAMPLES,
+        max_tokens=200,
+        temperature=temperature,
+    )
+    try:
+        response = generator.generate(gen_request)  # type: ignore[attr-defined]
+        return response.text.strip()
+    except Exception as e:
+        logger.warning("Generation failed: %s", e)
+        return None
+
+
 @router.post(
     "/reply",
     response_model=DraftReplyResponse,
@@ -179,6 +220,14 @@ def _parse_summary_response(response_text: str) -> tuple[str, list[str]]:
             "description": "Conversation not found or no messages",
             "model": ErrorResponse,
         },
+        408: {
+            "description": "Request timed out",
+            "model": ErrorResponse,
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "model": ErrorResponse,
+        },
         500: {
             "description": "Failed to generate suggestions",
             "model": ErrorResponse,
@@ -189,8 +238,10 @@ def _parse_summary_response(response_text: str) -> tuple[str, list[str]]:
         },
     },
 )
-def generate_draft_reply(
-    request: DraftReplyRequest,
+@limiter.limit(RATE_LIMIT_GENERATION)
+async def generate_draft_reply(
+    draft_request: DraftReplyRequest,
+    request: Request,
     reader: ChatDBReader = Depends(get_imessage_reader),
 ) -> DraftReplyResponse:
     """Generate AI-powered reply suggestions for a conversation.
@@ -204,6 +255,10 @@ def generate_draft_reply(
     2. Formats the conversation as input for the language model
     3. Generates multiple reply suggestions with varying tones
     4. Returns suggestions ranked by confidence
+
+    **Rate Limiting:**
+    This endpoint is rate limited to 10 requests per minute to prevent
+    resource exhaustion from CPU-intensive model generation.
 
     **Customizing Replies:**
     Use the `instruction` parameter to guide the tone or content:
@@ -240,8 +295,9 @@ def generate_draft_reply(
     ```
 
     Args:
-        request: DraftReplyRequest with chat_id, optional instruction,
+        draft_request: DraftReplyRequest with chat_id, optional instruction,
                  num_suggestions (1-5), and context_messages (5-50)
+        request: FastAPI request object (for rate limiting)
 
     Returns:
         DraftReplyResponse with list of suggestions and context metadata
@@ -249,17 +305,20 @@ def generate_draft_reply(
     Raises:
         HTTPException 403: Full Disk Access not granted
         HTTPException 404: No messages found for the conversation
+        HTTPException 408: Request timed out
+        HTTPException 429: Rate limit exceeded
         HTTPException 500: Failed to generate suggestions
         HTTPException 503: Model service unavailable
     """
-    # Fetch conversation messages for context
+    # Fetch conversation messages for context (I/O bound - run in threadpool)
     try:
-        messages = reader.get_messages(
-            chat_id=request.chat_id,
-            limit=request.context_messages,
+        messages = await run_in_threadpool(
+            reader.get_messages,
+            chat_id=draft_request.chat_id,
+            limit=draft_request.context_messages,
         )
     except Exception as e:
-        logger.error("Failed to fetch messages for chat %s: %s", request.chat_id, e)
+        logger.error("Failed to fetch messages for chat %s: %s", draft_request.chat_id, e)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch conversation context: {e}",
@@ -268,7 +327,7 @@ def generate_draft_reply(
     if not messages:
         raise HTTPException(
             status_code=404,
-            detail=f"No messages found for chat_id: {request.chat_id}",
+            detail=f"No messages found for chat_id: {draft_request.chat_id}",
         )
 
     # Build context info
@@ -278,7 +337,7 @@ def generate_draft_reply(
 
     # Get the generator
     try:
-        generator = get_generator()
+        generator = await run_in_threadpool(get_generator)
     except Exception as e:
         logger.error("Failed to get generator: %s", e)
         raise HTTPException(
@@ -286,38 +345,42 @@ def generate_draft_reply(
             detail="Model service unavailable",
         ) from e
 
-    # Generate multiple suggestions
+    # Generate multiple suggestions with timeout
     suggestions: list[DraftSuggestion] = []
 
-    for i in range(request.num_suggestions):
-        prompt = _build_reply_prompt(
-            last_message=last_message or "",
-            instruction=request.instruction,
-            suggestion_num=i + 1,
-        )
-
-        gen_request = GenerationRequest(
-            prompt=prompt,
-            context_documents=[context_text],
-            few_shot_examples=REPLY_EXAMPLES,
-            max_tokens=200,
-            temperature=0.7 + (i * 0.1),  # Vary temperature for diversity
-        )
-
-        try:
-            response = generator.generate(gen_request)
-            # Confidence decreases slightly for each suggestion
-            confidence = max(0.5, 0.9 - (i * 0.1))
-            suggestions.append(
-                DraftSuggestion(
-                    text=response.text.strip(),
-                    confidence=confidence,
+    try:
+        async with asyncio.timeout(TIMEOUT_GENERATION):
+            for i in range(draft_request.num_suggestions):
+                prompt = _build_reply_prompt(
+                    last_message=last_message or "",
+                    instruction=draft_request.instruction,
+                    suggestion_num=i + 1,
                 )
-            )
-        except Exception as e:
-            logger.warning("Failed to generate suggestion %d: %s", i + 1, e)
-            # Continue trying other suggestions
-            continue
+
+                # Run generation in threadpool (CPU-bound)
+                text = await run_in_threadpool(
+                    _generate_single_suggestion,
+                    generator,
+                    prompt,
+                    context_text,
+                    0.7 + (i * 0.1),  # Vary temperature for diversity
+                )
+
+                if text:
+                    confidence = max(0.5, 0.9 - (i * 0.1))
+                    suggestions.append(
+                        DraftSuggestion(
+                            text=text,
+                            confidence=confidence,
+                        )
+                    )
+    except TimeoutError:
+        logger.warning("Generation timed out after %s seconds", TIMEOUT_GENERATION)
+        if not suggestions:
+            raise HTTPException(
+                status_code=408,
+                detail=f"Request timed out after {TIMEOUT_GENERATION} seconds",
+            ) from None
 
     if not suggestions:
         raise HTTPException(
@@ -333,6 +396,29 @@ def generate_draft_reply(
             last_message=last_message,
         ),
     )
+
+
+def _generate_summary(generator: object, prompt: str) -> str:
+    """Generate a summary synchronously.
+
+    This runs in a thread pool to avoid blocking the event loop.
+
+    Args:
+        generator: The MLX generator instance.
+        prompt: The prompt to generate from.
+
+    Returns:
+        Generated summary text.
+    """
+    gen_request = GenerationRequest(
+        prompt=prompt,
+        context_documents=[],  # Context already in prompt
+        few_shot_examples=SUMMARY_EXAMPLES,
+        max_tokens=500,
+        temperature=0.5,  # Lower temperature for more focused summary
+    )
+    response = generator.generate(gen_request)  # type: ignore[attr-defined]
+    return response.text
 
 
 @router.post(
@@ -366,6 +452,14 @@ def generate_draft_reply(
             "description": "Conversation not found or no messages",
             "model": ErrorResponse,
         },
+        408: {
+            "description": "Request timed out",
+            "model": ErrorResponse,
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "model": ErrorResponse,
+        },
         500: {
             "description": "Failed to generate summary",
             "model": ErrorResponse,
@@ -376,14 +470,20 @@ def generate_draft_reply(
         },
     },
 )
-def summarize_conversation(
-    request: DraftSummaryRequest,
+@limiter.limit(RATE_LIMIT_GENERATION)
+async def summarize_conversation(
+    summary_request: DraftSummaryRequest,
+    request: Request,
     reader: ChatDBReader = Depends(get_imessage_reader),
 ) -> DraftSummaryResponse:
     """Summarize a conversation using AI.
 
     Analyzes the specified number of messages from a conversation and generates
     a concise summary with key points. Uses the local MLX model for processing.
+
+    **Rate Limiting:**
+    This endpoint is rate limited to 10 requests per minute to prevent
+    resource exhaustion from CPU-intensive model generation.
 
     **What You Get:**
     - A 1-2 sentence summary of the conversation
@@ -421,7 +521,8 @@ def summarize_conversation(
     ```
 
     Args:
-        request: DraftSummaryRequest with chat_id and num_messages (10-200)
+        summary_request: DraftSummaryRequest with chat_id and num_messages (10-200)
+        request: FastAPI request object (for rate limiting)
 
     Returns:
         DraftSummaryResponse with summary, key_points, and date_range
@@ -429,17 +530,20 @@ def summarize_conversation(
     Raises:
         HTTPException 403: Full Disk Access not granted
         HTTPException 404: No messages found for the conversation
+        HTTPException 408: Request timed out
+        HTTPException 429: Rate limit exceeded
         HTTPException 500: Failed to generate summary
         HTTPException 503: Model service unavailable
     """
-    # Fetch conversation messages
+    # Fetch conversation messages (I/O bound - run in threadpool)
     try:
-        messages = reader.get_messages(
-            chat_id=request.chat_id,
-            limit=request.num_messages,
+        messages = await run_in_threadpool(
+            reader.get_messages,
+            chat_id=summary_request.chat_id,
+            limit=summary_request.num_messages,
         )
     except Exception as e:
-        logger.error("Failed to fetch messages for chat %s: %s", request.chat_id, e)
+        logger.error("Failed to fetch messages for chat %s: %s", summary_request.chat_id, e)
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch conversation: {e}",
@@ -448,7 +552,7 @@ def summarize_conversation(
     if not messages:
         raise HTTPException(
             status_code=404,
-            detail=f"No messages found for chat_id: {request.chat_id}",
+            detail=f"No messages found for chat_id: {summary_request.chat_id}",
         )
 
     # Build context
@@ -460,7 +564,7 @@ def summarize_conversation(
 
     # Get the generator
     try:
-        generator = get_generator()
+        generator = await run_in_threadpool(get_generator)
     except Exception as e:
         logger.error("Failed to get generator: %s", e)
         raise HTTPException(
@@ -468,20 +572,23 @@ def summarize_conversation(
             detail="Model service unavailable",
         ) from e
 
-    # Generate summary
+    # Generate summary with timeout
     prompt = _build_summary_prompt(context_text, len(messages))
 
-    gen_request = GenerationRequest(
-        prompt=prompt,
-        context_documents=[],  # Context already in prompt
-        few_shot_examples=SUMMARY_EXAMPLES,
-        max_tokens=500,
-        temperature=0.5,  # Lower temperature for more focused summary
-    )
-
     try:
-        response = generator.generate(gen_request)
-        summary, key_points = _parse_summary_response(response.text)
+        async with asyncio.timeout(TIMEOUT_GENERATION):
+            response_text = await run_in_threadpool(
+                _generate_summary,
+                generator,
+                prompt,
+            )
+            summary, key_points = _parse_summary_response(response_text)
+    except TimeoutError:
+        logger.warning("Summary generation timed out after %s seconds", TIMEOUT_GENERATION)
+        raise HTTPException(
+            status_code=408,
+            detail=f"Request timed out after {TIMEOUT_GENERATION} seconds",
+        ) from None
     except Exception as e:
         logger.error("Failed to generate summary: %s", e)
         raise HTTPException(

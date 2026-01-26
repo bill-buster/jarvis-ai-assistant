@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 CONFIG_PATH = Path.home() / ".jarvis" / "config.json"
 
 # Current config schema version for migration tracking
-CONFIG_VERSION = 3
+CONFIG_VERSION = 4
 
 
 class MemoryThresholds(BaseModel):
@@ -82,6 +82,23 @@ class ChatConfig(BaseModel):
     show_typing_indicator: bool = True
 
 
+class RateLimitConfig(BaseModel):
+    """Rate limiting configuration for the API.
+
+    Attributes:
+        enabled: Whether rate limiting is enabled.
+        requests_per_minute: Maximum requests per minute for read endpoints.
+            Generation endpoints get 1/6 of this limit.
+        generation_timeout_seconds: Timeout for generation requests.
+        read_timeout_seconds: Timeout for read requests.
+    """
+
+    enabled: bool = True
+    requests_per_minute: int = Field(default=60, ge=1, le=1000)
+    generation_timeout_seconds: float = Field(default=30.0, ge=1.0, le=300.0)
+    read_timeout_seconds: float = Field(default=10.0, ge=1.0, le=60.0)
+
+
 class ModelSettings(BaseModel):
     """Model configuration for text generation.
 
@@ -113,6 +130,7 @@ class JarvisConfig(BaseModel):
         search: Search preferences.
         chat: Chat preferences.
         model: Model configuration for text generation.
+        rate_limit: Rate limiting configuration for the API.
     """
 
     config_version: int = CONFIG_VERSION
@@ -124,6 +142,7 @@ class JarvisConfig(BaseModel):
     search: SearchConfig = Field(default_factory=SearchConfig)
     chat: ChatConfig = Field(default_factory=ChatConfig)
     model: ModelSettings = Field(default_factory=ModelSettings)
+    rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
 
 
 # Module-level singleton with thread safety
@@ -184,6 +203,15 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
                 data["model"]["model_id"] = path_to_id[model_path]
 
         version = 3
+
+    if version < 4:
+        logger.info(f"Migrating config from version {version} to {CONFIG_VERSION}")
+
+        # Add rate_limit section if missing
+        if "rate_limit" not in data:
+            data["rate_limit"] = {}
+
+        version = 4
 
     # Update version
     data["config_version"] = CONFIG_VERSION
