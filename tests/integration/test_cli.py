@@ -1254,3 +1254,290 @@ class TestTemplateMatching:
             result = _template_only_response("test")
 
         assert "limited mode" in result.lower()
+
+
+class TestReplyCommand:
+    """Tests for reply command."""
+
+    def test_parser_reply_command(self):
+        """Parser parses reply command with person."""
+        parser = create_parser()
+        args = parser.parse_args(["reply", "John"])
+        assert args.command == "reply"
+        assert args.person == "John"
+        assert hasattr(args, "func")
+
+    def test_parser_reply_with_instruction(self):
+        """Parser parses reply command with instruction."""
+        parser = create_parser()
+        args = parser.parse_args(["reply", "Sarah", "-i", "say yes politely"])
+        assert args.person == "Sarah"
+        assert args.instruction == "say yes politely"
+
+    @patch("jarvis.cli._check_imessage_access")
+    @patch("jarvis.cli.console")
+    def test_reply_no_imessage_access(self, mock_console, mock_check):
+        """Reply returns error when no iMessage access."""
+        from jarvis.cli import cmd_reply
+
+        mock_check.return_value = False
+
+        parser = create_parser()
+        args = parser.parse_args(["reply", "John"])
+
+        exit_code = cmd_reply(args)
+
+        assert exit_code == 1
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Full Disk Access" in c for c in print_calls)
+
+    @patch("integrations.imessage.ChatDBReader")
+    @patch("jarvis.cli._check_imessage_access")
+    @patch("jarvis.cli.console")
+    def test_reply_person_not_found(self, mock_console, mock_check, mock_reader_class):
+        """Reply shows helpful message when person not found."""
+        from jarvis.cli import cmd_reply
+
+        mock_check.return_value = True
+
+        # Mock ChatDBReader
+        mock_reader = MagicMock()
+        mock_reader.__enter__ = MagicMock(return_value=mock_reader)
+        mock_reader.__exit__ = MagicMock(return_value=False)
+        mock_reader_class.return_value = mock_reader
+
+        # Return empty for find conversation, but return some conversations
+        mock_conv = MagicMock()
+        mock_conv.display_name = "Mom"
+        mock_conv.participants = ["+15551234567"]
+        mock_reader.get_conversations.return_value = [mock_conv]
+
+        # Mock ContextFetcher to return None for find_conversation_by_name
+        with patch("jarvis.cli.ContextFetcher") as mock_fetcher_class:
+            mock_fetcher = MagicMock()
+            mock_fetcher.find_conversation_by_name.return_value = None
+            mock_fetcher_class.return_value = mock_fetcher
+
+            parser = create_parser()
+            args = parser.parse_args(["reply", "Unknown"])
+
+            exit_code = cmd_reply(args)
+
+        assert exit_code == 1
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Could not find" in c for c in print_calls)
+
+
+class TestSummarizeCommand:
+    """Tests for summarize command."""
+
+    def test_parser_summarize_command(self):
+        """Parser parses summarize command with person."""
+        parser = create_parser()
+        args = parser.parse_args(["summarize", "Mom"])
+        assert args.command == "summarize"
+        assert args.person == "Mom"
+        assert args.messages == 50  # default
+
+    def test_parser_summarize_with_message_count(self):
+        """Parser parses summarize command with message count."""
+        parser = create_parser()
+        args = parser.parse_args(["summarize", "Dad", "-n", "100"])
+        assert args.person == "Dad"
+        assert args.messages == 100
+
+    @patch("jarvis.cli._check_imessage_access")
+    @patch("jarvis.cli.console")
+    def test_summarize_no_imessage_access(self, mock_console, mock_check):
+        """Summarize returns error when no iMessage access."""
+        from jarvis.cli import cmd_summarize
+
+        mock_check.return_value = False
+
+        parser = create_parser()
+        args = parser.parse_args(["summarize", "Mom"])
+
+        exit_code = cmd_summarize(args)
+
+        assert exit_code == 1
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Full Disk Access" in c for c in print_calls)
+
+
+class TestIntentClassifier:
+    """Tests for intent classification."""
+
+    def test_classify_reply_intent(self):
+        """Classifier detects reply intent."""
+        from jarvis.intent import IntentClassifier, IntentType
+
+        classifier = IntentClassifier()
+
+        result = classifier.classify("help me reply to John")
+        assert result.intent == IntentType.REPLY
+        assert result.extracted_params.get("person_name") == "John"
+
+    def test_classify_summarize_intent(self):
+        """Classifier detects summarize intent."""
+        from jarvis.intent import IntentClassifier, IntentType
+
+        classifier = IntentClassifier()
+
+        result = classifier.classify("summarize my chat with Sarah")
+        assert result.intent == IntentType.SUMMARIZE
+        assert result.extracted_params.get("person_name") == "Sarah"
+
+    def test_classify_search_intent(self):
+        """Classifier detects search intent."""
+        from jarvis.intent import IntentClassifier, IntentType
+
+        classifier = IntentClassifier()
+
+        result = classifier.classify("find messages about dinner")
+        assert result.intent == IntentType.SEARCH
+
+    def test_classify_quick_reply_intent(self):
+        """Classifier detects quick reply intent."""
+        from jarvis.intent import IntentClassifier, IntentType
+
+        classifier = IntentClassifier()
+
+        result = classifier.classify("ok")
+        assert result.intent == IntentType.QUICK_REPLY
+
+    def test_classify_general_intent(self):
+        """Classifier defaults to general for unknown queries."""
+        from jarvis.intent import IntentClassifier, IntentType
+
+        classifier = IntentClassifier()
+
+        result = classifier.classify("what is the weather today?")
+        assert result.intent == IntentType.GENERAL
+
+
+class TestContextFetcher:
+    """Tests for context fetcher."""
+
+    def test_find_conversation_by_name(self):
+        """Context fetcher finds conversation by display name."""
+        from jarvis.context import ContextFetcher
+
+        mock_reader = MagicMock()
+        mock_conv = MagicMock()
+        mock_conv.display_name = "John Smith"
+        mock_conv.chat_id = "chat123"
+        mock_conv.participants = []
+        mock_reader.get_conversations.return_value = [mock_conv]
+
+        fetcher = ContextFetcher(mock_reader)
+        result = fetcher.find_conversation_by_name("John")
+
+        assert result == "chat123"
+
+    def test_find_conversation_by_participant(self):
+        """Context fetcher finds conversation by participant."""
+        from jarvis.context import ContextFetcher
+
+        mock_reader = MagicMock()
+        mock_conv = MagicMock()
+        mock_conv.display_name = None
+        mock_conv.chat_id = "chat456"
+        mock_conv.participants = ["+15551234567"]
+        mock_reader.get_conversations.return_value = [mock_conv]
+
+        fetcher = ContextFetcher(mock_reader)
+        result = fetcher.find_conversation_by_name("+15551234567")
+
+        assert result == "chat456"
+
+    def test_find_conversation_not_found(self):
+        """Context fetcher returns None when conversation not found."""
+        from jarvis.context import ContextFetcher
+
+        mock_reader = MagicMock()
+        mock_reader.get_conversations.return_value = []
+
+        fetcher = ContextFetcher(mock_reader)
+        result = fetcher.find_conversation_by_name("Unknown")
+
+        assert result is None
+
+
+class TestPromptBuilders:
+    """Tests for prompt builders."""
+
+    def test_build_reply_prompt(self):
+        """Build reply prompt includes context."""
+        from jarvis.prompts import build_reply_prompt
+
+        prompt = build_reply_prompt(
+            context="[Jan 15] John: Hello",
+            last_message="Hello",
+        )
+
+        assert "[Jan 15] John: Hello" in prompt
+        assert "Generate a reply" in prompt
+
+    def test_build_reply_prompt_with_instruction(self):
+        """Build reply prompt includes custom instruction."""
+        from jarvis.prompts import build_reply_prompt
+
+        prompt = build_reply_prompt(
+            context="[Jan 15] John: Want to meet?",
+            last_message="Want to meet?",
+            instruction="say yes but ask for a time",
+        )
+
+        assert "say yes but ask for a time" in prompt
+
+    def test_build_summary_prompt(self):
+        """Build summary prompt includes context."""
+        from jarvis.prompts import build_summary_prompt
+
+        prompt = build_summary_prompt(
+            context="[Jan 15] John: Hello\n[Jan 15] Me: Hi",
+        )
+
+        assert "[Jan 15] John: Hello" in prompt
+        assert "Summary" in prompt or "summariz" in prompt.lower()
+
+    def test_build_summary_prompt_with_focus(self):
+        """Build summary prompt includes focus area."""
+        from jarvis.prompts import build_summary_prompt
+
+        prompt = build_summary_prompt(
+            context="[Jan 15] John: Meet at 3pm",
+            focus="action items",
+        )
+
+        assert "action items" in prompt
+
+
+class TestIntentRouting:
+    """Tests for intent-based routing in chat."""
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.get_memory_controller")
+    @patch("jarvis.cli.console")
+    def test_chat_routes_quick_reply_to_template(self, mock_console, mock_mem_ctrl, mock_deg_ctrl):
+        """Chat routes quick reply intent to template matcher."""
+        mock_state = MagicMock()
+        mock_state.current_mode.value = "FULL"
+        mock_mem_ctrl.return_value.get_state.return_value = mock_state
+
+        # Template matcher should be used, return a response
+        mock_deg_ctrl.return_value.execute.return_value = "Got it!"
+
+        mock_console.input.side_effect = ["ok", "quit"]
+
+        mock_gen = MagicMock()
+        with patch.dict("sys.modules", {"models": MagicMock(get_generator=lambda: mock_gen)}):
+            from jarvis.cli import cmd_chat
+
+            parser = create_parser()
+            args = parser.parse_args(["chat"])
+            exit_code = cmd_chat(args)
+
+        assert exit_code == 0
+        # Verify we got a response (any response means routing worked)
+        assert mock_deg_ctrl.return_value.execute.called
