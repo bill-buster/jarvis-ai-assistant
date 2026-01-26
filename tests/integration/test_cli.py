@@ -365,3 +365,623 @@ class TestAccessChecks:
 
         result = _check_imessage_access()
         assert isinstance(result, bool)
+
+    def test_check_imessage_access_exception_returns_false(self):
+        """Check iMessage access returns False on exception."""
+        from jarvis.cli import _check_imessage_access
+
+        # Patch the import inside the function
+        with patch("integrations.imessage.ChatDBReader") as mock_reader:
+            mock_reader.side_effect = Exception("DB error")
+            result = _check_imessage_access()
+        assert result is False
+
+
+class TestChatCommandMocked:
+    """Tests for chat command with full mocking (no MLX required)."""
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.get_memory_controller")
+    @patch("jarvis.cli.console")
+    def test_chat_generates_and_displays_response(
+        self, mock_console, mock_mem_ctrl, mock_deg_ctrl
+    ):
+        """Chat generates response and displays it."""
+        # Setup mocks
+        mock_state = MagicMock()
+        mock_state.current_mode.value = "FULL"
+        mock_mem_ctrl.return_value.get_state.return_value = mock_state
+
+        mock_deg_ctrl.return_value.execute.return_value = "Hello! I'm JARVIS."
+
+        # Simulate: user enters "hello", then "quit"
+        mock_console.input.side_effect = ["hello", "quit"]
+
+        # Need to mock the models import inside cmd_chat
+        mock_gen = MagicMock()
+        with patch.dict("sys.modules", {"models": MagicMock(get_generator=lambda: mock_gen)}):
+            from jarvis.cli import cmd_chat
+
+            parser = create_parser()
+            args = parser.parse_args(["chat"])
+            exit_code = cmd_chat(args)
+
+        assert exit_code == 0
+        # Verify response was printed
+        assert mock_console.print.call_count >= 3  # Panel, mode, response, goodbye
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.get_memory_controller")
+    @patch("jarvis.cli.console")
+    def test_chat_handles_empty_input(self, mock_console, mock_mem_ctrl, mock_deg_ctrl):
+        """Chat skips empty input."""
+        mock_state = MagicMock()
+        mock_state.current_mode.value = "FULL"
+        mock_mem_ctrl.return_value.get_state.return_value = mock_state
+
+        # Simulate: user enters empty string, then "exit"
+        mock_console.input.side_effect = ["", "   ", "exit"]
+
+        mock_gen = MagicMock()
+        with patch.dict("sys.modules", {"models": MagicMock(get_generator=lambda: mock_gen)}):
+            from jarvis.cli import cmd_chat
+
+            parser = create_parser()
+            args = parser.parse_args(["chat"])
+            exit_code = cmd_chat(args)
+
+        assert exit_code == 0
+        # Degradation controller should not have been called for empty input
+        mock_deg_ctrl.return_value.execute.assert_not_called()
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.get_memory_controller")
+    @patch("jarvis.cli.console")
+    def test_chat_exits_on_q_shortcut(self, mock_console, mock_mem_ctrl, mock_deg_ctrl):
+        """Chat exits on 'q' shortcut."""
+        mock_state = MagicMock()
+        mock_state.current_mode.value = "FULL"
+        mock_mem_ctrl.return_value.get_state.return_value = mock_state
+
+        mock_console.input.side_effect = ["q"]
+
+        mock_gen = MagicMock()
+        with patch.dict("sys.modules", {"models": MagicMock(get_generator=lambda: mock_gen)}):
+            from jarvis.cli import cmd_chat
+
+            parser = create_parser()
+            args = parser.parse_args(["chat"])
+            exit_code = cmd_chat(args)
+
+        assert exit_code == 0
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.get_memory_controller")
+    @patch("jarvis.cli.console")
+    def test_chat_handles_generation_error(self, mock_console, mock_mem_ctrl, mock_deg_ctrl):
+        """Chat handles errors during generation."""
+        mock_state = MagicMock()
+        mock_state.current_mode.value = "FULL"
+        mock_mem_ctrl.return_value.get_state.return_value = mock_state
+
+        # First call raises error, then quit
+        mock_deg_ctrl.return_value.execute.side_effect = [Exception("Generation failed"), None]
+
+        mock_console.input.side_effect = ["hello", "quit"]
+
+        mock_gen = MagicMock()
+        with patch.dict("sys.modules", {"models": MagicMock(get_generator=lambda: mock_gen)}):
+            from jarvis.cli import cmd_chat
+
+            parser = create_parser()
+            args = parser.parse_args(["chat"])
+            exit_code = cmd_chat(args)
+
+        assert exit_code == 0
+        # Error message should have been printed
+        error_calls = [c for c in mock_console.print.call_args_list if "Error" in str(c)]
+        assert len(error_calls) >= 1
+
+    @patch("jarvis.cli.get_memory_controller")
+    @patch("jarvis.cli.console")
+    def test_chat_returns_error_on_import_failure(self, mock_console, mock_mem_ctrl):
+        """Chat returns error code when models module unavailable."""
+        mock_state = MagicMock()
+        mock_state.current_mode.value = "FULL"
+        mock_mem_ctrl.return_value.get_state.return_value = mock_state
+
+        # Patch to simulate ImportError
+        import sys
+
+        original_modules = sys.modules.copy()
+        # Remove models from modules to trigger ImportError
+        if "models" in sys.modules:
+            del sys.modules["models"]
+
+        # Create a mock that raises ImportError
+        import builtins
+
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "models":
+                raise ImportError("No module named 'models'")
+            return real_import(name, *args, **kwargs)
+
+        with patch.object(builtins, "__import__", side_effect=mock_import):
+            # Reload the cli module to trigger the import error path
+            from jarvis import cli
+
+            # Force re-execution of import in cmd_chat by clearing cache
+            parser = create_parser()
+            args = parser.parse_args(["chat"])
+
+            # Call cmd_chat which will try to import models
+            exit_code = cli.cmd_chat(args)
+
+        # Restore modules
+        sys.modules.update(original_modules)
+
+        # Should return 1 on import error
+        assert exit_code == 1
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.get_memory_controller")
+    @patch("jarvis.cli.console")
+    def test_chat_handles_eof_error(self, mock_console, mock_mem_ctrl, mock_deg_ctrl):
+        """Chat handles EOFError (pipe closed)."""
+        mock_state = MagicMock()
+        mock_state.current_mode.value = "FULL"
+        mock_mem_ctrl.return_value.get_state.return_value = mock_state
+
+        mock_console.input.side_effect = EOFError()
+
+        mock_gen = MagicMock()
+        with patch.dict("sys.modules", {"models": MagicMock(get_generator=lambda: mock_gen)}):
+            from jarvis.cli import cmd_chat
+
+            parser = create_parser()
+            args = parser.parse_args(["chat"])
+            exit_code = cmd_chat(args)
+
+        assert exit_code == 0
+
+
+class TestSearchMessagesExtended:
+    """Extended tests for search-messages command."""
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_displays_results(self, mock_console, mock_deg_ctrl):
+        """Search displays results in table format."""
+        from datetime import datetime
+
+        from jarvis.cli import cmd_search_messages
+
+        # Create mock message
+        mock_msg = MagicMock()
+        mock_msg.date = datetime(2024, 1, 15, 10, 30)
+        mock_msg.is_from_me = False
+        mock_msg.sender = "+1234567890"
+        mock_msg.text = "Hello there, how are you doing today?"
+
+        mock_deg_ctrl.return_value.execute.return_value = [mock_msg]
+
+        # Initialize system first
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "hello"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+        # Table should be printed
+        assert mock_console.print.call_count >= 2
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_handles_empty_results(self, mock_console, mock_deg_ctrl):
+        """Search handles empty results gracefully."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.return_value = []
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "nonexistent"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+        # Should print "No messages found"
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("No messages found" in c for c in print_calls)
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_handles_permission_error(self, mock_console, mock_deg_ctrl):
+        """Search handles PermissionError appropriately."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.side_effect = PermissionError(
+            "Cannot access iMessage database"
+        )
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "test"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 1
+        # Should print permission error message
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Permission error" in c or "Full Disk Access" in c for c in print_calls)
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_handles_generic_exception(self, mock_console, mock_deg_ctrl):
+        """Search handles generic exceptions."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_deg_ctrl.return_value.execute.side_effect = RuntimeError("Database corrupted")
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "test"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 1
+        # Should print error message
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Error" in c for c in print_calls)
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_truncates_long_messages(self, mock_console, mock_deg_ctrl):
+        """Search truncates long messages in display."""
+        from datetime import datetime
+
+        from jarvis.cli import cmd_search_messages
+
+        # Create mock message with very long text
+        mock_msg = MagicMock()
+        mock_msg.date = datetime(2024, 1, 15, 10, 30)
+        mock_msg.is_from_me = True
+        mock_msg.sender = None
+        mock_msg.text = "A" * 200  # Very long message
+
+        mock_deg_ctrl.return_value.execute.return_value = [mock_msg]
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "AAAA"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+
+    @patch("jarvis.cli.get_degradation_controller")
+    @patch("jarvis.cli.console")
+    def test_search_handles_message_without_date(self, mock_console, mock_deg_ctrl):
+        """Search handles messages without date."""
+        from jarvis.cli import cmd_search_messages
+
+        mock_msg = MagicMock()
+        mock_msg.date = None
+        mock_msg.is_from_me = False
+        mock_msg.sender = None
+        mock_msg.text = "Test message"
+
+        mock_deg_ctrl.return_value.execute.return_value = [mock_msg]
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["search-messages", "test"])
+
+        exit_code = cmd_search_messages(args)
+
+        assert exit_code == 0
+
+
+class TestHealthExtended:
+    """Extended tests for health command."""
+
+    @patch("jarvis.cli.console")
+    def test_health_shows_model_loaded(self, mock_console):
+        """Health shows model loaded status."""
+        initialize_system()
+
+        # Mock the models module
+        mock_gen = MagicMock()
+        mock_gen.is_loaded.return_value = True
+        mock_gen.get_memory_usage_mb.return_value = 512.5
+
+        with patch.dict(
+            "sys.modules", {"models": MagicMock(get_generator=lambda: mock_gen)}
+        ):
+            parser = create_parser()
+            args = parser.parse_args(["health"])
+            exit_code = cmd_health(args)
+
+        assert exit_code == 0
+
+    @patch("jarvis.cli.console")
+    def test_health_shows_model_not_loaded(self, mock_console):
+        """Health shows model not loaded status."""
+        initialize_system()
+
+        mock_gen = MagicMock()
+        mock_gen.is_loaded.return_value = False
+
+        with patch.dict(
+            "sys.modules", {"models": MagicMock(get_generator=lambda: mock_gen)}
+        ):
+            parser = create_parser()
+            args = parser.parse_args(["health"])
+            exit_code = cmd_health(args)
+
+        assert exit_code == 0
+
+    @patch("jarvis.cli.console")
+    def test_health_handles_model_exception(self, mock_console):
+        """Health handles exception when checking model status."""
+        initialize_system()
+
+        # Create a module mock that raises when get_generator is called
+        mock_models = MagicMock()
+        mock_models.get_generator.side_effect = RuntimeError("Model not available")
+
+        with patch.dict("sys.modules", {"models": mock_models}):
+            parser = create_parser()
+            args = parser.parse_args(["health"])
+            exit_code = cmd_health(args)
+
+        assert exit_code == 0
+        # Should print warning about model status
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("unavailable" in c.lower() for c in print_calls)
+
+    @patch("jarvis.cli._check_imessage_access")
+    @patch("jarvis.cli.console")
+    def test_health_shows_degraded_features(self, mock_console, mock_imessage_check):
+        """Health shows degraded feature status."""
+        from contracts.health import FeatureState
+        from core.health import get_degradation_controller
+
+        mock_imessage_check.return_value = False
+
+        initialize_system()
+
+        # Manually set feature to degraded state
+        controller = get_degradation_controller()
+        # Trigger failures to move to degraded state
+        for _ in range(5):
+            try:
+                controller.execute(
+                    FEATURE_IMESSAGE,
+                    lambda q: (_ for _ in ()).throw(RuntimeError("Simulated failure")),
+                    "test",
+                )
+            except RuntimeError:
+                pass
+
+        parser = create_parser()
+        args = parser.parse_args(["health"])
+        exit_code = cmd_health(args)
+
+        assert exit_code == 0
+
+
+class TestBenchmarkExtended:
+    """Extended tests for benchmark command."""
+
+    @patch("jarvis.cli.console")
+    def test_benchmark_unknown_type_returns_error(self, mock_console):
+        """Benchmark with unknown type returns error."""
+        from jarvis.cli import cmd_benchmark
+
+        initialize_system()
+
+        parser = create_parser()
+        # Create args manually since parser won't accept invalid type
+        args = MagicMock()
+        args.type = "unknown_benchmark"
+        args.output = None
+
+        exit_code = cmd_benchmark(args)
+
+        assert exit_code == 1
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Unknown benchmark type" in c for c in print_calls)
+
+    @patch("subprocess.run")
+    @patch("jarvis.cli.console")
+    def test_benchmark_handles_subprocess_exception(self, mock_console, mock_run):
+        """Benchmark handles subprocess exception."""
+        from jarvis.cli import cmd_benchmark
+
+        mock_run.side_effect = OSError("Command not found")
+
+        initialize_system()
+
+        parser = create_parser()
+        args = parser.parse_args(["benchmark", "memory"])
+
+        exit_code = cmd_benchmark(args)
+
+        assert exit_code == 1
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Error running benchmark" in c for c in print_calls)
+
+    @patch("subprocess.run")
+    def test_benchmark_hhem_calls_correct_module(self, mock_run):
+        """Benchmark hhem calls correct module."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        exit_code = main(["benchmark", "hhem"])
+
+        call_args = mock_run.call_args[0][0]
+        assert "benchmarks.hallucination.run" in call_args
+        assert exit_code == 0
+
+
+class TestMainExtended:
+    """Extended tests for main entry point."""
+
+    @patch("jarvis.cli.initialize_system")
+    @patch("jarvis.cli.console")
+    def test_main_handles_failed_initialization(self, mock_console, mock_init):
+        """Main handles failed system initialization."""
+        mock_init.return_value = (False, ["Critical error"])
+
+        exit_code = main(["health"])
+
+        assert exit_code == 1
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Failed to initialize" in c for c in print_calls)
+
+    @patch("jarvis.cli.console")
+    def test_main_displays_warnings(self, mock_console):
+        """Main displays initialization warnings."""
+        with patch("jarvis.cli._check_imessage_access", return_value=False):
+            exit_code = main(["health"])
+
+        assert exit_code == 0
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("Warning" in c or "iMessage" in c for c in print_calls)
+
+
+class TestCleanupExtended:
+    """Extended tests for cleanup function."""
+
+    @patch("jarvis.cli.reset_memory_controller")
+    @patch("jarvis.cli.reset_degradation_controller")
+    def test_cleanup_handles_reset_generator_exception(self, mock_deg, mock_mem):
+        """Cleanup handles exception in reset_generator."""
+        from jarvis.cli import cleanup
+
+        # Create mock that raises
+        mock_models = MagicMock()
+        mock_models.reset_generator.side_effect = RuntimeError("Reset failed")
+
+        with patch.dict("sys.modules", {"models": mock_models}):
+            # Should not raise
+            cleanup()
+
+    @patch("jarvis.cli.reset_memory_controller")
+    def test_cleanup_handles_memory_controller_exception(self, mock_mem):
+        """Cleanup handles exception in reset_memory_controller."""
+        from jarvis.cli import cleanup
+
+        mock_mem.side_effect = RuntimeError("Memory reset failed")
+
+        # Should not raise
+        cleanup()
+
+
+class TestRunFunction:
+    """Tests for the run() entry point function."""
+
+    @patch("jarvis.cli.main")
+    @patch("jarvis.cli.cleanup")
+    def test_run_calls_main_and_cleanup(self, mock_cleanup, mock_main):
+        """Run calls main and cleanup."""
+        mock_main.return_value = 0
+
+        with pytest.raises(SystemExit) as exc_info:
+            from jarvis.cli import run
+
+            run()
+
+        assert exc_info.value.code == 0
+        mock_main.assert_called_once()
+        mock_cleanup.assert_called_once()
+
+    @patch("jarvis.cli.main")
+    @patch("jarvis.cli.cleanup")
+    @patch("jarvis.cli.console")
+    def test_run_handles_keyboard_interrupt(self, mock_console, mock_cleanup, mock_main):
+        """Run handles KeyboardInterrupt."""
+        mock_main.side_effect = KeyboardInterrupt()
+
+        with pytest.raises(SystemExit) as exc_info:
+            from jarvis.cli import run
+
+            run()
+
+        assert exc_info.value.code == 130
+        mock_cleanup.assert_called_once()
+
+    @patch("jarvis.cli.main")
+    @patch("jarvis.cli.cleanup")
+    @patch("jarvis.cli.console")
+    def test_run_handles_unexpected_exception(self, mock_console, mock_cleanup, mock_main):
+        """Run handles unexpected exceptions."""
+        mock_main.side_effect = RuntimeError("Unexpected error")
+
+        with pytest.raises(SystemExit) as exc_info:
+            from jarvis.cli import run
+
+            run()
+
+        assert exc_info.value.code == 1
+        mock_cleanup.assert_called_once()
+
+
+class TestTemplateMatching:
+    """Tests for template matching in degraded mode."""
+
+    def test_template_only_response_with_match(self):
+        """Template response returns matched template."""
+        mock_match = MagicMock()
+        mock_match.template.response = "Matched template response"
+
+        mock_matcher_class = MagicMock()
+        mock_matcher_class.return_value.match.return_value = mock_match
+
+        # Create a mock module for models.templates
+        mock_templates_module = MagicMock()
+        mock_templates_module.TemplateMatcher = mock_matcher_class
+
+        with patch.dict("sys.modules", {"models.templates": mock_templates_module}):
+            from jarvis.cli import _template_only_response
+
+            result = _template_only_response("what time is it?")
+
+        assert result == "Matched template response"
+
+    def test_template_only_response_no_match(self):
+        """Template response returns default when no match."""
+        mock_matcher_class = MagicMock()
+        mock_matcher_class.return_value.match.return_value = None
+
+        mock_templates_module = MagicMock()
+        mock_templates_module.TemplateMatcher = mock_matcher_class
+
+        with patch.dict("sys.modules", {"models.templates": mock_templates_module}):
+            from jarvis.cli import _template_only_response
+
+            result = _template_only_response("random query")
+
+        assert "limited mode" in result.lower()
+
+    def test_template_only_response_handles_exception(self):
+        """Template response handles exception gracefully."""
+        # Create mock that raises on instantiation
+        mock_templates_module = MagicMock()
+        mock_templates_module.TemplateMatcher.side_effect = Exception("Match failed")
+
+        with patch.dict("sys.modules", {"models.templates": mock_templates_module}):
+            from jarvis.cli import _template_only_response
+
+            result = _template_only_response("test")
+
+        assert "limited mode" in result.lower()
