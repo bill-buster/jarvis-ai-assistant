@@ -77,8 +77,27 @@ class iMessageReader(Protocol):  # noqa: N801 - iMessage is a proper noun
         """Get messages from a conversation."""
         ...
 
-    def search(self, query: str, limit: int = 50) -> list[Message]:
-        """Full-text search across messages."""
+    def search(
+        self,
+        query: str,
+        limit: int = 50,
+        sender: str | None = None,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        chat_id: str | None = None,
+        has_attachments: bool | None = None,
+    ) -> list[Message]:
+        """Full-text search across messages with optional filters.
+
+        Args:
+            query: Search query string
+            limit: Maximum number of results
+            sender: Filter by sender phone number or email
+            after: Filter for messages after this datetime
+            before: Filter for messages before this datetime
+            chat_id: Filter by conversation ID
+            has_attachments: Filter for messages with/without attachments
+        """
         ...
 
     def get_conversation_context(
