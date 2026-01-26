@@ -5,6 +5,7 @@ from .conversations import router as conversations_router
 from .drafts import router as drafts_router
 from .export import router as export_router
 from .health import router as health_router
+from .insights import router as insights_router
 from .metrics import router as metrics_router
 from .pdf_export import router as pdf_export_router
 from .settings import router as settings_router
@@ -19,6 +20,7 @@ __all__ = [
     "drafts_router",
     "export_router",
     "health_router",
+    "insights_router",
     "metrics_router",
     "pdf_export_router",
     "settings_router",

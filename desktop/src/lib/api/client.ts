@@ -5,15 +5,20 @@
 import type {
   ActivateResponse,
   Conversation,
+  ConversationInsights,
   ConversationStats,
   DownloadStatus,
   DraftReplyResponse,
+  FrequencyTrends,
   HealthResponse,
   Message,
   ModelInfo,
   PDFExportRequest,
   PDFExportResponse,
+  RelationshipHealth,
+  ResponsePatterns,
   SearchFilters,
+  SentimentResult,
   SettingsResponse,
   SettingsUpdateRequest,
   SmartReplySuggestionsResponse,
@@ -419,6 +424,84 @@ class ApiClient {
 
     const blob = await response.blob();
     return { blob, filename };
+  }
+
+  // Insights endpoints
+  async getConversationInsights(
+    chatId: string,
+    timeRange: TimeRange = "month",
+    limit: number = 500
+  ): Promise<ConversationInsights> {
+    const params = new URLSearchParams({
+      time_range: timeRange,
+      limit: limit.toString(),
+    });
+    return this.request<ConversationInsights>(
+      `/insights/${encodeURIComponent(chatId)}?${params.toString()}`
+    );
+  }
+
+  async getSentimentAnalysis(
+    chatId: string,
+    timeRange: TimeRange = "month",
+    limit: number = 200
+  ): Promise<SentimentResult> {
+    const params = new URLSearchParams({
+      time_range: timeRange,
+      limit: limit.toString(),
+    });
+    return this.request<SentimentResult>(
+      `/insights/${encodeURIComponent(chatId)}/sentiment?${params.toString()}`
+    );
+  }
+
+  async getResponsePatterns(
+    chatId: string,
+    timeRange: TimeRange = "month",
+    limit: number = 500
+  ): Promise<ResponsePatterns> {
+    const params = new URLSearchParams({
+      time_range: timeRange,
+      limit: limit.toString(),
+    });
+    return this.request<ResponsePatterns>(
+      `/insights/${encodeURIComponent(chatId)}/response-patterns?${params.toString()}`
+    );
+  }
+
+  async getFrequencyTrends(
+    chatId: string,
+    timeRange: TimeRange = "three_months",
+    limit: number = 1000
+  ): Promise<FrequencyTrends> {
+    const params = new URLSearchParams({
+      time_range: timeRange,
+      limit: limit.toString(),
+    });
+    return this.request<FrequencyTrends>(
+      `/insights/${encodeURIComponent(chatId)}/frequency?${params.toString()}`
+    );
+  }
+
+  async getRelationshipHealth(
+    chatId: string,
+    timeRange: TimeRange = "month",
+    limit: number = 500
+  ): Promise<RelationshipHealth> {
+    const params = new URLSearchParams({
+      time_range: timeRange,
+      limit: limit.toString(),
+    });
+    return this.request<RelationshipHealth>(
+      `/insights/${encodeURIComponent(chatId)}/health?${params.toString()}`
+    );
+  }
+
+  async invalidateInsightsCache(chatId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(
+      `/insights/${encodeURIComponent(chatId)}/cache`,
+      { method: "DELETE" }
+    );
   }
 }
 

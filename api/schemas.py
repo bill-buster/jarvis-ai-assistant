@@ -1726,3 +1726,453 @@ class ConversationStatsResponse(BaseModel):
         description="List of conversation participants",
         examples=[["+15551234567", "+15559876543"]],
     )
+
+
+# =============================================================================
+# Insights Schemas
+# =============================================================================
+
+
+class SentimentResponse(BaseModel):
+    """Sentiment analysis result.
+
+    Provides sentiment score and breakdown of positive/negative signals.
+
+    Example:
+        ```json
+        {
+            "score": 0.45,
+            "label": "positive",
+            "positive_count": 120,
+            "negative_count": 30,
+            "neutral_count": 50
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "score": 0.45,
+                "label": "positive",
+                "positive_count": 120,
+                "negative_count": 30,
+                "neutral_count": 50,
+            }
+        }
+    )
+
+    score: float = Field(
+        ...,
+        ge=-1.0,
+        le=1.0,
+        description="Sentiment score from -1.0 (negative) to 1.0 (positive)",
+        examples=[0.45, -0.2, 0.0],
+    )
+    label: str = Field(
+        ...,
+        description="Sentiment label: 'positive', 'negative', or 'neutral'",
+        examples=["positive", "negative", "neutral"],
+    )
+    positive_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of positive signals detected",
+        examples=[120, 45],
+    )
+    negative_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of negative signals detected",
+        examples=[30, 15],
+    )
+    neutral_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of neutral messages",
+        examples=[50, 100],
+    )
+
+
+class SentimentTrendResponse(BaseModel):
+    """Sentiment trend data point for a time period.
+
+    Example:
+        ```json
+        {
+            "date": "2024-W03",
+            "score": 0.35,
+            "message_count": 45
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "date": "2024-W03",
+                "score": 0.35,
+                "message_count": 45,
+            }
+        }
+    )
+
+    date: str = Field(
+        ...,
+        description="Period identifier (YYYY-MM-DD, YYYY-WNN, or YYYY-MM)",
+        examples=["2024-W03", "2024-01-15", "2024-01"],
+    )
+    score: float = Field(
+        ...,
+        ge=-1.0,
+        le=1.0,
+        description="Average sentiment score for the period",
+        examples=[0.35, -0.1],
+    )
+    message_count: int = Field(
+        ...,
+        ge=0,
+        description="Number of messages in this period",
+        examples=[45, 120],
+    )
+
+
+class ResponsePatternsResponse(BaseModel):
+    """Response time pattern analysis.
+
+    Provides detailed analysis of response times between participants.
+
+    Example:
+        ```json
+        {
+            "avg_response_time_minutes": 15.5,
+            "median_response_time_minutes": 8.0,
+            "fastest_response_minutes": 0.5,
+            "slowest_response_minutes": 480.0,
+            "my_avg_response_time_minutes": 12.0,
+            "their_avg_response_time_minutes": 18.5
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "avg_response_time_minutes": 15.5,
+                "median_response_time_minutes": 8.0,
+                "fastest_response_minutes": 0.5,
+                "slowest_response_minutes": 480.0,
+                "response_times_by_hour": {9: 5.2, 14: 12.5, 20: 25.0},
+                "response_times_by_day": {"Monday": 10.5, "Saturday": 45.0},
+                "my_avg_response_time_minutes": 12.0,
+                "their_avg_response_time_minutes": 18.5,
+            }
+        }
+    )
+
+    avg_response_time_minutes: float | None = Field(
+        default=None,
+        description="Average response time in minutes",
+        examples=[15.5, 8.0],
+    )
+    median_response_time_minutes: float | None = Field(
+        default=None,
+        description="Median response time in minutes",
+        examples=[8.0, 5.0],
+    )
+    fastest_response_minutes: float | None = Field(
+        default=None,
+        description="Fastest response time in minutes",
+        examples=[0.5, 1.0],
+    )
+    slowest_response_minutes: float | None = Field(
+        default=None,
+        description="Slowest response time in minutes (within 24h)",
+        examples=[480.0, 120.0],
+    )
+    response_times_by_hour: dict[int, float] = Field(
+        default_factory=dict,
+        description="Average response time by hour of day (0-23)",
+        examples=[{9: 5.2, 14: 12.5, 20: 25.0}],
+    )
+    response_times_by_day: dict[str, float] = Field(
+        default_factory=dict,
+        description="Average response time by day of week",
+        examples=[{"Monday": 10.5, "Saturday": 45.0}],
+    )
+    my_avg_response_time_minutes: float | None = Field(
+        default=None,
+        description="Your average response time in minutes",
+        examples=[12.0, 8.0],
+    )
+    their_avg_response_time_minutes: float | None = Field(
+        default=None,
+        description="Their average response time in minutes",
+        examples=[18.5, 15.0],
+    )
+
+
+class FrequencyTrendsResponse(BaseModel):
+    """Message frequency trend analysis.
+
+    Provides daily, weekly, and monthly message counts with trend direction.
+
+    Example:
+        ```json
+        {
+            "trend_direction": "increasing",
+            "trend_percentage": 25.5,
+            "most_active_day": "Saturday",
+            "most_active_hour": 20,
+            "messages_per_day_avg": 12.5
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "daily_counts": {"2024-01-15": 25, "2024-01-16": 18},
+                "weekly_counts": {"2024-W03": 120, "2024-W04": 95},
+                "monthly_counts": {"2024-01": 450},
+                "trend_direction": "increasing",
+                "trend_percentage": 25.5,
+                "most_active_day": "Saturday",
+                "most_active_hour": 20,
+                "messages_per_day_avg": 12.5,
+            }
+        }
+    )
+
+    daily_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Message count by day (YYYY-MM-DD)",
+    )
+    weekly_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Message count by week (YYYY-WNN)",
+    )
+    monthly_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Message count by month (YYYY-MM)",
+    )
+    trend_direction: str = Field(
+        ...,
+        description="Trend direction: 'increasing', 'decreasing', or 'stable'",
+        examples=["increasing", "decreasing", "stable"],
+    )
+    trend_percentage: float = Field(
+        ...,
+        description="Percentage change over the analysis period",
+        examples=[25.5, -10.0, 0.0],
+    )
+    most_active_day: str | None = Field(
+        default=None,
+        description="Most active day of the week",
+        examples=["Saturday", "Wednesday"],
+    )
+    most_active_hour: int | None = Field(
+        default=None,
+        ge=0,
+        le=23,
+        description="Most active hour of the day (0-23)",
+        examples=[20, 14],
+    )
+    messages_per_day_avg: float = Field(
+        ...,
+        ge=0,
+        description="Average messages per day",
+        examples=[12.5, 5.0],
+    )
+
+
+class RelationshipHealthResponse(BaseModel):
+    """Relationship health score and breakdown.
+
+    Provides a composite health score based on engagement, sentiment,
+    responsiveness, and consistency factors.
+
+    Example:
+        ```json
+        {
+            "overall_score": 75.5,
+            "health_label": "good",
+            "engagement_score": 80.0,
+            "sentiment_score": 72.5,
+            "responsiveness_score": 70.0,
+            "consistency_score": 78.0,
+            "factors": {
+                "engagement": "Balanced conversation with good message exchange",
+                "sentiment": "Predominantly positive communication"
+            }
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "overall_score": 75.5,
+                "health_label": "good",
+                "engagement_score": 80.0,
+                "sentiment_score": 72.5,
+                "responsiveness_score": 70.0,
+                "consistency_score": 78.0,
+                "factors": {
+                    "engagement": "Balanced conversation with good message exchange",
+                    "sentiment": "Predominantly positive communication",
+                    "responsiveness": "Good response time",
+                    "consistency": "Very consistent communication",
+                },
+            }
+        }
+    )
+
+    overall_score: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Overall relationship health score (0-100)",
+        examples=[75.5, 85.0],
+    )
+    engagement_score: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Engagement score based on message balance and frequency",
+        examples=[80.0, 65.0],
+    )
+    sentiment_score: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Sentiment score (normalized 0-100)",
+        examples=[72.5, 80.0],
+    )
+    responsiveness_score: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Responsiveness score based on response times",
+        examples=[70.0, 90.0],
+    )
+    consistency_score: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Consistency score based on regular communication",
+        examples=[78.0, 50.0],
+    )
+    health_label: str = Field(
+        ...,
+        description="Health label: 'excellent', 'good', 'fair', 'needs_attention', 'concerning'",
+        examples=["good", "excellent", "fair"],
+    )
+    factors: dict[str, str] = Field(
+        default_factory=dict,
+        description="Contributing factors with descriptions",
+    )
+
+
+class ConversationInsightsResponse(BaseModel):
+    """Complete conversation insights response.
+
+    Contains all analytics including sentiment, response patterns,
+    frequency trends, and relationship health.
+
+    Example:
+        ```json
+        {
+            "chat_id": "chat123456789",
+            "contact_name": "John Doe",
+            "time_range": "month",
+            "sentiment_overall": {"score": 0.45, "label": "positive"},
+            "relationship_health": {"overall_score": 75.5, "health_label": "good"},
+            "total_messages_analyzed": 500
+        }
+        ```
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "chat_id": "chat123456789",
+                "contact_name": "John Doe",
+                "time_range": "month",
+                "sentiment_overall": {
+                    "score": 0.45,
+                    "label": "positive",
+                    "positive_count": 120,
+                    "negative_count": 30,
+                    "neutral_count": 50,
+                },
+                "sentiment_trends": [
+                    {"date": "2024-W01", "score": 0.3, "message_count": 45},
+                    {"date": "2024-W02", "score": 0.5, "message_count": 52},
+                ],
+                "response_patterns": {
+                    "avg_response_time_minutes": 15.5,
+                    "my_avg_response_time_minutes": 12.0,
+                    "their_avg_response_time_minutes": 18.5,
+                },
+                "frequency_trends": {
+                    "trend_direction": "stable",
+                    "messages_per_day_avg": 12.5,
+                },
+                "relationship_health": {
+                    "overall_score": 75.5,
+                    "health_label": "good",
+                },
+                "total_messages_analyzed": 500,
+            }
+        }
+    )
+
+    chat_id: str = Field(
+        ...,
+        description="Conversation identifier",
+        examples=["chat123456789"],
+    )
+    contact_name: str | None = Field(
+        default=None,
+        description="Display name of the contact",
+        examples=["John Doe", "Mom"],
+    )
+    time_range: TimeRangeEnum = Field(
+        ...,
+        description="Time range used for analysis",
+    )
+    sentiment_overall: SentimentResponse = Field(
+        ...,
+        description="Overall sentiment analysis for the conversation",
+    )
+    sentiment_trends: list[SentimentTrendResponse] = Field(
+        default_factory=list,
+        description="Sentiment trends over time (weekly)",
+    )
+    response_patterns: ResponsePatternsResponse = Field(
+        ...,
+        description="Response time pattern analysis",
+    )
+    frequency_trends: FrequencyTrendsResponse = Field(
+        ...,
+        description="Message frequency trend analysis",
+    )
+    relationship_health: RelationshipHealthResponse = Field(
+        ...,
+        description="Relationship health score and breakdown",
+    )
+    total_messages_analyzed: int = Field(
+        ...,
+        ge=0,
+        description="Total number of messages analyzed",
+        examples=[500, 1000],
+    )
+    first_message_date: datetime | None = Field(
+        default=None,
+        description="Date of the earliest message analyzed",
+    )
+    last_message_date: datetime | None = Field(
+        default=None,
+        description="Date of the most recent message analyzed",
+    )

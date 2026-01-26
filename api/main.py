@@ -26,6 +26,7 @@ from api.routers import (
     drafts_router,
     export_router,
     health_router,
+    insights_router,
     metrics_router,
     pdf_export_router,
     settings_router,
@@ -124,6 +125,12 @@ API_TAGS_METADATA = [
         "description": "Conversation statistics and analytics. "
         "Get insights on messaging patterns, word frequency, activity by hour/day, "
         "response times, emoji usage, and attachment breakdowns.",
+    },
+    {
+        "name": "insights",
+        "description": "Advanced conversation insights and relationship analytics. "
+        "Provides sentiment analysis over time, response time patterns, message frequency "
+        "trends, and relationship health scores.",
     },
     {
         "name": "template-analytics",
@@ -252,6 +259,7 @@ app.include_router(pdf_export_router)
 app.include_router(suggestions_router)
 app.include_router(settings_router)
 app.include_router(stats_router)
+app.include_router(insights_router)
 app.include_router(metrics_router)
 app.include_router(template_analytics_router)
 app.include_router(topics_router)

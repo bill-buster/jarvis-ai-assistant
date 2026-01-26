@@ -307,3 +307,64 @@ export interface PDFExportResponse {
   message_count: number;
   size_bytes: number;
 }
+
+// Insights types
+export interface SentimentResult {
+  score: number;
+  label: "positive" | "negative" | "neutral";
+  positive_count: number;
+  negative_count: number;
+  neutral_count: number;
+}
+
+export interface SentimentTrend {
+  date: string;
+  score: number;
+  message_count: number;
+}
+
+export interface ResponsePatterns {
+  avg_response_time_minutes: number | null;
+  median_response_time_minutes: number | null;
+  fastest_response_minutes: number | null;
+  slowest_response_minutes: number | null;
+  response_times_by_hour: Record<number, number>;
+  response_times_by_day: Record<string, number>;
+  my_avg_response_time_minutes: number | null;
+  their_avg_response_time_minutes: number | null;
+}
+
+export interface FrequencyTrends {
+  daily_counts: Record<string, number>;
+  weekly_counts: Record<string, number>;
+  monthly_counts: Record<string, number>;
+  trend_direction: "increasing" | "decreasing" | "stable";
+  trend_percentage: number;
+  most_active_day: string | null;
+  most_active_hour: number | null;
+  messages_per_day_avg: number;
+}
+
+export interface RelationshipHealth {
+  overall_score: number;
+  engagement_score: number;
+  sentiment_score: number;
+  responsiveness_score: number;
+  consistency_score: number;
+  health_label: "excellent" | "good" | "fair" | "needs_attention" | "concerning";
+  factors: Record<string, string>;
+}
+
+export interface ConversationInsights {
+  chat_id: string;
+  contact_name: string | null;
+  time_range: TimeRange;
+  sentiment_overall: SentimentResult;
+  sentiment_trends: SentimentTrend[];
+  response_patterns: ResponsePatterns;
+  frequency_trends: FrequencyTrends;
+  relationship_health: RelationshipHealth;
+  total_messages_analyzed: number;
+  first_message_date: string | null;
+  last_message_date: string | null;
+}
