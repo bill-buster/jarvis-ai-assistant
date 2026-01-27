@@ -86,6 +86,26 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         description="Best quality responses. Requires 16GB+ RAM.",
         recommended_for=["summarization", "drafting", "complex_replies"],
     ),
+    "phi3-mini": ModelSpec(
+        id="phi3-mini",
+        path="mlx-community/Phi-3-mini-4k-instruct-4bit",
+        display_name="Phi-3 Mini 4K",
+        size_gb=2.5,
+        min_ram_gb=8,
+        quality_tier="good",
+        description="Fast generation (28 tok/s), excellent for coding. Can be verbose.",
+        recommended_for=["quick_replies", "coding_assistance"],
+    ),
+    "gemma3-4b": ModelSpec(
+        id="gemma3-4b",
+        path="mlx-community/gemma-3-4b-it-4bit",
+        display_name="Gemma 3 4B Instruct",
+        size_gb=2.75,
+        min_ram_gb=8,
+        quality_tier="excellent",
+        description="Best instruction following, natural tone, concise responses. Recommended.",
+        recommended_for=["quick_replies", "summarization", "drafting", "natural_conversation"],
+    ),
 }
 
 # Default model ID when none specified

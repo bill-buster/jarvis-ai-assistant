@@ -86,7 +86,7 @@ class ModelConfig:
     model_id: str | None = None
     model_path: str = ""
     estimated_memory_mb: float = 800
-    memory_buffer_multiplier: float = 1.5
+    memory_buffer_multiplier: float = 1.1  # Reduced from 1.5 to 1.1 (10% safety buffer)
     default_max_tokens: int = 100
     default_temperature: float = 0.7
     generation_timeout_seconds: float | None = field(
