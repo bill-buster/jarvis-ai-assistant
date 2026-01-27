@@ -247,14 +247,20 @@ async def chat(request: ChatRequest) -> ChatResponse | StreamingResponse:
                 "finish_reason": response.finish_reason,
             }
 
-        text, metadata = deg_controller.execute(
+        result = deg_controller.execute(
             FEATURE_CHAT,
             generate_response,
             request.message,
         )
 
-        # Handle case where degradation controller returns a simple string
-        if isinstance(text, str) and not metadata:
+        # Handle case where degradation controller returns a simple string (fallback)
+        if isinstance(result, str):
+            text, metadata = result, {}
+        else:
+            text, metadata = result
+
+        # If metadata is empty (fallback mode), use default values
+        if not metadata:
             return ChatResponse(
                 text=text,
                 tokens_used=0,
