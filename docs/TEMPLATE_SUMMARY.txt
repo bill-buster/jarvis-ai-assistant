@@ -1,0 +1,87 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                    JARVIS TEMPLATE SYSTEM                          ║
+║                        Quick Reference                             ║
+╚════════════════════════════════════════════════════════════════════╝
+
+📊 CURRENT TEMPLATES: 144 total
+
+┌────────────────────────────────────────────────────────────────────┐
+│ CATEGORY BREAKDOWN                                                 │
+├────────────────────────────────────────────────────────────────────┤
+│ Professional/Email           10 templates                          │
+│ Quick iMessage Responses     18 templates                          │
+│ Conversation Closers          6 templates                          │
+│ Conversational                3 templates                          │
+│ Assistant Queries            25 templates                          │
+│ Group Chat                   82 templates                          │
+│   ├─ Event Planning           4 templates                          │
+│   ├─ RSVP Coordination        5 templates                          │
+│   ├─ Poll Responses           4 templates                          │
+│   ├─ Group Logistics          5 templates                          │
+│   ├─ Celebratory Messages     5 templates                          │
+│   ├─ Information Sharing      4 templates                          │
+│   └─ Size-Specific           3 templates (constraints on group size)│
+└────────────────────────────────────────────────────────────────────┘
+
+🔧 HOW TO RUN COVERAGE BENCHMARK
+
+  # Analyze template characteristics (no data needed)
+  python -m benchmarks.templates.run --mode analysis
+
+  # Test on synthetic queries (handcrafted test cases)
+  python -m benchmarks.templates.run --mode synthetic
+
+  # Test on real iMessage data (requires Full Disk Access)
+  python -m benchmarks.templates.run --mode real --sample-size 5000
+
+  # Run all evaluations
+  python -m benchmarks.templates.run --output results/template_coverage.json
+
+📈 EXPECTED METRICS
+
+  Hit Rate Targets:
+    ├─ Quick responses (ok, thanks, lol):     80-90%
+    ├─ Group coordination:                     60-70%
+    ├─ General chat:                           40-50%
+    ├─ Reply with context:                     30-40%
+    └─ Search/Summarize:                        5-10%
+
+  Overall Target: 50-60% hit rate for casual iMessage use
+
+🎯 KEY CONCEPTS
+
+  Template Matching Process:
+    1. User query arrives
+    2. Encode query using sentence transformer (all-MiniLM-L6-v2)
+    3. Compute cosine similarity with all template patterns
+    4. If best match >= 0.7 threshold: return template response
+    5. If < 0.7: fall through to MLX model generation
+
+  Performance:
+    ├─ Template match: 10-50ms
+    ├─ MLX generation: 2-5 seconds
+    └─ Memory: 80MB (templates) vs 2-4GB (MLX)
+
+  Quality Control:
+    ├─ Track hit/miss rates
+    ├─ Monitor "near misses" (0.6-0.69 similarity)
+    ├─ Identify unused templates
+    └─ Find high-frequency misses for new template candidates
+
+📁 KEY FILES
+
+  models/templates.py          - TemplateMatcher class, all templates
+  jarvis/metrics.py            - TemplateAnalytics for tracking
+  benchmarks/templates/run.py  - Coverage benchmark script
+  docs/TEMPLATE_WORKFLOW.md    - Full technical documentation
+
+🚀 OVERNIGHT EXPERIMENTS
+
+  To add to overnight_eval.sh:
+    1. Template coverage benchmark (real data)
+    2. Intent classification accuracy
+    3. Multi-model comparison (0.5B/1.5B/3B)
+    4. Context window experiments
+    5. Long-running stability test
+
+═══════════════════════════════════════════════════════════════════════
