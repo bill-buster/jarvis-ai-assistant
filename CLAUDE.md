@@ -88,6 +88,42 @@ make clean-all          # Clean + remove .venv
 
 These are checkpoints that must be followed at every stage of development.
 
+**Four Core Principles (inspired by Karpathy's LLM coding observations):**
+
+1. **Think Before Coding** - Don't assume, ASK. Present options with tradeoffs.
+2. **Simplicity First** - Minimum code. No speculation. No overengineering.
+3. **Surgical Changes** - Touch ONLY what's needed. No drive-by refactoring.
+4. **Goal-Driven** - Define verifiable success criteria. Loop until verified.
+
+---
+
+### Core Principles (Detailed)
+
+**Think Before Coding** - Don't assume, don't hide confusion, surface tradeoffs:
+- State assumptions explicitly - if uncertain, ASK rather than guess
+- Present multiple approaches when ambiguity exists (with pros/cons)
+- Push back constructively if a simpler solution exists
+- Stop and clarify when confused - don't code through uncertainty
+
+**Simplicity First** - Minimum code that solves the problem:
+- No features beyond what was requested
+- No abstractions for single-use code
+- No speculative "flexibility" or error handling for impossible scenarios
+- If 200 lines could be 50, rewrite it
+- Test: Would a senior engineer call this overcomplicated? If yes, simplify.
+
+**Surgical Changes** - Touch only what you must:
+- Don't "improve" adjacent code, comments, or formatting
+- Don't refactor things that aren't broken
+- Match existing style even if you'd do it differently
+- Remove only imports/variables/functions YOUR changes orphaned
+- Test: Every changed line should trace directly to the user's request
+
+**Goal-Driven** - Clear success criteria enable autonomous work:
+- Transform vague → verifiable: "Add validation" → "Tests pass for empty/null/invalid/injection"
+- For multi-step: State plan with verification at each step
+- Loop until criteria met (don't say "should work" without verifying)
+
 ### Shell Command Guidelines
 
 - **Always use `rm -f` or `rm -rf`** when removing files/directories to avoid interactive prompts that can hang
@@ -97,14 +133,28 @@ These are checkpoints that must be followed at every stage of development.
 
 **Pre-Task Checklist** - Do these BEFORE writing any code:
 
-1. Run `make health` to understand current project state
-2. Run `git status` to confirm clean working directory
-3. If on `main`, create a feature branch first:
+1. **Think First** - If requirements are unclear, ask clarifying questions NOW:
+   - What are the success criteria? (specific, verifiable)
+   - Are there multiple valid approaches? Which is simplest?
+   - What assumptions am I making?
+   - Can I present options with tradeoffs instead of choosing silently?
+
+2. **State your plan for multi-step tasks** (goal-driven execution):
+   ```
+   Plan:
+   1. [Step] → verify: [specific check]
+   2. [Step] → verify: [specific check]
+   3. [Step] → verify: [specific check]
+   ```
+
+3. Run `make health` to understand current project state
+4. Run `git status` to confirm clean working directory
+5. If on `main`, create a feature branch first:
    ```bash
    git checkout -b feature/descriptive-name
    ```
-4. Read relevant existing code before writing new code
-5. Understand the existing patterns before adding new ones
+6. Read relevant existing code before writing new code
+7. Understand the existing patterns before adding new ones
 
 ### Test Execution Rules (MANDATORY)
 
@@ -126,28 +176,48 @@ cat test_results.txt         # Get actual error messages
 
 ### Before Saying "Done" (Self-Verification)
 
-**Before reporting that a task is complete:**
+**Goal-Driven Completion** - Verify against success criteria, not just "it works":
+
+Transform vague criteria into verifiable goals:
+- ❌ "Added validation" → ✅ "Tests pass for: empty input, null, invalid format, SQL injection"
+- ❌ "Fixed the bug" → ✅ "Test reproduces bug (fails), fix applied, test now passes"
+- ❌ "Refactored X" → ✅ "All tests passed before, refactored, all tests still pass"
+
+**Before reporting completion:**
 
 1. Run `make verify` (not just tests - full verification including lint and typecheck)
 2. Read `test_results.txt` and confirm all tests pass
-3. If you wrote new code, confirm it has test coverage
-4. If you modified existing code, confirm existing tests still pass
-5. Run `git diff` and review your own changes for obvious issues
-6. Only then report completion with **specific evidence**:
+3. Verify against the SPECIFIC success criteria defined at task start
+4. If you wrote new code, confirm it has test coverage
+5. If you modified existing code, confirm existing tests still pass
+6. Run `git diff` and review for surgical changes:
+   - Do all changes trace to the user's request?
+   - Any drive-by refactoring to remove?
+   - Any debug code or comments to clean up?
+7. Only then report completion with **specific evidence**:
    - "All 47 tests pass"
    - "Lint clean, no type errors"
    - NOT "tests should pass now"
 
 ### When Tests Fail or Errors Occur
 
-**STOP - don't immediately try to fix.** Follow this process:
+**STOP - don't immediately try to fix.** Think first, code second:
 
 1. Read the **FULL** error from `test_results.txt`
-2. Identify the **ROOT CAUSE**, not just the symptom
-3. If unclear, run `make test-fast` to isolate first failure
-4. Fix **ONE** issue at a time
-5. Re-run tests after each fix
-6. Never say "tests should pass now" without actually running them
+2. **Surface confusion** - If you don't understand the error, say so and ask
+3. Identify the **ROOT CAUSE**, not just the symptom:
+   - Is this a wrong assumption I made?
+   - Did I overcomplicate something?
+   - Did I change code I shouldn't have touched?
+4. If unclear, run `make test-fast` to isolate first failure
+5. Fix **ONE** issue at a time (surgical changes only)
+6. Re-run tests after each fix
+7. Never say "tests should pass now" without actually running them
+
+**Common failure patterns:**
+- ❌ Made assumption about API behavior → ✅ Should have checked docs/code first
+- ❌ Added "flexibility" that broke existing behavior → ✅ Should have kept it simple
+- ❌ Refactored adjacent code "while I was there" → ✅ Should have made surgical changes only
 
 ### Before Handing Off to Another Agent or Human
 
@@ -167,118 +237,19 @@ Before creating a PR, review your own diff:
 git diff main..HEAD
 ```
 
-Checklist:
+**Surgical Changes Checklist:**
+- [ ] Every changed line traces to the user's request (no drive-by refactoring)
+- [ ] No formatting/style changes to code you didn't modify
+- [ ] No "improvements" to adjacent functions or comments
+- [ ] Removed only imports/variables/functions YOUR changes orphaned
 - [ ] Are there any debug prints or commented code to remove?
 - [ ] Are there any hardcoded values that should be config?
+
+**Quality Checklist:**
 - [ ] Did you add/update tests for your changes?
 - [ ] Did you update any relevant documentation?
 - [ ] Does the code match the project's existing patterns?
-
----
-
-## Coding Principles (Karpathy Guidelines)
-
-These principles address common LLM coding pitfalls: wrong assumptions, overcomplication, and unnecessary changes.
-
-### 1. Think Before Coding
-
-Don't assume. Don't hide confusion. Surface tradeoffs.
-
-- **State assumptions explicitly** - If uncertain about requirements, ask rather than guess
-- **Present multiple interpretations** - When ambiguity exists, present options instead of picking silently
-- **Push back constructively** - If a simpler approach exists, propose it with reasoning
-- **Stop when confused** - Name what's unclear and request clarification
-
-<example>
-❌ BAD: Silently assumes user wants OAuth when they said "add auth"
-✅ GOOD: "For authentication, I can implement: (1) JWT tokens (simpler, stateless), (2) OAuth2 (standard, more complex), or (3) session-based (simplest). Which fits your needs?"
-</example>
-
-### 2. Simplicity First
-
-Minimum code that solves the problem. Nothing speculative.
-
-- No features beyond what was requested
-- No abstractions for single-use code
-- No "flexibility" or "configurability" that wasn't asked for
-- No error handling for impossible scenarios (trust internal contracts)
-- If 200 lines could be 50, rewrite it
-
-**The test**: Would a senior engineer call this overcomplicated? If yes, simplify.
-
-<example>
-❌ BAD: Creates `AbstractFactoryBuilder` with 5 methods for a one-time conversion
-✅ GOOD: Writes a single function that does the conversion
-</example>
-
-### 3. Surgical Changes
-
-Touch only what you must. Clean up only your own mess.
-
-When editing existing code:
-
-- **Don't "improve" adjacent code** - No drive-by refactoring, formatting, or comment changes
-- **Don't refactor things that work** - If it's not broken and not blocking you, leave it
-- **Match existing style** - Even if you'd do it differently
-- **Notice but don't fix unrelated issues** - Mention dead code, don't delete it
-- **Remove only what YOU orphaned** - Delete imports/variables/functions your changes made unused
-
-**The test**: Every changed line should trace directly to the user's request.
-
-<example>
-❌ BAD: Asked to fix a bug, also reformats 10 other files and removes "unnecessary" comments
-✅ GOOD: Changes only the 3 lines needed to fix the bug
-</example>
-
-### 4. Goal-Driven Execution
-
-Define success criteria. Loop until verified.
-
-Transform imperative tasks into verifiable goals with clear completion criteria:
-
-| Instead of... | Transform to... |
-|---------------|----------------|
-| "Add validation" | "Write tests for invalid inputs (empty, null, wrong type), then make them pass" |
-| "Fix the bug" | "Write test reproducing the bug, verify it fails, then make it pass" |
-| "Refactor X" | "Ensure all tests pass before changes, refactor, confirm tests still pass" |
-| "Improve performance" | "Benchmark current speed, optimize, verify ≥2x improvement" |
-
-**For multi-step tasks, state a brief plan:**
-
-```
-Plan:
-1. Write test reproducing issue → verify: test fails as expected
-2. Implement fix → verify: test passes
-3. Run full test suite → verify: no regressions
-4. Commit with test + fix → verify: git diff shows only intended changes
-```
-
-**Why this works**: Clear success criteria enable autonomous looping. Vague criteria ("make it work") require constant clarification.
-
-<example>
-❌ BAD: "I'll add input validation" (no way to verify success)
-✅ GOOD: "Writing tests for: empty string, null, invalid format, SQL injection. Will make all pass."
-</example>
-
-### When to Apply
-
-These principles are most valuable for:
-
-- **Non-trivial changes** - Anything beyond simple typo fixes or one-liners
-- **Unclear requirements** - When the request is ambiguous
-- **Existing code modifications** - High risk of unintended side effects
-- **Multi-step tasks** - Need clear verification at each step
-
-For trivial tasks (fixing a typo, updating a constant), use judgment—not every change needs full rigor.
-
-### Principle Summary
-
-| Principle | Prevents | Example |
-|-----------|----------|---------|
-| Think Before Coding | Wrong assumptions, silent choices | Ask about auth method instead of assuming |
-| Simplicity First | Overengineering, bloat | Single function instead of factory pattern |
-| Surgical Changes | Drive-by edits, scope creep | Change 3 lines, not 300 |
-| Goal-Driven | Vague success, endless loops | "Tests pass" not "should work now" |
+- [ ] Is this the simplest solution? (no overengineering)
 
 ---
 
