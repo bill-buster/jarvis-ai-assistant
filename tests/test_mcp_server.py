@@ -252,6 +252,10 @@ class TestMCPServer:
     def test_handle_tools_list(self) -> None:
         """Test handling tools/list request."""
         server = MCPServer()
+        # Initialize server first (required by Phase 2 security fix)
+        init_request = JSONRPCRequest(method="initialize", params={"protocolVersion": "1.0"}, id=0)
+        server.handle_request(init_request)
+        # Now test tools/list
         request = JSONRPCRequest(method="tools/list", params={}, id=1)
         response = server.handle_request(request)
         assert response is not None
@@ -281,6 +285,10 @@ class TestMCPServer:
         """Test tools/call when iMessage not accessible."""
         mock_check.return_value = False
         server = MCPServer()
+        # Initialize server first (required by Phase 2 security fix)
+        init_request = JSONRPCRequest(method="initialize", params={"protocolVersion": "1.0"}, id=0)
+        server.handle_request(init_request)
+        # Now test tools/call
         request = JSONRPCRequest(
             method="tools/call",
             params={"name": "search_messages", "arguments": {"query": "test"}},
@@ -294,6 +302,10 @@ class TestMCPServer:
     def test_handle_tools_call_missing_name(self) -> None:
         """Test tools/call without tool name returns error."""
         server = MCPServer()
+        # Initialize server first (required by Phase 2 security fix)
+        init_request = JSONRPCRequest(method="initialize", params={"protocolVersion": "1.0"}, id=0)
+        server.handle_request(init_request)
+        # Now test tools/call
         request = JSONRPCRequest(
             method="tools/call",
             params={"arguments": {}},

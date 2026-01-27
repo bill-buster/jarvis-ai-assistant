@@ -510,12 +510,15 @@ class MLXModelLoader:
 
             # Generate full response first (MLX limitation) with timeout
             if effective_timeout is not None and effective_timeout > 0:
-                with ThreadPoolExecutor(max_workers=1) as executor:
+                executor = ThreadPoolExecutor(max_workers=1)
+                try:
                     future = executor.submit(_do_generate)
                     try:
                         response = future.result(timeout=effective_timeout)
                     except FuturesTimeoutError:
                         future.cancel()
+                        # Don't wait for potentially stuck thread
+                        executor.shutdown(wait=False, cancel_futures=True)
                         logger.warning(
                             "Streaming generation timed out after %.1f seconds for model %s",
                             effective_timeout,
@@ -526,6 +529,13 @@ class MLXModelLoader:
                             effective_timeout,
                             prompt=prompt,
                         )
+                    # Success - normal cleanup
+                    executor.shutdown(wait=True)
+                except Exception:
+                    # Ensure cleanup on any exception
+                    if not executor._shutdown:
+                        executor.shutdown(wait=False, cancel_futures=True)
+                    raise
             else:
                 response = _do_generate()
 
@@ -618,5 +628,5 @@ class MLXModelLoader:
             "display_name": self.config.display_name,
             "loaded": self.is_loaded(),
             "memory_usage_mb": self.get_memory_usage_mb(),
-            "quality_tier": self.config.spec.quality_tier if self.config.spec else None,
+            "quality_tier": getattr(self.config.spec, "quality_tier", None),
         }

@@ -122,7 +122,7 @@ class TestAnalyzeSentimentTrends:
 
     def test_single_day_trend(self):
         """Single day creates single trend entry."""
-        now = datetime.now()
+        now = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
         messages = [
             create_message("I love this!", date=now),
             create_message("This is great!", date=now + timedelta(hours=1)),
@@ -177,7 +177,7 @@ class TestAnalyzeSentimentTrends:
 
     def test_sentiment_averaged_per_period(self):
         """Sentiment scores are averaged per period."""
-        now = datetime.now()
+        now = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
         messages = [
             create_message("I love this!", date=now),  # Positive
             create_message("I hate this!", date=now + timedelta(hours=1)),  # Negative
@@ -367,12 +367,14 @@ class TestAnalyzeFrequencyTrends:
     def test_most_active_day_detected(self):
         """Most active day of week is detected."""
         now = datetime.now()
-        # Find the next Saturday
+        # Find the next Saturday and reset to midnight
         days_until_saturday = (5 - now.weekday()) % 7
-        saturday = now + timedelta(days=days_until_saturday)
+        saturday = (now + timedelta(days=days_until_saturday)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
         messages = []
-        # Add 5 messages on Saturday
+        # Add 5 messages on Saturday (spread across different hours)
         for i in range(5):
             messages.append(create_message(f"sat{i}", date=saturday + timedelta(hours=i)))
         # Add 1 message on other days

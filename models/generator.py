@@ -393,9 +393,14 @@ class ThreadAwareGenerator:
 
         # Get last message
         last_msg = thread_context.messages[-1]
-        last_text = last_msg.text if hasattr(last_msg, "text") else str(last_msg)
+        last_text = getattr(last_msg, "text", None)
 
-        if not last_text:
+        # If text attribute is None or doesn't exist, try string conversion
+        if last_text is None:
+            last_text = str(last_msg)
+
+        # Check for empty or whitespace-only text
+        if not last_text or not last_text.strip():
             return None
 
         # Try template matching

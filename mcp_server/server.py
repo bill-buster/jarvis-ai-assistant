@@ -204,6 +204,7 @@ class MCPServer:
             # Method dispatch
             if method == "initialize":
                 result = self._handle_initialize(params)
+                return JSONRPCResponse(result=result, id=request.id)
             elif method == "initialized":
                 self._handle_initialized(params)
                 return None  # Notification, no response
@@ -218,10 +219,12 @@ class MCPServer:
                         id=request.id,
                     )
 
-            if method == "tools/list":
-                result = self._handle_tools_list(params)
-            elif method == "tools/call":
-                result = self._handle_tools_call(params)
+                # Handle the specific method
+                if method == "tools/list":
+                    result = self._handle_tools_list(params)
+                else:  # tools/call
+                    result = self._handle_tools_call(params)
+                return JSONRPCResponse(result=result, id=request.id)
             elif method == "ping":
                 result = {}
             elif method == "shutdown":
