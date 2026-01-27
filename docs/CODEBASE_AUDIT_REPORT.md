@@ -21,7 +21,7 @@ This audit compared the actual codebase against the design documentation. The pr
 | Integrations (WS10) | 100% implemented (iMessage with caching) |
 | CLI Entry Point | 100% implemented |
 | Setup Wizard | 100% implemented |
-| FastAPI Layer | 100% implemented (7 routers) |
+| FastAPI Layer | 100% implemented (29 routers) |
 | Config System | 100% implemented |
 | Metrics System | 100% implemented |
 | Error Handling | 100% implemented (unified hierarchy) |
@@ -51,7 +51,7 @@ This audit compared the actual codebase against the design documentation. The pr
 | WS10 | iMessage Parser | `integrations/imessage/parser.py` | Complete - LRU caching for attributedBody parsing |
 | - | CLI Entry Point | `jarvis/cli.py` | Complete - chat, search with filters, health, benchmarks |
 | - | Setup Wizard | `jarvis/setup.py` | Complete - environment validation |
-| - | FastAPI Layer | `api/` | Complete - REST API with 7 routers for Tauri frontend |
+| - | FastAPI Layer | `api/` | Complete - REST API with 29 routers for Tauri frontend |
 | - | Config System | `jarvis/config.py` | Complete - nested sections, migration support |
 | - | Metrics System | `jarvis/metrics.py` | Complete - memory sampling, request counting, latency histograms |
 | - | Error Handling | `jarvis/errors.py` | Complete - unified exception hierarchy |
@@ -182,6 +182,33 @@ Areas with lower test coverage that may need attention:
 | `integrations/imessage/reader.py` | 90% | Contact resolution failures, cleanup errors |
 | `benchmarks/memory/dashboard.py` | 85% | Interactive terminal rendering, keyboard interrupt handling |
 
+### API Router Test Coverage Gap
+
+**Critical Finding**: Of 29 API routers, only 8 have dedicated test files. The following routers lack comprehensive test coverage:
+
+| Router | Test Status | Priority |
+|--------|-------------|----------|
+| `conversations` | Missing | HIGH - User-facing |
+| `search` | Missing | HIGH - User-facing |
+| `tasks` | Missing | HIGH - User-facing |
+| `attachments` | Missing | Medium |
+| `batch` | Missing | Medium |
+| `contacts` | Missing | Medium |
+| `threads` | Missing | Medium |
+| `topics` | Missing | Medium |
+| `experiments` | Missing | Low |
+| `stats` | Missing | Low |
+| `template_analytics` | Missing | Low |
+| `insights` | Missing | Low |
+| `relationships` | Missing | Low |
+| `quality` | Missing | Low |
+| `priority` | Missing | Low |
+| `feedback` | Missing | Low |
+| `pdf_export` | Missing | Low |
+| `websocket` | Partial | Medium |
+
+**Note**: The 97% test coverage metric is misleading because it doesn't account for these newer routers added after the initial design.
+
 ---
 
 ## 7. External Dependencies
@@ -290,21 +317,57 @@ The following require actual macOS with Full Disk Access:
 
 ## 11. API Router Summary
 
-The FastAPI layer now includes 7 routers:
+The FastAPI layer now includes 29 routers:
 
-| Router | Prefix | Purpose |
-|--------|--------|---------|
-| `health_router` | `/health` | System health and status |
-| `conversations_router` | `/conversations` | iMessage conversation access |
-| `drafts_router` | `/drafts` | AI-powered reply generation |
-| `export_router` | `/export` | Data export functionality |
-| `suggestions_router` | `/suggestions` | Pattern-based quick suggestions |
-| `settings_router` | `/settings` | Configuration management |
-| `metrics_router` | `/metrics` | Prometheus-compatible metrics |
+### Core Routers (Original)
+
+| Router | Prefix | Purpose | Test Coverage |
+|--------|--------|---------|---------------|
+| `health_router` | `/health` | System health and status | ✅ Tested |
+| `conversations_router` | `/conversations` | iMessage conversation access | ❌ Missing |
+| `drafts_router` | `/drafts` | AI-powered reply generation | ✅ Tested |
+| `export_router` | `/export` | Data export functionality | ✅ Tested |
+| `suggestions_router` | `/suggestions` | Pattern-based quick suggestions | ✅ Tested |
+| `settings_router` | `/settings` | Configuration management | ✅ Tested |
+| `metrics_router` | `/metrics` | Prometheus-compatible metrics | ✅ Tested |
+
+### Extended Routers (Added January 2026)
+
+| Router | Prefix | Purpose | Test Coverage |
+|--------|--------|---------|---------------|
+| `attachments_router` | `/attachments` | Attachment management | ❌ Missing |
+| `batch_router` | `/batch` | Batch operations | ❌ Missing |
+| `contacts_router` | `/contacts` | Contact management | ❌ Missing |
+| `experiments_router` | `/experiments` | A/B testing features | ❌ Missing |
+| `feedback_router` | `/feedback` | User feedback collection | ❌ Missing |
+| `insights_router` | `/insights` | Sentiment analysis, patterns | ❌ Missing |
+| `pdf_export_router` | `/pdf-export` | PDF export functionality | ❌ Missing |
+| `priority_router` | `/priority` | Priority inbox | ❌ Missing |
+| `quality_router` | `/quality` | Quality metrics | ❌ Missing |
+| `relationships_router` | `/relationships` | Relationship profiling | ❌ Missing |
+| `search_router` | `/search` | Message search | ❌ Missing |
+| `stats_router` | `/stats` | Usage statistics | ❌ Missing |
+| `tasks_router` | `/tasks` | Task queue management | ❌ Missing |
+| `template_analytics_router` | `/template-analytics` | Template usage analytics | ❌ Missing |
+| `threads_router` | `/threads` | Thread management | ❌ Missing |
+| `topics_router` | `/topics` | Topic extraction | ❌ Missing |
+| `websocket_router` | `/ws` | Real-time streaming | ⚠️ Partial |
+
+### New Core Modules (Undocumented)
+
+| Module | Lines | Purpose |
+|--------|-------|---------|
+| `jarvis/insights.py` | ~814 | Sentiment analysis, response patterns |
+| `jarvis/relationships.py` | ~1062 | Relationship profiling |
+| `jarvis/quality_metrics.py` | ~989 | Quality scoring |
+| `jarvis/priority.py` | ~751 | Priority inbox |
+| `jarvis/embeddings.py` | ~1038 | RAG and semantic search |
 
 ---
 
 ## 12. Remaining Work
+
+### Completed Items
 
 | Item | Priority | Notes |
 |------|----------|-------|
@@ -314,17 +377,50 @@ The FastAPI layer now includes 7 routers:
 | ~~Add unified error handling~~ | ~~Medium~~ | DONE - Hierarchical exceptions with error codes |
 | ~~Add export functionality~~ | ~~Medium~~ | DONE - JSON/CSV/TXT export |
 | ~~Add desktop E2E tests~~ | ~~Medium~~ | DONE - 7 Playwright test suites |
-| Improve memory dashboard coverage | Low | Currently 85% |
+
+### Prioritized Backlog (January 2026)
+
+#### High Priority
+
+| # | Item | Effort | Impact | Notes |
+|---|------|--------|--------|-------|
+| 1 | Add tests for untested API routers | 2-3 weeks | HIGH | 21 of 29 routers lack test coverage. Focus on `conversations`, `search`, `export`, `tasks` first (user-facing) |
+| 2 | Improve CLI interactive chat tests | 1 week | HIGH | Currently 78% coverage. Missing tests for error handling, keyboard interrupts, multi-turn conversations |
+| 3 | Expand setup wizard edge case tests | 1 week | MEDIUM-HIGH | Currently 82% coverage. Missing tests for permission errors, config migration failures, error recovery |
+
+#### Medium Priority
+
+| # | Item | Effort | Impact | Notes |
+|---|------|--------|--------|-------|
+| 4 | Add WebSocket router integration tests | 1 week | MEDIUM | Missing tests for streaming generation, reconnection, multi-client broadcasts |
+| 5 | Fix schema/import consistency | 3-5 days | MEDIUM | Recent commits suggest some routers have inconsistent Pydantic schemas |
+| 6 | Add iMessage contact resolution error tests | 3-5 days | MEDIUM | Currently 90% coverage. Missing tests for invalid contacts and cleanup failures |
+| 7 | Add input validation for search queries | 2-3 days | MEDIUM | Security hardening - validate user-provided search queries |
+
+#### Low Priority
+
+| # | Item | Effort | Impact | Notes |
+|---|------|--------|--------|-------|
+| 8 | Improve memory dashboard test coverage | 3-5 days | LOW | Currently 85%. Missing tests for interactive rendering, keyboard interrupts |
+| 9 | Remove/document deprecated iMessageSender | 1-2 days | LOW | Marked as experimental and unreliable in CLAUDE.md |
+| 10 | Document new modules | 2-3 weeks | LOW-MEDIUM | `insights.py`, `relationships.py`, `quality_metrics.py`, `priority.py`, `embeddings.py` lack documentation |
+
+### Quick Wins
+
+- [ ] Add `test_conversations_api.py` - Test main conversation endpoint
+- [ ] Add `test_search_api.py` - Test search with various filters
+- [ ] Update CLAUDE.md with new module documentation
+- [ ] Run `make verify` to ensure all existing tests pass
 
 ---
 
 ## 13. Conclusion
 
-The JARVIS project is substantially complete and has reached production-ready status. All core functionality is implemented:
+The JARVIS project is substantially complete and has reached production-ready status for core functionality. All original features are implemented:
 - All 9 protocols have implementations
 - All 3 benchmarks are functional (memory, HHEM, latency)
 - CLI and setup wizard are complete with search filtering
-- FastAPI layer with 7 routers ready for Tauri frontend integration
+- FastAPI layer expanded from 7 to 29 routers for Tauri frontend integration
 - Unified error handling with HTTP status mapping
 - Metrics system with Prometheus-compatible output
 - Config system supports nested sections with automatic migration
@@ -335,6 +431,21 @@ The JARVIS project is substantially complete and has reached production-ready st
 - Memory dashboard with ASCII visualization
 - Desktop E2E tests with Playwright
 - ~1518 tests with 97% coverage
+
+### Areas Requiring Attention
+
+The project has grown significantly with 22 new API routers and 5 major new modules added in January 2026. This growth has created:
+
+1. **Testing debt**: 21 of 29 API routers lack dedicated test files
+2. **Documentation debt**: New modules (`insights`, `relationships`, `quality_metrics`, `priority`, `embeddings`) are undocumented
+3. **Coverage gap**: The 97% coverage metric is misleading as it doesn't fully account for newer routers
+
+### Recommendation
+
+Before adding new features, prioritize:
+1. Adding test coverage for user-facing API routers (`conversations`, `search`, `tasks`)
+2. Documenting new modules in CLAUDE.md
+3. Fixing any schema/import inconsistencies in newer routers
 
 ---
 
