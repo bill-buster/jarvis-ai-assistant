@@ -17,6 +17,7 @@ from .insights import router as insights_router
 from .metrics import router as metrics_router
 from .pdf_export import router as pdf_export_router
 from .priority import router as priority_router
+from .quality import router as quality_router
 from .relationships import router as relationships_router
 from .search import router as search_router
 from .settings import router as settings_router
@@ -45,6 +46,7 @@ __all__ = [
     "metrics_router",
     "pdf_export_router",
     "priority_router",
+    "quality_router",
     "relationships_router",
     "search_router",
     "settings_router",

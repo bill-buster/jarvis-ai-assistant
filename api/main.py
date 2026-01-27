@@ -40,8 +40,8 @@ from api.routers import (
     metrics_router,
     pdf_export_router,
     priority_router,
+    quality_router,
     relationships_router,
-    search_router,
     settings_router,
     stats_router,
     suggestions_router,
@@ -231,6 +231,12 @@ API_TAGS_METADATA = [
         "Build and manage profiles that capture communication patterns with each contact "
         "for personalized reply generation.",
     },
+    {
+        "name": "quality",
+        "description": "Quality metrics dashboard for response generation. "
+        "Track template hit rates, HHEM scores, user acceptance, edit distance, and latency. "
+        "View metrics by contact, time of day, conversation type, and intent.",
+    },
 ]
 
 API_CONTACT = {
@@ -375,6 +381,7 @@ app.include_router(priority_router)
 app.include_router(feedback_router)
 app.include_router(experiments_router)
 app.include_router(relationships_router)
+app.include_router(quality_router)
 
 # Register JARVIS exception handlers for standardized error responses
 register_exception_handlers(app)

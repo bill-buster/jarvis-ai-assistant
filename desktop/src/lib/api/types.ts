@@ -923,3 +923,90 @@ export interface CreateExperimentRequest {
     config?: Record<string, unknown>;
   }>;
 }
+
+// Quality Metrics types
+export interface QualitySummary {
+  total_responses: number;
+  template_responses: number;
+  model_responses: number;
+  template_hit_rate_percent: number;
+  model_fallback_rate_percent: number;
+  avg_hhem_score: number | null;
+  hhem_score_count: number;
+  acceptance_rate_percent: number;
+  accepted_unchanged_count: number;
+  accepted_modified_count: number;
+  rejected_count: number;
+  avg_edit_distance: number | null;
+  avg_template_latency_ms: number;
+  avg_model_latency_ms: number;
+  uptime_seconds: number;
+  responses_per_second: number;
+}
+
+export interface TrendDataPoint {
+  date: string;
+  template_hit_rate_percent: number;
+  model_hit_rate_percent: number;
+  avg_hhem_score: number | null;
+  acceptance_rate_percent: number;
+  avg_edit_distance: number | null;
+  avg_template_latency_ms: number;
+  avg_model_latency_ms: number;
+  total_responses: number;
+}
+
+export interface ContactQuality {
+  contact_id: string;
+  total_responses: number;
+  template_responses: number;
+  model_responses: number;
+  acceptance_rate: number;
+  avg_hhem_score: number | null;
+  avg_edit_distance: number | null;
+  avg_latency_ms: number;
+}
+
+export interface TimeOfDayQuality {
+  hour: number;
+  total_responses: number;
+  template_hit_rate: number;
+  acceptance_rate: number;
+  avg_latency_ms: number;
+}
+
+export interface IntentQuality {
+  intent: string;
+  total_responses: number;
+  template_hit_rate: number;
+  acceptance_rate: number;
+  avg_hhem_score: number | null;
+  avg_latency_ms: number;
+}
+
+export interface ConversationTypeQuality {
+  total_responses: number;
+  template_hit_rate_percent: number;
+  acceptance_rate_percent: number;
+  avg_hhem_score: number | null;
+  avg_latency_ms: number;
+}
+
+export interface Recommendation {
+  category: string;
+  priority: string;
+  title: string;
+  description: string;
+  metric_value: number | null;
+  target_value: number | null;
+}
+
+export interface QualityDashboardData {
+  summary: QualitySummary;
+  trends: TrendDataPoint[];
+  top_contacts: ContactQuality[];
+  time_of_day: TimeOfDayQuality[];
+  by_intent: IntentQuality[];
+  by_conversation_type: Record<string, ConversationTypeQuality>;
+  recommendations: Recommendation[];
+}
