@@ -659,3 +659,53 @@ export interface ThreadingConfigRequest {
   semantic_similarity_threshold?: number;
   use_semantic_analysis?: boolean;
 }
+
+// Attachment Manager types
+export type AttachmentType = "images" | "videos" | "audio" | "documents" | "other" | "all";
+
+export interface ExtendedAttachment {
+  filename: string;
+  file_path: string | null;
+  mime_type: string | null;
+  file_size: number | null;
+  width: number | null;
+  height: number | null;
+  duration_seconds: number | null;
+  created_date: string | null;
+  is_sticker: boolean;
+  uti: string | null;
+}
+
+export interface AttachmentWithContext {
+  attachment: ExtendedAttachment;
+  message_id: number;
+  message_date: string;
+  chat_id: string;
+  sender: string;
+  sender_name: string | null;
+  is_from_me: boolean;
+}
+
+export interface AttachmentStats {
+  chat_id: string;
+  total_count: number;
+  total_size_bytes: number;
+  total_size_formatted: string;
+  by_type: Record<string, number>;
+  size_by_type: Record<string, number>;
+}
+
+export interface StorageByConversation {
+  chat_id: string;
+  display_name: string | null;
+  attachment_count: number;
+  total_size_bytes: number;
+  total_size_formatted: string;
+}
+
+export interface StorageSummary {
+  total_attachments: number;
+  total_size_bytes: number;
+  total_size_formatted: string;
+  by_conversation: StorageByConversation[];
+}

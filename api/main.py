@@ -23,6 +23,7 @@ from slowapi.errors import RateLimitExceeded
 from api.errors import register_exception_handlers
 from api.ratelimit import limiter, rate_limit_exceeded_handler
 from api.routers import (
+    attachments_router,
     batch_router,
     calendar_router,
     contacts_router,
@@ -193,6 +194,11 @@ API_TAGS_METADATA = [
         "description": "Conversation threading for organizing messages into logical groups. "
         "Detect threads based on time gaps, topic shifts, and explicit reply references.",
     },
+    {
+        "name": "attachments",
+        "description": "iMessage attachment management. "
+        "List, download, and analyze file attachments from conversations.",
+    },
 ]
 
 API_CONTACT = {
@@ -311,6 +317,7 @@ async def metrics_middleware(request: Request, call_next):  # type: ignore[no-un
 
 # Include routers
 app.include_router(health_router)
+app.include_router(attachments_router)
 app.include_router(calendar_router)
 app.include_router(contacts_router)
 app.include_router(conversations_router)

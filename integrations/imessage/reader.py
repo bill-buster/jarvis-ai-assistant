@@ -23,6 +23,7 @@ from jarvis.errors import (
 
 from .avatar import ContactAvatarData, get_contact_avatar
 from .parser import (
+    categorize_attachment_type,
     datetime_to_apple_timestamp,
     extract_text_from_row,
     normalize_phone_number,
@@ -1028,6 +1029,203 @@ class ChatDBReader:
         except sqlite3.OperationalError as e:
             logger.debug(f"Error fetching GUID for message {message_id}: {e}")
             return []
+
+    def get_attachments(
+        self,
+        chat_id: str | None = None,
+        attachment_type: str | None = None,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Get attachments with optional filtering.
+
+        Args:
+            chat_id: Optional conversation ID to filter by
+            attachment_type: Filter by type ("images", "videos", "audio", "documents")
+            after: Filter for attachments after this datetime
+            before: Filter for attachments before this datetime
+            limit: Maximum number of attachments to return
+
+        Returns:
+            List of attachment dictionaries with extended metadata
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # Build params list based on filters
+        params: list[Any] = []
+        if chat_id is not None:
+            params.append(chat_id)
+        if after is not None:
+            params.append(datetime_to_apple_timestamp(after))
+        if before is not None:
+            params.append(datetime_to_apple_timestamp(before))
+        params.append(limit)
+
+        query = get_query(
+            "all_attachments",
+            self._schema_version or "v14",
+            with_attachment_chat_filter=chat_id is not None,
+            with_attachment_type_filter=attachment_type,
+            with_attachment_date_after_filter=after is not None,
+            with_attachment_date_before_filter=before is not None,
+        )
+
+        try:
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+        except sqlite3.OperationalError as e:
+            logger.warning(f"Query error in get_attachments: {e}")
+            return []
+
+        results = []
+        for row in rows:
+            row_dict = dict(row)
+            # Parse attachment metadata
+            attachments = parse_attachments([row_dict])
+            if attachments:
+                attachment = attachments[0]
+                # Add message context
+                raw_sender = row_dict.get("sender") or ""
+                sender = normalize_phone_number(raw_sender) or raw_sender
+                sender_name = None
+                if not row_dict.get("is_from_me") and raw_sender:
+                    sender_name = self._resolve_contact_name(raw_sender)
+                results.append({
+                    "attachment": attachment,
+                    "message_id": row_dict.get("message_id"),
+                    "message_date": parse_apple_timestamp(row_dict.get("message_date")),
+                    "chat_id": row_dict.get("chat_id"),
+                    "sender": sender,
+                    "sender_name": sender_name,
+                    "is_from_me": bool(row_dict.get("is_from_me")),
+                })
+
+        return results
+
+    def get_attachment_stats(self, chat_id: str) -> dict[str, Any]:
+        """Get attachment statistics for a conversation.
+
+        Args:
+            chat_id: The conversation ID
+
+        Returns:
+            Dictionary with total count, total size, and breakdown by type
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        query = get_query("attachment_stats", self._schema_version or "v14")
+
+        try:
+            cursor.execute(query, (chat_id,))
+            rows = cursor.fetchall()
+        except sqlite3.OperationalError as e:
+            logger.warning(f"Query error in get_attachment_stats: {e}")
+            return {
+                "total_count": 0,
+                "total_size_bytes": 0,
+                "by_type": {},
+                "size_by_type": {},
+            }
+
+        total_count = 0
+        total_size = 0
+        by_type: dict[str, int] = {}
+        size_by_type: dict[str, int] = {}
+
+        for row in rows:
+            row_dict = dict(row)
+            count = row_dict.get("total_count", 0)
+            size = row_dict.get("total_size", 0)
+            mime_type = row_dict.get("mime_type")
+
+            total_count += count
+            total_size += size
+
+            # Categorize by type
+            category = categorize_attachment_type(mime_type)
+
+            by_type[category] = by_type.get(category, 0) + count
+            size_by_type[category] = size_by_type.get(category, 0) + size
+
+        return {
+            "total_count": total_count,
+            "total_size_bytes": total_size,
+            "by_type": by_type,
+            "size_by_type": size_by_type,
+        }
+
+    def get_storage_by_conversation(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Get storage usage breakdown by conversation.
+
+        Args:
+            limit: Maximum number of conversations to return
+
+        Returns:
+            List of dictionaries with chat_id, display_name, attachment_count, and total_size
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        query = get_query("storage_by_conversation", self._schema_version or "v14")
+
+        try:
+            cursor.execute(query, (limit,))
+            rows = cursor.fetchall()
+        except sqlite3.OperationalError as e:
+            logger.warning(f"Query error in get_storage_by_conversation: {e}")
+            return []
+
+        results = []
+        for row in rows:
+            row_dict = dict(row)
+            results.append({
+                "chat_id": row_dict.get("chat_id"),
+                "display_name": row_dict.get("display_name"),
+                "attachment_count": row_dict.get("attachment_count", 0),
+                "total_size_bytes": row_dict.get("total_size", 0),
+            })
+
+        return results
+
+    def get_attachment_thumbnail_path(self, file_path: str) -> str | None:
+        """Get the thumbnail path for an attachment if it exists.
+
+        iMessage stores thumbnails for some attachments in a parallel directory.
+
+        Args:
+            file_path: The full path to the attachment
+
+        Returns:
+            Path to thumbnail if it exists, None otherwise
+        """
+        if not file_path:
+            return None
+
+        # iMessage thumbnails are stored in a similar path with _t suffix
+        # e.g., ~/Library/Messages/Attachments/.../IMG_1234.jpg
+        #   -> ~/Library/Messages/Attachments/.../IMG_1234_t.jpg
+        path = Path(file_path)
+        if not path.exists():
+            return None
+
+        # Try common thumbnail patterns
+        stem = path.stem
+        suffix = path.suffix
+
+        # Pattern 1: _t suffix before extension
+        thumb_path = path.parent / f"{stem}_t{suffix}"
+        if thumb_path.exists():
+            return str(thumb_path)
+
+        # Pattern 2: .thumbnail suffix
+        thumb_path = path.parent / f"{path.name}.thumbnail"
+        if thumb_path.exists():
+            return str(thumb_path)
+
+        return None
 
     def get_contact_avatar(self, identifier: str) -> ContactAvatarData | None:
         """Get contact avatar data for a phone number or email.

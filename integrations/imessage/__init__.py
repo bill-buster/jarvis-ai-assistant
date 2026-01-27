@@ -18,10 +18,12 @@ Example:
 """
 
 from .avatar import ContactAvatarData, get_contact_avatar
+from .parser import categorize_attachment_type
 from .reader import CHAT_DB_PATH, ChatDBReader
 from .sender import IMessageSender, SendResult, TapbackType
 
 __all__ = [
+    "categorize_attachment_type",
     "ChatDBReader",
     "CHAT_DB_PATH",
     "ContactAvatarData",
