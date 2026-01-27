@@ -52,7 +52,6 @@ class TestErrorCode:
                 code.value.startswith(prefix)
                 for prefix in ["CFG_", "MDL_", "MSG_", "VAL_", "RES_", "TSK_", "CAL_", "EXP_"]
             )
-            )
 
 
 class TestJarvisError:

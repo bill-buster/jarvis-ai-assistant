@@ -1998,7 +1998,6 @@ class TemplateMatcher:
             query_norm = np.linalg.norm(query_embedding)
 
             if query_norm == 0:
-            if query_norm == 0:
                 return None
 
             # Compute similarities in batch (optimized dot product)

@@ -42,6 +42,7 @@ from api.routers import (
     priority_router,
     quality_router,
     relationships_router,
+    search_router,
     settings_router,
     stats_router,
     suggestions_router,
