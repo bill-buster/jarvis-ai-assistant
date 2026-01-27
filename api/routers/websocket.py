@@ -265,6 +265,42 @@ async def _handle_generate(
         temperature = data.get("temperature", 0.7)
         stop_sequences = data.get("stop_sequences")
 
+        # Validate parameter types and ranges
+        if not isinstance(max_tokens, int) or max_tokens < 1 or max_tokens > 4096:
+            await manager.send_message(
+                client.client_id,
+                MessageType.GENERATION_ERROR,
+                {
+                    "error": "max_tokens must be an integer between 1 and 4096",
+                    "generation_id": generation_id,
+                },
+            )
+            return
+        if not isinstance(temperature, (int, float)) or temperature < 0.0 or temperature > 2.0:
+            await manager.send_message(
+                client.client_id,
+                MessageType.GENERATION_ERROR,
+                {
+                    "error": "temperature must be a number between 0.0 and 2.0",
+                    "generation_id": generation_id,
+                },
+            )
+            return
+        if not isinstance(context_documents, list):
+            await manager.send_message(
+                client.client_id,
+                MessageType.GENERATION_ERROR,
+                {"error": "context_documents must be a list", "generation_id": generation_id},
+            )
+            return
+        if not isinstance(few_shot_examples, list):
+            await manager.send_message(
+                client.client_id,
+                MessageType.GENERATION_ERROR,
+                {"error": "few_shot_examples must be a list", "generation_id": generation_id},
+            )
+            return
+
         # Convert few_shot_examples to list of tuples
         examples = [
             (ex.get("input", ""), ex.get("output", ""))

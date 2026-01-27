@@ -251,9 +251,10 @@ def get_timeout_read() -> float:
 
 
 # Timeout constants for different operations (for backward compatibility)
-# Prefer using get_timeout_generation() and get_timeout_read() functions
-# Note: These are dynamically computed from config at import time.
-# For runtime config changes, use get_timeout_generation() and get_timeout_read() instead.
+# IMPORTANT: These constants are evaluated at module import time and will NOT
+# reflect runtime config changes. Always use get_timeout_generation() and
+# get_timeout_read() functions instead to get the current config values.
+# These constants are provided only for backwards compatibility with existing code.
 TIMEOUT_GENERATION = get_timeout_generation()
 TIMEOUT_READ = get_timeout_read()
 

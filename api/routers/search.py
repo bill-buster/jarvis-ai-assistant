@@ -375,14 +375,15 @@ def get_cache_stats() -> CacheStatsResponse:
     from jarvis.semantic_search import EmbeddingCache
 
     cache = EmbeddingCache()
-    stats = cache.stats()
-    cache.close()
-
-    return CacheStatsResponse(
-        embedding_count=int(stats["embedding_count"]),
-        size_bytes=int(stats["size_bytes"]),
-        size_mb=stats["size_mb"],
-    )
+    try:
+        stats = cache.stats()
+        return CacheStatsResponse(
+            embedding_count=int(stats["embedding_count"]),
+            size_bytes=int(stats["size_bytes"]),
+            size_mb=stats["size_mb"],
+        )
+    finally:
+        cache.close()
 
 
 @router.delete(
@@ -408,12 +409,13 @@ def clear_cache() -> dict[str, str]:
     from jarvis.semantic_search import EmbeddingCache
 
     cache = EmbeddingCache()
-    stats_before = cache.stats()
-    cache.clear()
-    cache.close()
-
-    return {
-        "status": "success",
-        "message": f"Cleared {stats_before['embedding_count']} cached embeddings "
-        f"({stats_before['size_mb']} MB)",
-    }
+    try:
+        stats_before = cache.stats()
+        cache.clear()
+        return {
+            "status": "success",
+            "message": f"Cleared {stats_before['embedding_count']} cached embeddings "
+            f"({stats_before['size_mb']} MB)",
+        }
+    finally:
+        cache.close()

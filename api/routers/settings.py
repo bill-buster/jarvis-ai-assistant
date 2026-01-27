@@ -9,6 +9,7 @@ file for model selection. Changes take effect immediately.
 
 import json
 import logging
+import sqlite3
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -149,19 +150,26 @@ def _check_model_loaded(model_id: str) -> bool:
         # Check if loaded model matches the requested model_id
         config = get_config()
         return config.model_path == model_id
+    except (ImportError, AttributeError):
+        return False
     except Exception:
         return False
 
 
 def _check_imessage_access() -> bool:
     """Check if iMessage database is accessible."""
+    reader = None
     try:
         reader = ChatDBReader()
         result = reader.check_access()
-        reader.close()
         return result
+    except (sqlite3.Error, PermissionError, FileNotFoundError):
+        return False
     except Exception:
         return False
+    finally:
+        if reader is not None:
+            reader.close()
 
 
 def _get_system_info() -> SystemInfo:

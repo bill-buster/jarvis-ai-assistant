@@ -348,11 +348,14 @@ def get_thumbnail(
     attachments_base = Path.home() / "Library" / "Messages" / "Attachments"
     try:
         resolved_path = Path(file_path).resolve()
-        if not str(resolved_path).startswith(str(attachments_base)):
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: path outside attachments directory",
-            )
+        resolved_base = attachments_base.resolve()
+        # Use relative_to to ensure path is within base directory
+        resolved_path.relative_to(resolved_base)
+    except ValueError:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: path outside attachments directory",
+        )
     except Exception as e:
         logger.warning(f"Path resolution error: {e}")
         raise HTTPException(
@@ -442,11 +445,14 @@ def download_attachment(
     attachments_base = Path.home() / "Library" / "Messages" / "Attachments"
     try:
         resolved_path = Path(file_path).resolve()
-        if not str(resolved_path).startswith(str(attachments_base)):
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: path outside attachments directory",
-            )
+        resolved_base = attachments_base.resolve()
+        # Use relative_to to ensure path is within base directory
+        resolved_path.relative_to(resolved_base)
+    except ValueError:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: path outside attachments directory",
+        )
     except Exception as e:
         logger.warning(f"Path resolution error: {e}")
         raise HTTPException(

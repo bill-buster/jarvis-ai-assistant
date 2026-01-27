@@ -48,12 +48,14 @@ def get_commit_range(args: argparse.Namespace) -> str:
 
 def get_commits(commit_range: str) -> list[dict[str, str]]:
     """Get list of commits in range."""
-    log_output = run_git_command([
-        "log",
-        "--pretty=format:%H|%s|%an|%ad",
-        "--date=short",
-        commit_range,
-    ])
+    log_output = run_git_command(
+        [
+            "log",
+            "--pretty=format:%H|%s|%an|%ad",
+            "--date=short",
+            commit_range,
+        ]
+    )
 
     if not log_output:
         return []
@@ -63,22 +65,26 @@ def get_commits(commit_range: str) -> list[dict[str, str]]:
         if not line:
             continue
         hash_val, subject, author, date = line.split("|", 3)
-        commits.append({
-            "hash": hash_val[:7],
-            "subject": subject,
-            "author": author,
-            "date": date,
-        })
+        commits.append(
+            {
+                "hash": hash_val[:7],
+                "subject": subject,
+                "author": author,
+                "date": date,
+            }
+        )
     return commits
 
 
 def get_changed_files(commit_range: str) -> dict[str, tuple[int, int]]:
     """Get files changed with line counts."""
-    diff_output = run_git_command([
-        "diff",
-        "--numstat",
-        commit_range,
-    ])
+    diff_output = run_git_command(
+        [
+            "diff",
+            "--numstat",
+            commit_range,
+        ]
+    )
 
     if not diff_output:
         return {}
@@ -147,9 +153,7 @@ def generate_summary(
 
 def main() -> int:
     """Main entry point."""
-    parser = argparse.ArgumentParser(
-        description="Generate phase summaries for context management"
-    )
+    parser = argparse.ArgumentParser(description="Generate phase summaries for context management")
     parser.add_argument(
         "--commits",
         help="Commit range (e.g., 'abc123..def456')",

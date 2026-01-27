@@ -92,8 +92,16 @@ def _get_model_info() -> ModelInfo | None:
         from models import get_generator
 
         generator = get_generator()
-        loader = generator._loader
+        if generator is None:
+            return None
+
+        loader = getattr(generator, "_loader", None)
+        if loader is None:
+            return None
+
         info = loader.get_current_model_info()
+        if info is None:
+            return None
 
         result = ModelInfo(
             id=info.get("id"),
@@ -104,6 +112,8 @@ def _get_model_info() -> ModelInfo | None:
         )
         cache.set("model_info", result)
         return result
+    except (ImportError, AttributeError, KeyError, TypeError):
+        return None
     except Exception:
         return None
 

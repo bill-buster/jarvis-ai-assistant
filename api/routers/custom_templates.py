@@ -290,9 +290,21 @@ def update_template(
     # Validate group size constraints
     min_size_val = updates.get("min_group_size", existing.min_group_size)
     max_size_val = updates.get("max_group_size", existing.max_group_size)
-    # Cast to int for comparison (values are always int | None for these fields)
-    min_size = int(min_size_val) if isinstance(min_size_val, int) else None
-    max_size = int(max_size_val) if isinstance(max_size_val, int) else None
+
+    # Validate types explicitly
+    if min_size_val is not None and not isinstance(min_size_val, int):
+        raise HTTPException(
+            status_code=400,
+            detail="min_group_size must be an integer",
+        )
+    if max_size_val is not None and not isinstance(max_size_val, int):
+        raise HTTPException(
+            status_code=400,
+            detail="max_group_size must be an integer",
+        )
+
+    min_size = min_size_val
+    max_size = max_size_val
     if min_size is not None and max_size is not None and min_size > max_size:
         raise HTTPException(
             status_code=400,

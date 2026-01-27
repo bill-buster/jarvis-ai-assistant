@@ -133,11 +133,10 @@ def get_avatar_cache() -> AvatarCache:
         Shared AvatarCache instance
     """
     global _avatar_cache
-    if _avatar_cache is None:
-        with _cache_lock:
-            if _avatar_cache is None:
-                _avatar_cache = AvatarCache()
-    return _avatar_cache
+    with _cache_lock:
+        if _avatar_cache is None:
+            _avatar_cache = AvatarCache()
+        return _avatar_cache
 
 
 # =============================================================================
