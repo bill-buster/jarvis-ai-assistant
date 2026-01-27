@@ -30,7 +30,8 @@ class SuggestionRequest(BaseModel):
         ```json
         {
             "last_message": "Are you free for dinner?",
-            "num_suggestions": 3
+            "num_suggestions": 3,
+            "group_size": 5
         }
         ```
     """
@@ -40,6 +41,7 @@ class SuggestionRequest(BaseModel):
             "example": {
                 "last_message": "Are you free for dinner?",
                 "num_suggestions": 3,
+                "group_size": 5,
             }
         }
     )
@@ -55,6 +57,16 @@ class SuggestionRequest(BaseModel):
         ge=1,
         le=5,
         description="Number of suggestions to return (1-5)",
+    )
+    group_size: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Number of participants in the chat. "
+            "If >= 3, group-specific suggestions will be included. "
+            "If None or <= 2, only 1-on-1 suggestions are returned."
+        ),
+        examples=[1, 3, 10],
     )
 
 
@@ -126,7 +138,7 @@ class SuggestionResponse(BaseModel):
     )
 
 
-# Pre-defined response patterns
+# Pre-defined response patterns for 1-on-1 chats
 # Each tuple: (keywords_to_match, response_text, base_score)
 RESPONSE_PATTERNS: list[tuple[list[str], str, float]] = [
     # Questions about time/scheduling
@@ -162,6 +174,56 @@ RESPONSE_PATTERNS: list[tuple[list[str], str, float]] = [
     ([], "Sounds good!", 0.3),
     ([], "Got it!", 0.25),
     ([], "Thanks!", 0.2),
+]
+
+# Group chat specific response patterns
+# These are used when group_size >= 3
+GROUP_RESPONSE_PATTERNS: list[tuple[list[str], str, float]] = [
+    # Event planning / scheduling
+    (
+        ["when works for everyone", "when is everyone free"],
+        "I'm flexible! What works for you all?",
+        0.95,
+    ),
+    (["what time works", "when can everyone"], "Any time works for me!", 0.9),
+    (["let's pick a date", "pick a day"], "How about this weekend?", 0.85),
+    # RSVP coordination
+    (["who's coming", "who's in", "who all"], "Count me in!", 0.95),
+    (["count me in", "i'm in", "sign me up"], "Same here!", 0.9),
+    (["can't make it", "count me out"], "Aw, we'll miss you!", 0.9),
+    (["i'll be there", "definitely coming"], "See you there!", 0.9),
+    (["plus one", "+1", "bringing someone"], "The more the merrier!", 0.85),
+    # Poll responses
+    (["let's vote", "let's do a poll", "what does everyone think"], "Good idea! I vote A", 0.9),
+    (["option a", "vote a", "i prefer a"], "A works for me too!", 0.85),
+    (["option b", "vote b", "i prefer b"], "I can do B!", 0.85),
+    (["either works", "both work", "no preference"], "Same, I'm flexible!", 0.85),
+    # Group logistics
+    (["who's bringing", "what should i bring"], "I can bring drinks!", 0.9),
+    (["i'll handle", "i'll take care of", "leave it to me"], "Thanks for handling that!", 0.95),
+    (["where are we meeting", "where should we"], "Good question - any suggestions?", 0.85),
+    (["anyone need a ride", "who's driving", "carpool"], "I could use a ride!", 0.85),
+    (["let's split", "split the bill"], "Sounds fair!", 0.9),
+    # Celebratory messages
+    (["happy birthday", "hbd"], "Happy birthday! 🎉", 0.95),
+    (["congrats", "congratulations", "well done"], "Congrats! 🎉", 0.95),
+    (["happy holidays", "merry christmas", "happy new year"], "Happy holidays everyone! 🎊", 0.95),
+    (["thanks everyone", "thank you all"], "This group is the best!", 0.9),
+    # Information sharing
+    (["fyi", "heads up", "just so you know"], "Thanks for the heads up!", 0.9),
+    (["sharing with", "thought you'd want to see"], "Thanks for sharing!", 0.9),
+    (["update for everyone", "quick update"], "Good to know, thanks!", 0.9),
+    (["reminder", "don't forget"], "Thanks for the reminder!", 0.9),
+    # General group responses
+    (["sounds good", "that works"], "Works for me!", 0.9),
+    (["see you", "see everyone"], "See you all there!", 0.9),
+    # Large group specific (these get higher scores for larger groups)
+    (["so many messages", "catching up", "what did i miss"], "Here's the summary...", 0.85),
+    (["this chat is active", "blowing up"], "Love this group's energy!", 0.85),
+    # Fallback group suggestions
+    ([], "Sounds good!", 0.3),
+    ([], "Works for me!", 0.25),
+    ([], "Thanks for sharing!", 0.2),
 ]
 
 
@@ -250,7 +312,15 @@ async def get_suggestions(
     - Running late: "omw", "on my way", "running late"
     - Goodbyes: "see you", "bye", "ttyl"
 
-    **Example Request:**
+    **Group Chat Patterns (when group_size >= 3):**
+    - Event planning: "when works for everyone", "let's pick a date"
+    - RSVP: "count me in", "who's coming", "+1"
+    - Polls: "let's vote", "option A", "either works"
+    - Logistics: "who's bringing what", "where are we meeting"
+    - Celebrations: "happy birthday", "congrats everyone"
+    - Info sharing: "fyi", "heads up", "reminder"
+
+    **Example Request (1-on-1 chat):**
     ```json
     {
         "last_message": "Want to grab dinner tonight?",
@@ -258,19 +328,28 @@ async def get_suggestions(
     }
     ```
 
+    **Example Request (group chat):**
+    ```json
+    {
+        "last_message": "Who's coming to the party?",
+        "num_suggestions": 3,
+        "group_size": 8
+    }
+    ```
+
     **Example Response:**
     ```json
     {
         "suggestions": [
-            {"text": "I'm in! Where were you thinking?", "score": 0.85},
-            {"text": "Sounds good!", "score": 0.3},
-            {"text": "Got it!", "score": 0.25}
+            {"text": "Count me in!", "score": 0.95},
+            {"text": "I'll be there!", "score": 0.9},
+            {"text": "Sounds good!", "score": 0.3}
         ]
     }
     ```
 
     Args:
-        suggestion_request: SuggestionRequest with last_message and num_suggestions
+        suggestion_request: SuggestionRequest with last_message, num_suggestions, and optional group_size
         request: FastAPI request object (for rate limiting)
 
     Returns:
@@ -280,16 +359,37 @@ async def get_suggestions(
     if not message:
         return SuggestionResponse(suggestions=[])
 
+    # Determine which pattern set to use based on group size
+    is_group_chat = suggestion_request.group_size is not None and suggestion_request.group_size >= 3
+
     # Score all patterns
     scored: list[tuple[str, float]] = []
     seen_responses: set[str] = set()
 
+    # For group chats, score group patterns first (with higher priority)
+    if is_group_chat:
+        for keywords, response, base_score in GROUP_RESPONSE_PATTERNS:
+            if response in seen_responses:
+                continue
+
+            score = _compute_match_score(message, keywords, base_score)
+            if score > 0:
+                # Boost scores slightly for large groups (10+)
+                if suggestion_request.group_size and suggestion_request.group_size >= 10:
+                    score = min(1.0, score * 1.05)
+                scored.append((response, score))
+                seen_responses.add(response)
+
+    # Also score standard patterns (they work for both contexts)
     for keywords, response, base_score in RESPONSE_PATTERNS:
         if response in seen_responses:
             continue
 
         score = _compute_match_score(message, keywords, base_score)
         if score > 0:
+            # Slightly lower priority for standard patterns in group chats
+            if is_group_chat and keywords:  # Don't penalize fallbacks
+                score = score * 0.95
             scored.append((response, score))
             seen_responses.add(response)
 
@@ -298,9 +398,13 @@ async def get_suggestions(
 
     # Take top N
     suggestions = [
-        Suggestion(text=text, score=score)
+        Suggestion(text=text, score=round(score, 3))
         for text, score in scored[: suggestion_request.num_suggestions]
     ]
 
-    logger.debug("Generated %d suggestions for message", len(suggestions))
+    logger.debug(
+        "Generated %d suggestions for message (group_size=%s)",
+        len(suggestions),
+        suggestion_request.group_size,
+    )
     return SuggestionResponse(suggestions=suggestions)

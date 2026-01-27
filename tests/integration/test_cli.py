@@ -27,6 +27,9 @@ from jarvis.cli import (
     main,
 )
 
+# Import the marker for tests that require sentence_transformers
+from tests.conftest import requires_sentence_transformers
+
 # Marker for tests that depend on specific model outputs (may vary)
 model_dependent = pytest.mark.xfail(
     reason="Model output varies - tests verify expected behavior but allow variation",
@@ -1370,8 +1373,12 @@ class TestSummarizeCommand:
         assert any("Full Disk Access" in c for c in print_calls)
 
 
+@requires_sentence_transformers
 class TestIntentClassifier:
-    """Tests for intent classification."""
+    """Tests for intent classification.
+
+    These tests require sentence_transformers to be available.
+    """
 
     def test_classify_reply_intent(self):
         """Classifier detects reply intent."""

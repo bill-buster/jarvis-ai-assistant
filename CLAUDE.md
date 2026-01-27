@@ -364,7 +364,16 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 ### Key Patterns (Implemented)
 
-**Template-First Generation**: Queries are matched against templates (semantic similarity via all-MiniLM-L6-v2) before invoking the model. Threshold: 0.7 similarity.
+**Template-First Generation**: Queries are matched against templates (semantic similarity via all-MiniLM-L6-v2) before invoking the model. Threshold: 0.7 similarity. Supports group chat context with `match_with_context(query, group_size)` method.
+
+**Group Chat Templates**: `models/templates.py` includes 25+ group-specific templates organized into categories:
+- Event planning (scheduling, day proposals, conflicts)
+- RSVP coordination (yes/no/maybe, +1, headcount)
+- Poll responses (option voting, preferences)
+- Group logistics (who's bringing what, reservations, carpooling)
+- Celebratory messages (birthdays, congrats, holidays)
+- Information sharing (FYI, updates, reminders)
+Templates can specify `min_group_size` and `max_group_size` constraints for size-appropriate responses.
 
 **Thread-Safe Lazy Initialization**: MLXModelLoader uses double-check locking for singleton model loading. See `models/loader.py`.
 
@@ -372,7 +381,7 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 **Model Registry**: `models/registry.py` provides multi-model support with `MODEL_REGISTRY` containing specs for 0.5B/1.5B/3B Qwen models. Use `get_recommended_model(available_ram_gb)` to select the best model for the user's system.
 
-**Intent Classification**: `IntentClassifier` in `jarvis/intent.py` routes user queries using semantic similarity. Supports REPLY, SUMMARIZE, SEARCH, QUICK_REPLY, and GENERAL intents with extracted parameters (person_name, search_query, etc.).
+**Intent Classification**: `IntentClassifier` in `jarvis/intent.py` routes user queries using semantic similarity. Supports REPLY, SUMMARIZE, SEARCH, QUICK_REPLY, GENERAL, and group-specific intents (GROUP_COORDINATION, GROUP_RSVP, GROUP_CELEBRATION) with extracted parameters (person_name, search_query, rsvp_response, poll_choice, etc.).
 
 **Centralized Prompts**: `jarvis/prompts.py` is the single source of truth for all prompts. Includes `PromptRegistry` for dynamic prompt management, few-shot examples for different tones (casual/professional), and prompt templates for replies, summaries, and search answers.
 

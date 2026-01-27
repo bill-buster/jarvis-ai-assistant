@@ -30,6 +30,10 @@ class IntentType(Enum):
     SEARCH = "search"
     QUICK_REPLY = "quick_reply"
     GENERAL = "general"
+    # Group chat specific intents
+    GROUP_COORDINATION = "group_coordination"  # Event planning, logistics, polls
+    GROUP_RSVP = "group_rsvp"  # RSVPs and attendance responses
+    GROUP_CELEBRATION = "group_celebration"  # Birthdays, congratulations, holidays
 
 
 @dataclass
@@ -257,6 +261,115 @@ INTENT_EXAMPLES: dict[IntentType, list[str]] = {
         "help",
         "what are you",
         "who are you",
+    ],
+    IntentType.GROUP_COORDINATION: [
+        # Event planning
+        "when works for everyone",
+        "what time works for the group",
+        "when is everyone free",
+        "let's figure out a time",
+        "when can everyone make it",
+        "what day works for all",
+        "let's pick a date",
+        "scheduling for the group",
+        # Logistics
+        "who's bringing what",
+        "what should I bring",
+        "I'll handle the reservation",
+        "I can make the reservation",
+        "where are we meeting",
+        "where should we go",
+        "who's driving",
+        "let's carpool",
+        "anyone need a ride",
+        "let's split the bill",
+        "how should we split it",
+        # Polls
+        "let's do a poll",
+        "let's vote on it",
+        "what does everyone think",
+        "can we get everyone's input",
+        "I vote for option A",
+        "either works for me",
+        "no preference",
+        "both options work",
+        # Group updates
+        "update for everyone",
+        "fyi for the group",
+        "heads up everyone",
+        "reminder for everyone",
+        "sharing with the group",
+    ],
+    IntentType.GROUP_RSVP: [
+        # Yes responses
+        "count me in",
+        "I'm in",
+        "I'll be there",
+        "yes I'm coming",
+        "definitely coming",
+        "sign me up",
+        "add me to the list",
+        "I'm down",
+        # Plus one
+        "I'll be there +1",
+        "count me plus one",
+        "I'm bringing someone",
+        "can I bring a friend",
+        "plus one for me",
+        # No responses
+        "can't make it",
+        "I won't be able to come",
+        "count me out",
+        "I have to skip this one",
+        "sorry I can't make it",
+        "unfortunately I can't come",
+        # Maybe responses
+        "I might be able to come",
+        "I'll try to make it",
+        "tentative yes",
+        "put me down as a maybe",
+        "I'll let you know",
+        "not sure yet",
+        # Attendance queries
+        "who's coming",
+        "how many people so far",
+        "what's the headcount",
+        "who's confirmed",
+        "who all is going",
+    ],
+    IntentType.GROUP_CELEBRATION: [
+        # Birthdays
+        "happy birthday",
+        "happy bday",
+        "hbd",
+        "hope you have a great birthday",
+        "wishing you a happy birthday",
+        "birthday wishes",
+        # Congratulations
+        "congrats everyone",
+        "congratulations to all",
+        "way to go team",
+        "we did it",
+        "great job everyone",
+        "congrats",
+        "congratulations",
+        "so proud of you",
+        "well done",
+        "amazing job",
+        "you did it",
+        # Holidays
+        "happy holidays",
+        "happy new year",
+        "merry christmas",
+        "happy thanksgiving",
+        "enjoy the holidays",
+        # Group appreciation
+        "thanks everyone",
+        "thank you all",
+        "appreciate everyone",
+        "grateful for this group",
+        "you all are the best",
+        "love this group",
     ],
 }
 
@@ -500,7 +613,7 @@ class IntentClassifier:
                 params["person_name"] = person_name
 
         # Extract time range for relevant intents
-        if intent in (IntentType.SUMMARIZE, IntentType.SEARCH):
+        if intent in (IntentType.SUMMARIZE, IntentType.SEARCH, IntentType.GROUP_COORDINATION):
             time_range = self._extract_time_range(query)
             if time_range:
                 params["time_range"] = time_range
@@ -511,7 +624,89 @@ class IntentClassifier:
             if search_query:
                 params["search_query"] = search_query
 
+        # Extract group-specific parameters
+        if intent in (IntentType.GROUP_COORDINATION, IntentType.GROUP_RSVP):
+            rsvp_response = self._extract_rsvp_response(query)
+            if rsvp_response:
+                params["rsvp_response"] = rsvp_response
+
+            poll_choice = self._extract_poll_choice(query)
+            if poll_choice:
+                params["poll_choice"] = poll_choice
+
         return params
+
+    def _extract_rsvp_response(self, query: str) -> str | None:
+        """Extract RSVP response type from query.
+
+        Args:
+            query: The user query
+
+        Returns:
+            'yes', 'no', 'maybe', or None if not detected
+        """
+        query_lower = query.lower()
+
+        # Yes patterns
+        yes_patterns = [
+            r"\b(count me in|i'm in|i'll be there|yes|definitely|sign me up|i'm down)\b",
+            r"\b(coming|attending|going)\b",
+        ]
+        for pattern in yes_patterns:
+            if re.search(pattern, query_lower):
+                return "yes"
+
+        # No patterns
+        no_patterns = [
+            r"\b(can't make it|count me out|skip|won't be able|can't come|cannot)\b",
+            r"\b(not coming|not going|not attending)\b",
+        ]
+        for pattern in no_patterns:
+            if re.search(pattern, query_lower):
+                return "no"
+
+        # Maybe patterns
+        maybe_patterns = [
+            r"\b(maybe|might|tentative|not sure|let you know|try to make it)\b",
+        ]
+        for pattern in maybe_patterns:
+            if re.search(pattern, query_lower):
+                return "maybe"
+
+        return None
+
+    def _extract_poll_choice(self, query: str) -> str | None:
+        """Extract poll choice from query.
+
+        Args:
+            query: The user query
+
+        Returns:
+            The choice (e.g., 'A', 'B', '1', '2') or None if not detected
+        """
+        query_lower = query.lower()
+
+        # Option letter patterns
+        letter_match = re.search(r"\boption\s+([a-z])\b", query_lower)
+        if letter_match:
+            return letter_match.group(1).upper()
+
+        # Direct letter vote patterns
+        vote_pattern = r"\b(?:vote(?:s)?\s+(?:for\s+)?|i\s+(?:vote|prefer|choose)\s+)([a-z])\b"
+        vote_match = re.search(vote_pattern, query_lower)
+        if vote_match:
+            return vote_match.group(1).upper()
+
+        # Number patterns
+        number_match = re.search(r"\boption\s+(\d+)\b", query_lower)
+        if number_match:
+            return number_match.group(1)
+
+        # "Either" or "both" indicates no specific choice
+        if re.search(r"\b(either|both|any|no preference)\b", query_lower):
+            return "any"
+
+        return None
 
     def _extract_person_name(self, query: str) -> str | None:
         """Extract person name from query using regex patterns.
