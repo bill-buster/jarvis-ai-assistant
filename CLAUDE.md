@@ -176,6 +176,112 @@ Checklist:
 
 ---
 
+## Coding Principles (Karpathy Guidelines)
+
+These principles address common LLM coding pitfalls: wrong assumptions, overcomplication, and unnecessary changes.
+
+### 1. Think Before Coding
+
+Don't assume. Don't hide confusion. Surface tradeoffs.
+
+- **State assumptions explicitly** - If uncertain about requirements, ask rather than guess
+- **Present multiple interpretations** - When ambiguity exists, present options instead of picking silently
+- **Push back constructively** - If a simpler approach exists, propose it with reasoning
+- **Stop when confused** - Name what's unclear and request clarification
+
+<example>
+❌ BAD: Silently assumes user wants OAuth when they said "add auth"
+✅ GOOD: "For authentication, I can implement: (1) JWT tokens (simpler, stateless), (2) OAuth2 (standard, more complex), or (3) session-based (simplest). Which fits your needs?"
+</example>
+
+### 2. Simplicity First
+
+Minimum code that solves the problem. Nothing speculative.
+
+- No features beyond what was requested
+- No abstractions for single-use code
+- No "flexibility" or "configurability" that wasn't asked for
+- No error handling for impossible scenarios (trust internal contracts)
+- If 200 lines could be 50, rewrite it
+
+**The test**: Would a senior engineer call this overcomplicated? If yes, simplify.
+
+<example>
+❌ BAD: Creates `AbstractFactoryBuilder` with 5 methods for a one-time conversion
+✅ GOOD: Writes a single function that does the conversion
+</example>
+
+### 3. Surgical Changes
+
+Touch only what you must. Clean up only your own mess.
+
+When editing existing code:
+
+- **Don't "improve" adjacent code** - No drive-by refactoring, formatting, or comment changes
+- **Don't refactor things that work** - If it's not broken and not blocking you, leave it
+- **Match existing style** - Even if you'd do it differently
+- **Notice but don't fix unrelated issues** - Mention dead code, don't delete it
+- **Remove only what YOU orphaned** - Delete imports/variables/functions your changes made unused
+
+**The test**: Every changed line should trace directly to the user's request.
+
+<example>
+❌ BAD: Asked to fix a bug, also reformats 10 other files and removes "unnecessary" comments
+✅ GOOD: Changes only the 3 lines needed to fix the bug
+</example>
+
+### 4. Goal-Driven Execution
+
+Define success criteria. Loop until verified.
+
+Transform imperative tasks into verifiable goals with clear completion criteria:
+
+| Instead of... | Transform to... |
+|---------------|----------------|
+| "Add validation" | "Write tests for invalid inputs (empty, null, wrong type), then make them pass" |
+| "Fix the bug" | "Write test reproducing the bug, verify it fails, then make it pass" |
+| "Refactor X" | "Ensure all tests pass before changes, refactor, confirm tests still pass" |
+| "Improve performance" | "Benchmark current speed, optimize, verify ≥2x improvement" |
+
+**For multi-step tasks, state a brief plan:**
+
+```
+Plan:
+1. Write test reproducing issue → verify: test fails as expected
+2. Implement fix → verify: test passes
+3. Run full test suite → verify: no regressions
+4. Commit with test + fix → verify: git diff shows only intended changes
+```
+
+**Why this works**: Clear success criteria enable autonomous looping. Vague criteria ("make it work") require constant clarification.
+
+<example>
+❌ BAD: "I'll add input validation" (no way to verify success)
+✅ GOOD: "Writing tests for: empty string, null, invalid format, SQL injection. Will make all pass."
+</example>
+
+### When to Apply
+
+These principles are most valuable for:
+
+- **Non-trivial changes** - Anything beyond simple typo fixes or one-liners
+- **Unclear requirements** - When the request is ambiguous
+- **Existing code modifications** - High risk of unintended side effects
+- **Multi-step tasks** - Need clear verification at each step
+
+For trivial tasks (fixing a typo, updating a constant), use judgment—not every change needs full rigor.
+
+### Principle Summary
+
+| Principle | Prevents | Example |
+|-----------|----------|---------|
+| Think Before Coding | Wrong assumptions, silent choices | Ask about auth method instead of assuming |
+| Simplicity First | Overengineering, bloat | Single function instead of factory pattern |
+| Surgical Changes | Drive-by edits, scope creep | Change 3 lines, not 300 |
+| Goal-Driven | Vague success, endless loops | "Tests pass" not "should work now" |
+
+---
+
 ## Worktree Workflow
 
 For parallel development tasks, use git worktrees to avoid conflicts between branches.
