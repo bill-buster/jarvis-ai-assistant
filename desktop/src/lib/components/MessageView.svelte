@@ -23,6 +23,76 @@
   let showPDFExportModal = $state(false);
   let messageViewFocused = $state(true);
 
+  // Compose message state
+  let composeText = $state("");
+  let sendingMessage = $state(false);
+  let sendError = $state<string | null>(null);
+
+  // Auto-resize textarea as user types
+  function autoResizeTextarea(event: Event) {
+    const textarea = event.target as HTMLTextAreaElement;
+    textarea.style.height = "auto";
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+  }
+
+  // Handle Enter key in compose input
+  function handleComposeKeydown(event: KeyboardEvent) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSendMessage();
+    }
+  }
+
+  // Send the message
+  async function handleSendMessage() {
+    if (!composeText.trim() || sendingMessage || !$selectedConversation) return;
+
+    sendingMessage = true;
+    sendError = null;
+
+    try {
+      const chatId = $selectedConversation.chat_id;
+      const isGroup = $selectedConversation.is_group;
+      const recipient = !isGroup && $selectedConversation.participants?.length > 0
+        ? $selectedConversation.participants[0]
+        : undefined;
+
+      const response = await fetch(`http://localhost:8742/conversations/${encodeURIComponent(chatId)}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: composeText.trim(),
+          recipient: recipient,
+          is_group: isGroup,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        sendError = `Send failed: ${response.status} - ${errorText}`;
+        return;
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        composeText = "";
+        // Reset textarea height
+        const textarea = document.querySelector(".compose-input") as HTMLTextAreaElement;
+        if (textarea) textarea.style.height = "auto";
+        // Refresh messages in background - don't await to prevent blocking
+        pollMessages().catch(err => console.error("Poll error:", err));
+      } else {
+        sendError = result.error || "Failed to send message";
+      }
+    } catch (err) {
+      sendError = "Failed to send message. Check if Messages app has permissions.";
+      console.error("Send error:", err);
+    } finally {
+      sendingMessage = false;
+    }
+  }
+
   // Compute the last received message (for smart reply chips)
   // Only show chips when the last message is NOT from the user
   function getLastReceivedMessage(): string {
@@ -417,13 +487,14 @@
       {/if}
     </div>
 
-    <!-- Smart Reply Chips -->
-    {#if getLastReceivedMessage()}
+    <!-- Smart Reply Chips - HIDDEN: Using AI Draft button instead (LLM-powered) -->
+    <!-- TODO: Re-enable when SmartReplyChips uses LLM instead of templates -->
+    <!-- {#if getLastReceivedMessage()}
       <SmartReplyChips
         lastMessage={getLastReceivedMessage()}
         isFocused={messageViewFocused}
       />
-    {/if}
+    {/if} -->
 
     {#if hasNewMessagesBelow}
       <button class="new-messages-button" onclick={handleNewMessagesClick}>
@@ -433,6 +504,37 @@
         New messages below
       </button>
     {/if}
+
+    <!-- Compose Message Input -->
+    <div class="compose-area">
+      <div class="compose-input-wrapper">
+        <textarea
+          class="compose-input"
+          bind:value={composeText}
+          placeholder="iMessage"
+          rows="1"
+          onkeydown={handleComposeKeydown}
+          oninput={autoResizeTextarea}
+        ></textarea>
+        <button
+          class="send-button"
+          onclick={handleSendMessage}
+          disabled={!composeText.trim() || sendingMessage}
+          title="Send message (Enter)"
+        >
+          {#if sendingMessage}
+            <div class="send-spinner"></div>
+          {:else}
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          {/if}
+        </button>
+      </div>
+      {#if sendError}
+        <div class="send-error">{sendError}</div>
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -859,5 +961,93 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+  }
+
+  /* Compose Area Styles */
+  .compose-area {
+    padding: 8px 16px 16px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+  }
+
+  .compose-input-wrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 8px 8px 16px;
+  }
+
+  .compose-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.4;
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    min-height: 24px;
+  }
+
+  .compose-input::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .send-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  .send-button:hover:not(:disabled) {
+    transform: scale(1.05);
+  }
+
+  .send-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .send-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .send-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .send-error {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 59, 48, 0.1);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    border-radius: 8px;
+    color: #ff3b30;
+    font-size: 13px;
   }
 </style>

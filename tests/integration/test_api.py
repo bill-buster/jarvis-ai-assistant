@@ -660,7 +660,7 @@ class TestServeCommand:
 
         assert result == 0
         mock_uvicorn_run.assert_called_once_with(
-            "jarvis.api:app",
+            "api.main:app",
             host="127.0.0.1",
             port=8000,
             reload=False,

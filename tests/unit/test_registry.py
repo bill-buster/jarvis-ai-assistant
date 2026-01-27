@@ -127,7 +127,7 @@ class TestModelRegistry:
         spec = MODEL_REGISTRY["qwen-3b"]
         assert spec.path == "mlx-community/Qwen2.5-3B-Instruct-4bit"
         assert spec.size_gb == 2.5
-        assert spec.min_ram_gb == 16
+        assert spec.min_ram_gb == 8  # 4-bit model fits in 8GB
         assert spec.quality_tier == "excellent"
 
 
@@ -179,11 +179,11 @@ class TestGetRecommendedModel:
     """Tests for get_recommended_model function."""
 
     def test_recommend_basic_for_8gb(self):
-        """Test 8GB RAM gets the balanced model (qwen-1.5b)."""
+        """Test 8GB RAM gets an excellent tier model."""
         spec = get_recommended_model(8.0)
-        # 8GB meets qwen-1.5b's min_ram_gb=8 requirement
-        assert spec.id == "qwen-1.5b"
-        assert spec.quality_tier == "good"
+        # 8GB now meets excellent tier models (qwen-3b, gemma3-4b) min_ram_gb=8
+        assert spec.quality_tier == "excellent"
+        assert spec.min_ram_gb <= 8
 
     def test_recommend_excellent_for_16gb(self):
         """Test 16GB RAM gets the best model (qwen-3b)."""
@@ -206,14 +206,16 @@ class TestGetRecommendedModel:
 
     def test_recommend_returns_best_fitting_model(self):
         """Test recommendation selects best model that fits RAM."""
-        # Test edge case at 16GB boundary
-        spec = get_recommended_model(15.9)
-        # Should get qwen-1.5b since 15.9 < 16 (qwen-3b requirement)
-        assert spec.id == "qwen-1.5b"
+        # With all excellent-tier models at min_ram=8, they're all eligible at 8GB+
+        spec = get_recommended_model(8.0)
+        assert spec.quality_tier == "excellent"
 
         spec = get_recommended_model(16.0)
-        # Should get qwen-3b since 16.0 >= 16
-        assert spec.id == "qwen-3b"
+        assert spec.quality_tier == "excellent"
+
+        # Low RAM should fall back
+        spec = get_recommended_model(4.0)
+        assert spec is not None
 
 
 class TestGetAllModels:

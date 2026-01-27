@@ -81,9 +81,9 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         path="mlx-community/Qwen2.5-3B-Instruct-4bit",
         display_name="Qwen 2.5 3B (Quality)",
         size_gb=2.5,
-        min_ram_gb=16,
+        min_ram_gb=8,
         quality_tier="excellent",
-        description="Best quality responses. Requires 16GB+ RAM.",
+        description="Best quality responses for 4-bit quantized model.",
         recommended_for=["summarization", "drafting", "complex_replies"],
     ),
     "phi3-mini": ModelSpec(

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { healthStore } from "../stores/health";
 
-  export let currentView: "messages" | "dashboard" | "health" | "settings" | "templates" =
-    "messages";
+  type ViewType = "messages" | "dashboard" | "health" | "settings" | "templates";
 
-  function navigate(view: "messages" | "dashboard" | "health" | "settings" | "templates") {
+  let { currentView = $bindable<ViewType>("messages") } = $props<{ currentView?: ViewType }>();
+
+  function navigate(view: ViewType) {
     currentView = view;
   }
 </script>

@@ -1482,7 +1482,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     try:
         uvicorn.run(
-            "jarvis.api:app",
+            "api.main:app",  # Full API with all endpoints for Tauri desktop app
             host=host,
             port=port,
             reload=reload,

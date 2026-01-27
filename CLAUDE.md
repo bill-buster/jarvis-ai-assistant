@@ -126,6 +126,7 @@ These are checkpoints that must be followed at every stage of development.
 
 ### Shell Command Guidelines
 
+- **Always use `uv run`** for Python commands (e.g., `uv run python -m jarvis.setup`, `uv run pytest`). Never use raw `python` or `.venv/bin/python`.
 - **Always use `rm -f` or `rm -rf`** when removing files/directories to avoid interactive prompts that can hang
 - Use absolute paths when possible to avoid confusion about current directory
 
