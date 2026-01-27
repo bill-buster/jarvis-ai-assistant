@@ -40,6 +40,7 @@ from api.routers import (
     metrics_router,
     pdf_export_router,
     priority_router,
+    relationships_router,
     search_router,
     settings_router,
     stats_router,
@@ -224,6 +225,12 @@ API_TAGS_METADATA = [
         "description": "A/B testing infrastructure for prompt experimentation. "
         "Create experiments, assign variants to contacts, record outcomes, and analyze results.",
     },
+    {
+        "name": "relationships",
+        "description": "Relationship learning and communication profiling. "
+        "Build and manage profiles that capture communication patterns with each contact "
+        "for personalized reply generation.",
+    },
 ]
 
 API_CONTACT = {
@@ -367,6 +374,7 @@ app.include_router(batch_router)
 app.include_router(priority_router)
 app.include_router(feedback_router)
 app.include_router(experiments_router)
+app.include_router(relationships_router)
 
 # Register JARVIS exception handlers for standardized error responses
 register_exception_handlers(app)

@@ -737,21 +737,7 @@ class UnansweredConversationResponse(BaseModel):
 
 
 class GroupHighlightResponse(BaseModel):
-    """Highlight from an active group chat.
-
-    Example:
-        ```json
-        {
-            "chat_id": "chat123456789",
-            "display_name": "Family Group",
-            "participants": ["+15551234567", "+15559876543"],
-            "message_count": 45,
-            "active_participants": ["John", "Jane"],
-            "top_topics": ["meeting", "plans"],
-            "last_activity": "2024-01-15T18:30:00Z"
-        }
-        ```
-    """
+    """Highlight from an active group chat."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -777,21 +763,7 @@ class GroupHighlightResponse(BaseModel):
 
 
 class ActionItemResponse(BaseModel):
-    """Detected action item from messages.
-
-    Example:
-        ```json
-        {
-            "text": "Can you send me the report?",
-            "chat_id": "chat123456789",
-            "conversation_name": "John Doe",
-            "sender": "John Doe",
-            "date": "2024-01-15T10:30:00Z",
-            "message_id": 12345,
-            "item_type": "task"
-        }
-        ```
-    """
+    """Detected action item from messages."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -821,23 +793,7 @@ class ActionItemResponse(BaseModel):
 
 
 class MessageStatsResponse(BaseModel):
-    """Message volume statistics.
-
-    Example:
-        ```json
-        {
-            "total_sent": 150,
-            "total_received": 200,
-            "total_messages": 350,
-            "active_conversations": 12,
-            "most_active_conversation": "Family Group",
-            "most_active_count": 45,
-            "avg_messages_per_day": 50.0,
-            "busiest_hour": 14,
-            "hourly_distribution": {"9": 20, "14": 35}
-        }
-        ```
-    """
+    """Message volume statistics."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -873,22 +829,7 @@ class MessageStatsResponse(BaseModel):
 
 
 class DigestResponse(BaseModel):
-    """Complete digest response.
-
-    Example:
-        ```json
-        {
-            "period": "daily",
-            "generated_at": "2024-01-15T08:00:00Z",
-            "start_date": "2024-01-14T08:00:00Z",
-            "end_date": "2024-01-15T08:00:00Z",
-            "needs_attention": [],
-            "highlights": [],
-            "action_items": [],
-            "stats": {...}
-        }
-        ```
-    """
+    """Complete digest response."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -932,16 +873,7 @@ class DigestResponse(BaseModel):
 
 
 class DigestGenerateRequest(BaseModel):
-    """Request to generate a digest.
-
-    Example:
-        ```json
-        {
-            "period": "daily",
-            "end_date": "2024-01-15T08:00:00Z"
-        }
-        ```
-    """
+    """Request to generate a digest."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -961,17 +893,7 @@ class DigestGenerateRequest(BaseModel):
 
 
 class DigestExportRequest(BaseModel):
-    """Request to export a digest.
-
-    Example:
-        ```json
-        {
-            "period": "daily",
-            "format": "markdown",
-            "end_date": "2024-01-15T08:00:00Z"
-        }
-        ```
-    """
+    """Request to export a digest."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -991,18 +913,7 @@ class DigestExportRequest(BaseModel):
 
 
 class DigestExportResponse(BaseModel):
-    """Response containing exported digest.
-
-    Example:
-        ```json
-        {
-            "success": true,
-            "format": "markdown",
-            "filename": "jarvis_digest_daily_20240115.md",
-            "data": "# JARVIS Daily Digest..."
-        }
-        ```
-    """
+    """Response containing exported digest."""
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -1015,6 +926,187 @@ class DigestExportResponse(BaseModel):
         }
     )
 
+    success: bool = Field(..., description="Whether export succeeded")
+    format: str = Field(..., description="Export format used")
+    filename: str = Field(..., description="Suggested filename")
+    data: str = Field(..., description="Exported content")
+
+
+class DigestPreferencesResponse(BaseModel):
+    """Digest preferences response."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "enabled": True,
+                "schedule": "daily",
+                "preferred_time": "08:00",
+                "include_action_items": True,
+                "include_stats": True,
+                "max_conversations": 50,
+                "export_format": "markdown",
+            }
+        }
+    )
+
+    enabled: bool = Field(..., description="Whether digest generation is enabled")
+    schedule: str = Field(..., description="Digest schedule (daily/weekly)")
+    preferred_time: str = Field(..., description="Preferred time (HH:MM)")
+    include_action_items: bool = Field(..., description="Include action items")
+    include_stats: bool = Field(..., description="Include stats")
+    max_conversations: int = Field(..., description="Max conversations to analyze")
+    export_format: str = Field(..., description="Default export format")
+
+
+class DigestPreferencesUpdate(BaseModel):
+    """Request to update digest preferences."""
+
+    enabled: bool | None = Field(default=None)
+    schedule: str | None = Field(default=None)
+    preferred_time: str | None = Field(default=None)
+    include_action_items: bool | None = Field(default=None)
+    include_stats: bool | None = Field(default=None)
+    max_conversations: int | None = Field(default=None)
+    export_format: str | None = Field(default=None)
+
+
+# =============================================================================
+# Relationship Schemas
+# =============================================================================
+
+
+class ToneProfileResponse(BaseModel):
+    """Communication tone characteristics for a relationship."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "formality_score": 0.3,
+                "emoji_frequency": 1.5,
+                "exclamation_frequency": 0.8,
+                "question_frequency": 0.2,
+                "avg_message_length": 45.5,
+                "uses_caps": False,
+            }
+        }
+    )
+
+    formality_score: float = Field(..., ge=0.0, le=1.0)
+    emoji_frequency: float = Field(..., ge=0.0)
+    exclamation_frequency: float = Field(..., ge=0.0)
+    question_frequency: float = Field(..., ge=0.0)
+    avg_message_length: float = Field(..., ge=0.0)
+    uses_caps: bool = Field(...)
+
+
+class TopicDistributionResponse(BaseModel):
+    """Distribution of conversation topics."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "topics": {
+                    "scheduling": 0.35,
+                    "food": 0.25,
+                    "work": 0.2
+                },
+                "top_topics": ["scheduling", "food", "work"]
+            }
+        }
+    )
+
+    topics: dict[str, float] = Field(default_factory=dict)
+    top_topics: list[str] = Field(default_factory=list)
+
+
+class RelationshipProfileResponse(BaseModel):
+    """Complete relationship profile for a contact."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "contact_id": "a1b2c3d4e5f6g7h8",
+                "contact_name": "John Doe",
+                "tone_profile": {
+                    "formality_score": 0.3,
+                    "emoji_frequency": 1.5,
+                    "exclamation_frequency": 0.8,
+                    "question_frequency": 0.2,
+                    "avg_message_length": 45.5,
+                    "uses_caps": False,
+                },
+                "topic_distribution": {
+                    "topics": {"scheduling": 0.35, "food": 0.25},
+                    "top_topics": ["scheduling", "food"],
+                },
+                "response_patterns": {
+                    "avg_response_time_minutes": 15.5,
+                    "typical_response_length": "medium",
+                    "greeting_style": ["hey", "hi"],
+                    "signoff_style": ["thanks"],
+                    "common_phrases": ["sounds good"],
+                },
+                "message_count": 250,
+                "last_updated": "2024-01-15T10:30:00",
+                "version": "1.0.0",
+            }
+        }
+    )
+
+    contact_id: str = Field(..., description="Hashed contact identifier")
+    contact_name: str | None = Field(default=None, description="Display name")
+    tone_profile: ToneProfileResponse = Field(..., description="Tone info")
+    topic_distribution: TopicDistributionResponse = Field(..., description="Topic info")
+    response_patterns: ResponsePatternsResponse = Field(..., description="Response info")
+    message_count: int = Field(..., ge=0)
+    last_updated: str = Field(...)
+    version: str = Field(...)
+
+
+class StyleGuideResponse(BaseModel):
+    """Natural language style guide for a relationship."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "contact_id": "a1b2c3d4e5f6g7h8",
+                "contact_name": "John Doe",
+                "style_guide": "Keep it casual, use emojis, keep messages brief.",
+                "voice_guidance": {
+                    "formality": "casual",
+                    "use_emojis": True,
+                    "emoji_level": "high",
+                    "message_length": "short",
+                    "use_exclamations": True,
+                    "common_greetings": ["hey", "hi"],
+                    "common_signoffs": ["thanks", "bye"],
+                    "preferred_phrases": ["sounds good"],
+                    "top_topics": ["scheduling", "food"],
+                },
+            }
+        }
+    )
+
+    contact_id: str = Field(...)
+    contact_name: str | None = Field(default=None)
+    style_guide: str = Field(...)
+    voice_guidance: dict[str, Any] = Field(...)
+
+
+class RefreshProfileRequest(BaseModel):
+    """Request to refresh a relationship profile."""
+
+    message_limit: int = Field(default=500, ge=50, le=2000)
+    force_refresh: bool = Field(default=False)
+
+
+class RefreshProfileResponse(BaseModel):
+    """Response after refreshing a relationship profile."""
+
+    success: bool = Field(...)
+    profile: RelationshipProfileResponse | None = Field(default=None)
+    messages_analyzed: int = Field(...)
+    previous_message_count: int = Field(...)
     success: bool = Field(..., description="Whether export succeeded")
     format: str = Field(..., description="Export format used")
     filename: str = Field(..., description="Suggested filename")
@@ -1091,3 +1183,29 @@ class DigestPreferencesUpdateRequest(BaseModel):
         default=None, ge=10, le=200, description="Max conversations"
     )
     export_format: str | None = Field(default=None, description="Export format")
+=======
+    success: bool = Field(
+        ...,
+        description="Whether the refresh was successful",
+    )
+    profile: RelationshipProfileResponse | None = Field(
+        default=None,
+        description="The refreshed profile (if successful)",
+    )
+    messages_analyzed: int = Field(
+        ...,
+        ge=0,
+        description="Number of messages analyzed",
+        examples=[500, 250],
+    )
+    previous_message_count: int | None = Field(
+        default=None,
+        description="Previous profile's message count (if existed)",
+        examples=[250, None],
+    )
+    error: str | None = Field(
+        default=None,
+        description="Error message if refresh failed",
+        examples=[None, "Insufficient messages for profile"],
+    )
+>>>>>>> origin/claude/relationship-learning-system-A02qZ

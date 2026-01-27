@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
+    from jarvis.relationships import RelationshipProfile
     from jarvis.threading import ThreadContext, ThreadedReplyConfig
 
 # =============================================================================
@@ -723,6 +724,7 @@ def build_reply_prompt(
     last_message: str,
     instruction: str | None = None,
     tone: Literal["casual", "professional", "mixed"] = "casual",
+    relationship_profile: RelationshipProfile | None = None,
 ) -> str:
     """Build a prompt for generating iMessage replies.
 
@@ -731,22 +733,66 @@ def build_reply_prompt(
         last_message: The most recent message to reply to
         instruction: Optional custom instruction for the reply
         tone: The desired tone for the reply
+        relationship_profile: Optional relationship profile for personalized replies.
+            If provided, the profile's communication patterns will be used to
+            customize the reply style (emoji usage, formality, typical phrases).
 
     Returns:
         Formatted prompt string ready for model input
     """
-    # Select appropriate examples based on tone
-    if tone == "professional":
+    # Import here to avoid circular imports
+    from jarvis.relationships import (
+        MIN_MESSAGES_FOR_PROFILE,
+        generate_style_guide,
+        select_matching_examples,
+    )
+
+    # Determine effective tone from profile if available
+    effective_tone = tone
+    if relationship_profile and relationship_profile.message_count >= MIN_MESSAGES_FOR_PROFILE:
+        formality = relationship_profile.tone_profile.formality_score
+        if formality >= 0.7:
+            effective_tone = "professional"
+        elif formality < 0.4:
+            effective_tone = "casual"
+        else:
+            effective_tone = "mixed"
+
+    # Select appropriate examples based on tone (and profile if available)
+    if relationship_profile and relationship_profile.message_count >= MIN_MESSAGES_FOR_PROFILE:
+        # Use profile to select matching examples
+        # Convert FewShotExample to tuple format for the selector function
+        casual_tuples = [(ex.context, ex.output) for ex in CASUAL_REPLY_EXAMPLES]
+        professional_tuples = [(ex.context, ex.output) for ex in PROFESSIONAL_REPLY_EXAMPLES]
+        examples_list = select_matching_examples(
+            relationship_profile,
+            casual_tuples,
+            professional_tuples,
+        )
+        examples = [FewShotExample(context=ctx, output=out) for ctx, out in examples_list]
+    elif effective_tone == "professional":
         examples = PROFESSIONAL_REPLY_EXAMPLES[:3]
-        tone_str = "professional/formal"
     else:
         examples = CASUAL_REPLY_EXAMPLES[:3]
+
+    # Determine tone string
+    if effective_tone == "professional":
+        tone_str = "professional/formal"
+    else:
         tone_str = "casual/friendly"
 
     # Format custom instruction
     custom_instruction = ""
     if instruction:
         custom_instruction = f"- Additional guidance: {instruction}"
+
+    # Add relationship-based style guidance if profile is available
+    if relationship_profile and relationship_profile.message_count >= MIN_MESSAGES_FOR_PROFILE:
+        style_guide = generate_style_guide(relationship_profile)
+        if custom_instruction:
+            custom_instruction += f"\n- Communication style: {style_guide}"
+        else:
+            custom_instruction = f"- Communication style: {style_guide}"
 
     # Truncate context if needed
     truncated_context = _truncate_context(context)
