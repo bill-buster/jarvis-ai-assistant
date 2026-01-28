@@ -671,6 +671,97 @@ class EmbeddingStore:
 
         return np.array(embeddings), messages
 
+    def get_user_response_patterns(
+        self,
+        chat_id: str | None = None,
+        min_replies: int = 3,
+    ) -> dict[str, list[str]]:
+        """Extract user's common response patterns grouped by intent.
+
+        Analyzes your reply pairs to find consistent response patterns,
+        which can be used as personalized templates.
+
+        Args:
+            chat_id: Optional filter by conversation (None = all conversations)
+            min_replies: Minimum replies per pattern to include
+
+        Returns:
+            Dict mapping intent -> list of your actual replies
+            e.g., {"affirmative": ["yeah for sure", "sounds good!", "down"]}
+        """
+        # Intent keywords for simple classification
+        intent_patterns = {
+            "affirmative": {
+                "yes", "yeah", "yep", "yea", "ya", "sure", "ok", "okay", "k",
+                "definitely", "absolutely", "for sure", "down", "sounds good",
+            },
+            "negative": {
+                "no", "nah", "nope", "cant", "can't", "cannot", "sorry",
+                "not", "won't", "wont", "don't", "dont",
+            },
+            "greeting": {
+                "hey", "hi", "hello", "yo", "sup", "what's up", "whats up",
+            },
+            "thanks": {
+                "thanks", "thank", "thx", "ty", "appreciate",
+            },
+            "acknowledgment": {
+                "got it", "gotcha", "cool", "nice", "alright", "right",
+            },
+        }
+
+        with self._get_connection() as conn:
+            # Get your reply pairs (their message -> your reply within 5 min)
+            sql = """
+                SELECT m1.text_preview as their_msg, m2.text_preview as your_reply
+                FROM message_embeddings m1
+                JOIN message_embeddings m2 ON m2.chat_id = m1.chat_id
+                WHERE m1.is_from_me = 0
+                  AND m2.is_from_me = 1
+                  AND m2.timestamp > m1.timestamp
+                  AND m2.timestamp < m1.timestamp + 300
+            """
+            params: list = []
+
+            if chat_id:
+                sql += " AND m1.chat_id = ?"
+                params.append(chat_id)
+
+            sql += " ORDER BY m1.timestamp DESC LIMIT 500"
+            rows = conn.execute(sql, params).fetchall()
+
+        if not rows:
+            return {}
+
+        # Group replies by intent
+        patterns: dict[str, list[str]] = {k: [] for k in intent_patterns}
+
+        for row in rows:
+            your_reply = row["your_reply"]
+            if not your_reply or len(your_reply) < 2:
+                continue
+
+            reply_lower = your_reply.lower().strip()
+
+            # Classify by first matching intent
+            for intent, keywords in intent_patterns.items():
+                for keyword in keywords:
+                    if reply_lower.startswith(keyword) or keyword in reply_lower.split()[:3]:
+                        # Store original casing
+                        if your_reply not in patterns[intent]:
+                            patterns[intent].append(your_reply)
+                        break
+                else:
+                    continue
+                break
+
+        # Filter to only intents with enough replies
+        return {
+            intent: replies[:10]  # Top 10 per intent
+            for intent, replies in patterns.items()
+            if len(replies) >= min_replies
+        }
+
     def get_stats(self) -> dict[str, Any]:
         """Get index statistics."""
         with self._get_connection() as conn:

@@ -66,6 +66,9 @@ class ReplyGenerationResult:
 class ReplyGenerator:
     """Generates contextual reply suggestions."""
 
+    # Max recent generations to track per chat
+    MAX_RECENT_GENERATIONS = 5
+
     def __init__(self, model_loader):
         """Initialize generator.
 
@@ -78,6 +81,54 @@ class ReplyGenerator:
 
         # Cache styles per conversation
         self._style_cache: dict[str, UserStyle] = {}
+
+        # Track recent generations per chat to avoid repetition
+        self._recent_generations: dict[str, list[str]] = {}
+
+    def _record_generation(self, chat_id: str, reply: str) -> None:
+        """Record a generated reply for repetition tracking.
+
+        Args:
+            chat_id: Conversation ID
+            reply: Generated reply text
+        """
+        recent = self._recent_generations.setdefault(chat_id, [])
+        recent.append(reply.lower().strip())
+        # Keep only last N generations
+        if len(recent) > self.MAX_RECENT_GENERATIONS:
+            recent.pop(0)
+
+    def _is_repetitive(self, reply: str, chat_id: str | None) -> bool:
+        """Check if a reply is repetitive (recently used).
+
+        Args:
+            reply: Reply text to check
+            chat_id: Conversation ID
+
+        Returns:
+            True if reply was recently used in this conversation
+        """
+        if not chat_id:
+            return False
+        recent = self._recent_generations.get(chat_id, [])
+        reply_lower = reply.lower().strip()
+        return reply_lower in recent
+
+    def _filter_repetitive(
+        self, replies: list[GeneratedReply], chat_id: str | None
+    ) -> list[GeneratedReply]:
+        """Filter out repetitive replies.
+
+        Args:
+            replies: List of generated replies
+            chat_id: Conversation ID
+
+        Returns:
+            Filtered list with non-repetitive replies
+        """
+        if not chat_id:
+            return replies
+        return [r for r in replies if not self._is_repetitive(r.text, chat_id)]
 
     def generate_replies(
         self,
@@ -123,10 +174,13 @@ class ReplyGenerator:
         timings["strategy"] = (time.time() - t0) * 1000
 
         # 4. Find YOUR past replies to similar messages (style learning!)
-        # NOTE: Disabled for now - too slow (~30s) and not contextually relevant
-        # The semantic similarity of short messages like "Oh" doesn't help
+        # Only search if:
+        # - Message is substantive (> 10 chars) - short messages have poor semantic similarity
+        # - FAISS index is preloaded (to avoid 5+ second delay)
         t0 = time.time()
-        past_replies = []  # self._find_past_replies(context.last_message, chat_id)
+        past_replies = []
+        if len(context.last_message) > 10 and chat_id:
+            past_replies = self._find_past_replies(context.last_message, chat_id)
         timings["past_replies_lookup"] = (time.time() - t0) * 1000
 
         # 4b. Template matching - if past replies are very similar and consistent, skip LLM
@@ -147,6 +201,7 @@ class ReplyGenerator:
 
         # 5. Get contact profile for better style info (from ALL your messages, not just recent)
         # Skip topic extraction (LLM call) - only need style info for generation
+        # Profile is cached for fast retrieval after first computation
         t0 = time.time()
         profile = None
         if chat_id:
@@ -155,6 +210,11 @@ class ReplyGenerator:
 
         # 6. Build style instructions - prefer contact profile (more comprehensive)
         style_instructions = self._build_style_instructions(style, profile)
+
+        # Get recent topics for context continuity (from cached profile or skip)
+        recent_topics = None
+        if profile and profile.topics:
+            recent_topics = [t.name for t in profile.topics[:3]]
 
         prompt = build_reply_prompt(
             messages=coherent_messages,  # Use coherent segment, not all messages
@@ -167,6 +227,7 @@ class ReplyGenerator:
             intent_value=context.intent.value,
             past_replies=past_replies,
             user_name=self._user_name,
+            recent_topics=recent_topics,
         )
 
         # 7. Generate with LLM
@@ -193,9 +254,22 @@ class ReplyGenerator:
         replies = self._parse_replies(raw_output, strategy.reply_types, strip_emojis=strip_emojis)
         timings["parse_replies"] = (time.time() - t0) * 1000
 
+        # 9. Filter out repetitive replies (recently used in this conversation)
+        replies = self._filter_repetitive(replies, chat_id)
+
         # Ensure we have enough replies
         if len(replies) < num_replies:
-            replies.extend(self._get_fallback_replies(context.intent.value, num_replies - len(replies)))
+            fallbacks = self._get_fallback_replies(
+                context.intent.value, num_replies - len(replies), chat_id
+            )
+            # Filter fallbacks too
+            fallbacks = self._filter_repetitive(fallbacks, chat_id)
+            replies.extend(fallbacks)
+
+        # Record generations for future repetition checking
+        if chat_id:
+            for reply in replies[:num_replies]:
+                self._record_generation(chat_id, reply.text)
 
         generation_time = (time.time() - start_time) * 1000
 
@@ -291,8 +365,21 @@ class ReplyGenerator:
 
         return replies
 
-    def _get_fallback_replies(self, intent_value: str, count: int) -> list[GeneratedReply]:
-        """Get fallback replies when generation fails or is incomplete."""
+    def _get_fallback_replies(
+        self, intent_value: str, count: int, chat_id: str | None = None
+    ) -> list[GeneratedReply]:
+        """Get fallback replies when generation fails or is incomplete.
+
+        Tries personal templates first (from user's actual message history),
+        then falls back to generic templates.
+        """
+        # Try personal templates first
+        if chat_id:
+            personal = self._get_personal_templates(intent_value, chat_id, count)
+            if personal:
+                return personal
+
+        # Fall back to generic templates
         fallbacks = {
             "yes_no_question": ["sounds good!", "can't right now, sorry", "let me check"],
             "open_question": ["not sure yet", "good question", "let me think about it"],
@@ -309,6 +396,51 @@ class ReplyGenerator:
             GeneratedReply(text=text, reply_type="fallback", confidence=0.5)
             for text in replies_text[:count]
         ]
+
+    def _get_personal_templates(
+        self, intent_value: str, chat_id: str, count: int
+    ) -> list[GeneratedReply]:
+        """Get personalized fallback templates from user's message history.
+
+        Args:
+            intent_value: Detected intent type
+            chat_id: Conversation ID
+            count: Number of replies needed
+
+        Returns:
+            List of personalized replies, or empty if none found
+        """
+        store = _get_embedding_store()
+        if not store:
+            return []
+
+        # Map intent to response pattern category
+        intent_to_pattern = {
+            "yes_no_question": "affirmative",  # Default to affirmative
+            "greeting": "greeting",
+            "thanks": "thanks",
+            "statement": "acknowledgment",
+            "logistics": "acknowledgment",
+        }
+
+        pattern_key = intent_to_pattern.get(intent_value)
+        if not pattern_key:
+            return []
+
+        try:
+            patterns = store.get_user_response_patterns(chat_id)
+            replies = patterns.get(pattern_key, [])
+
+            if not replies:
+                return []
+
+            return [
+                GeneratedReply(text=text, reply_type="personal_template", confidence=0.7)
+                for text in replies[:count]
+            ]
+        except Exception as e:
+            logger.debug(f"Failed to get personal templates: {e}")
+            return []
 
     def _fallback_result(
         self,
@@ -329,15 +461,17 @@ class ReplyGenerator:
         )
 
     def clear_style_cache(self, chat_id: str | None = None) -> None:
-        """Clear cached style analysis.
+        """Clear cached style analysis and recent generations.
 
         Args:
             chat_id: Specific chat to clear, or None for all
         """
         if chat_id:
             self._style_cache.pop(chat_id, None)
+            self._recent_generations.pop(chat_id, None)
         else:
             self._style_cache.clear()
+            self._recent_generations.clear()
 
     def _get_coherent_messages(self, messages: list[dict]) -> list[dict]:
         """Get relevant context for reply generation.

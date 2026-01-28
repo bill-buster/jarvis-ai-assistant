@@ -6,17 +6,173 @@ Answers: Who is this person? What do we talk about? How do we communicate?
 
 from __future__ import annotations
 
+import json
 import logging
 import re
+import sqlite3
+import time
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 
 from .store import get_embedding_store, SimilarMessage
 
 logger = logging.getLogger(__name__)
+
+# Default cache location
+DEFAULT_CACHE_PATH = Path.home() / ".jarvis" / "profile_cache.db"
+
+
+class ProfileCache:
+    """Persistent SQLite cache for contact profiles.
+
+    Caches computed profiles to avoid re-analyzing conversations on every reply.
+    Invalidates when message_count changes or profile is older than max_age_hours.
+    """
+
+    def __init__(self, db_path: Path | None = None):
+        self.db_path = db_path or DEFAULT_CACHE_PATH
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_schema()
+
+    def _get_connection(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(str(self.db_path), timeout=10.0)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def _init_schema(self) -> None:
+        with self._get_connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS profile_cache (
+                    chat_id TEXT PRIMARY KEY,
+                    profile_json TEXT NOT NULL,
+                    computed_at INTEGER NOT NULL,
+                    message_count INTEGER NOT NULL
+                )
+            """)
+            conn.commit()
+
+    def get(
+        self,
+        chat_id: str,
+        current_message_count: int,
+        max_age_hours: int = 24,
+    ) -> "ContactProfile | None":
+        """Get cached profile if still valid.
+
+        Args:
+            chat_id: Conversation ID
+            current_message_count: Current message count for this chat
+            max_age_hours: Max age before invalidation
+
+        Returns:
+            Cached ContactProfile or None if cache miss/stale
+        """
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT profile_json, computed_at, message_count FROM profile_cache WHERE chat_id = ?",
+                (chat_id,),
+            ).fetchone()
+
+        if not row:
+            return None
+
+        # Check staleness
+        age_hours = (time.time() - row["computed_at"]) / 3600
+        if age_hours > max_age_hours:
+            logger.debug(f"Profile cache stale for {chat_id} (age: {age_hours:.1f}h)")
+            return None
+
+        # Check message count changed
+        if row["message_count"] != current_message_count:
+            logger.debug(
+                f"Profile cache invalid for {chat_id} (count: {row['message_count']} -> {current_message_count})"
+            )
+            return None
+
+        # Deserialize profile
+        try:
+            data = json.loads(row["profile_json"])
+            profile = _profile_from_dict(data)
+            logger.debug(f"Profile cache hit for {chat_id}")
+            return profile
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.warning(f"Failed to deserialize cached profile: {e}")
+            return None
+
+    def set(self, chat_id: str, profile: "ContactProfile", message_count: int) -> None:
+        """Store profile in cache.
+
+        Args:
+            chat_id: Conversation ID
+            profile: Profile to cache
+            message_count: Current message count (for invalidation)
+        """
+        # Serialize profile (convert datetimes to timestamps)
+        data = _profile_to_dict(profile)
+        profile_json = json.dumps(data)
+
+        with self._get_connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO profile_cache (chat_id, profile_json, computed_at, message_count)
+                VALUES (?, ?, ?, ?)
+                """,
+                (chat_id, profile_json, int(time.time()), message_count),
+            )
+            conn.commit()
+        logger.debug(f"Cached profile for {chat_id} ({message_count} messages)")
+
+    def invalidate(self, chat_id: str) -> None:
+        """Remove a profile from cache."""
+        with self._get_connection() as conn:
+            conn.execute("DELETE FROM profile_cache WHERE chat_id = ?", (chat_id,))
+            conn.commit()
+
+    def clear(self) -> None:
+        """Clear all cached profiles."""
+        with self._get_connection() as conn:
+            conn.execute("DELETE FROM profile_cache")
+            conn.commit()
+
+
+def _profile_to_dict(profile: "ContactProfile") -> dict:
+    """Convert ContactProfile to JSON-serializable dict."""
+    data = asdict(profile)
+    # Convert datetime fields to timestamps
+    if data.get("last_message_date"):
+        data["last_message_date"] = data["last_message_date"].timestamp()
+    if data.get("first_message_date"):
+        data["first_message_date"] = data["first_message_date"].timestamp()
+    return data
+
+
+def _profile_from_dict(data: dict) -> "ContactProfile":
+    """Reconstruct ContactProfile from dict."""
+    # Convert timestamps back to datetimes
+    if data.get("last_message_date"):
+        data["last_message_date"] = datetime.fromtimestamp(data["last_message_date"])
+    if data.get("first_message_date"):
+        data["first_message_date"] = datetime.fromtimestamp(data["first_message_date"])
+    # Reconstruct topic clusters
+    if data.get("topics"):
+        data["topics"] = [TopicCluster(**t) for t in data["topics"]]
+    return ContactProfile(**data)
+
+
+# Singleton cache instance
+_profile_cache: ProfileCache | None = None
+
+
+def get_profile_cache() -> ProfileCache:
+    """Get singleton profile cache."""
+    global _profile_cache
+    if _profile_cache is None:
+        _profile_cache = ProfileCache()
+    return _profile_cache
 
 
 @dataclass
@@ -623,19 +779,105 @@ Topic label (2-4 words only, no quotes, no explanation):"""
 
         return ", ".join(parts) + "."
 
+    def get_relationship_trajectory(self, chat_id: str) -> dict | None:
+        """Track how communication style has changed over time.
+
+        Compares style from early messages vs recent messages to detect
+        relationship evolution (e.g., becoming more casual over time).
+
+        Args:
+            chat_id: Conversation ID
+
+        Returns:
+            Dict with trajectory signals, or None if not enough history
+        """
+        messages = self._get_conversation_messages(chat_id)
+
+        # Need at least 100 messages for meaningful comparison
+        if len(messages) < 100:
+            return None
+
+        # Sort by timestamp
+        sorted_msgs = sorted(messages, key=lambda m: m.timestamp)
+        early = sorted_msgs[:50]
+        recent = sorted_msgs[-50:]
+
+        # Analyze tone changes
+        early_tone = self._analyze_tone(early)
+        recent_tone = self._analyze_tone(recent)
+
+        # Check emoji usage change
+        early_emoji = self._check_emoji_usage(early)
+        recent_emoji = self._check_emoji_usage(recent)
+
+        # Check message length change
+        early_your_msgs = [m for m in early if m.is_from_me and m.text]
+        recent_your_msgs = [m for m in recent if m.is_from_me and m.text]
+
+        early_avg_len = (
+            sum(len(m.text) for m in early_your_msgs) / len(early_your_msgs)
+            if early_your_msgs else 0
+        )
+        recent_avg_len = (
+            sum(len(m.text) for m in recent_your_msgs) / len(recent_your_msgs)
+            if recent_your_msgs else 0
+        )
+
+        return {
+            "formality_change": early_tone != recent_tone,
+            "early_tone": early_tone,
+            "recent_tone": recent_tone,
+            "emoji_increase": recent_emoji and not early_emoji,
+            "emoji_decrease": early_emoji and not recent_emoji,
+            "conversation_deepening": recent_avg_len > early_avg_len * 1.3,
+            "conversation_shortening": recent_avg_len < early_avg_len * 0.7,
+            "early_avg_length": round(early_avg_len, 1),
+            "recent_avg_length": round(recent_avg_len, 1),
+        }
+
 
 # Convenience function
 def get_contact_profile(
     chat_id: str,
     display_name: str | None = None,
     include_topics: bool = True,
+    use_cache: bool = True,
 ) -> ContactProfile:
     """Get a contact profile for a conversation.
+
+    Uses persistent cache to avoid re-computing profiles on every request.
+    Cache invalidates when message count changes or profile is > 24 hours old.
 
     Args:
         chat_id: Conversation ID
         display_name: Optional display name
         include_topics: If False, skip LLM topic extraction (faster for style-only)
+        use_cache: If True, use persistent cache (default True)
     """
     profiler = ContactProfiler()
-    return profiler.build_profile(chat_id, display_name, include_topics=include_topics)
+
+    # Get current message count for cache validation
+    store = get_embedding_store()
+    with store._get_connection() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) as count FROM message_embeddings WHERE chat_id = ?",
+            (chat_id,),
+        ).fetchone()
+        current_count = row["count"] if row else 0
+
+    # Try cache first (only for style-only profiles to avoid stale topics)
+    if use_cache and not include_topics:
+        cache = get_profile_cache()
+        cached = cache.get(chat_id, current_count)
+        if cached is not None:
+            return cached
+
+    # Build fresh profile
+    profile = profiler.build_profile(chat_id, display_name, include_topics=include_topics)
+
+    # Cache the result (only style-only profiles - topics change frequently)
+    if use_cache and not include_topics and profile.total_messages > 0:
+        cache = get_profile_cache()
+        cache.set(chat_id, profile, current_count)
+
+    return profile

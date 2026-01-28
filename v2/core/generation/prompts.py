@@ -344,6 +344,35 @@ def _build_messages_array(messages: list[dict], max_messages: int = 6) -> tuple[
     return texts, reply_to
 
 
+def format_past_replies(past_replies: list[tuple[str, str, float]] | None) -> str:
+    """Format past replies as examples for the prompt.
+
+    Args:
+        past_replies: List of (their_message, your_reply, similarity) tuples
+
+    Returns:
+        Formatted string showing how user replied before
+    """
+    if not past_replies:
+        return ""
+
+    lines = ["Your past replies to similar messages:"]
+    for their_msg, your_reply, _sim in past_replies[:3]:  # Top 3 examples
+        # Truncate long messages
+        their_msg = their_msg[:50] + "..." if len(their_msg) > 50 else their_msg
+        your_reply = your_reply[:50] + "..." if len(your_reply) > 50 else your_reply
+        lines.append(f'- They said: "{their_msg}" → You: "{your_reply}"')
+
+    return "\n".join(lines)
+
+
+# Prompt template with past replies section
+REPLY_PROMPT_WITH_HISTORY = '''Text message conversation. Reply briefly.
+{past_replies_section}
+{conversation}
+{user_name}:'''
+
+
 def build_reply_prompt(
     messages: list[dict],
     last_message: str,
@@ -355,6 +384,7 @@ def build_reply_prompt(
     intent_value: str,
     past_replies: list[tuple[str, str, float]] | None = None,
     user_name: str = "me",
+    recent_topics: list[str] | None = None,
 ) -> str:
     """Build the complete reply generation prompt.
 
@@ -369,12 +399,19 @@ def build_reply_prompt(
         intent_value: Detected intent
         past_replies: User's past replies to similar messages
         user_name: User's name for personalization
+        recent_topics: Recent conversation topics for context
 
     Returns:
         Complete prompt string (JSON format for Qwen3)
     """
     # Build simple conversation format
     lines = []
+
+    # Add topic hint if available (helps maintain conversation context)
+    if recent_topics:
+        topic_hint = f"[Recent topics: {', '.join(recent_topics[:3])}]"
+        lines.append(topic_hint)
+
     for msg in messages[-6:]:  # Last 6 messages
         text = msg.get("text", "").replace("\ufffc", "").strip()
         if not text or len(text) < 2:
@@ -386,7 +423,13 @@ def build_reply_prompt(
 
     conversation = "\n".join(lines)
 
-    return REPLY_PROMPT.format(
+    # Format past replies section
+    past_replies_section = format_past_replies(past_replies)
+    if past_replies_section:
+        past_replies_section = "\n" + past_replies_section + "\n"
+
+    return REPLY_PROMPT_WITH_HISTORY.format(
         user_name=user_name,
         conversation=conversation,
+        past_replies_section=past_replies_section,
     )
