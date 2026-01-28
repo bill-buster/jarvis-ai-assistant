@@ -13,6 +13,7 @@
   import AIDraftPanel from "./AIDraftPanel.svelte";
   import SummaryModal from "./SummaryModal.svelte";
   import SmartReplyChips from "./SmartReplyChips.svelte";
+  import SmartReplyChipsV2 from "./SmartReplyChipsV2.svelte";
   import ConversationStats from "./ConversationStats.svelte";
   import PDFExportModal from "./PDFExportModal.svelte";
 
@@ -487,14 +488,13 @@
       {/if}
     </div>
 
-    <!-- Smart Reply Chips - HIDDEN: Using AI Draft button instead (LLM-powered) -->
-    <!-- TODO: Re-enable when SmartReplyChips uses LLM instead of templates -->
-    <!-- {#if getLastReceivedMessage()}
-      <SmartReplyChips
-        lastMessage={getLastReceivedMessage()}
+    <!-- Smart Reply Chips v2 - LLM-powered suggestions -->
+    {#if $selectedConversation?.chat_id}
+      <SmartReplyChipsV2
+        chatId={$selectedConversation.chat_id}
         isFocused={messageViewFocused}
       />
-    {/if} -->
+    {/if}
 
     {#if hasNewMessagesBelow}
       <button class="new-messages-button" onclick={handleNewMessagesClick}>
