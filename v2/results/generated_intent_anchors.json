@@ -1,0 +1,34 @@
+{
+  "accept": [
+    "sure! here are 15 short text examples:"
+  ],
+  "decline": [
+    "1. no thanks",
+    "2. can't make",
+    "3. not interested",
+    "4. busy",
+    "5. too busy",
+    "6. got swapped",
+    "7. can't do",
+    "8. i'm swamped",
+    "9. not available",
+    "10. too late",
+    "11. no way",
+    "12. can't attend",
+    "13. busy tonight",
+    "14. not today",
+    "15. let's chat later  <|im_end|>"
+  ],
+  "question": [
+    "sure! here are 15 short text examples:"
+  ],
+  "reaction": [
+    "sure! here are 15 short text examples:"
+  ],
+  "info": [
+    "sure! here are 15 short text examples:"
+  ],
+  "acknowledge": [
+    "sure! here are 15 short examples:"
+  ]
+}

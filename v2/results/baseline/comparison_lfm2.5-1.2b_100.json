@@ -1,0 +1,26 @@
+{
+  "raw": {
+    "exact_match_rate": 0.0,
+    "avg_sim": 0.11464044569991529,
+    "avg_style": 0.665,
+    "first_word_rate": 0.0
+  },
+  "simple": {
+    "exact_match_rate": 0.0,
+    "avg_sim": 0.1094652686547488,
+    "avg_style": 0.6475,
+    "first_word_rate": 0.0
+  },
+  "casual": {
+    "exact_match_rate": 0.0,
+    "avg_sim": 0.14255449239164592,
+    "avg_style": 0.71,
+    "first_word_rate": 0.0
+  },
+  "detailed": {
+    "exact_match_rate": 0.0,
+    "avg_sim": 0.16156587337143719,
+    "avg_style": 0.7125,
+    "first_word_rate": 0.03
+  }
+}

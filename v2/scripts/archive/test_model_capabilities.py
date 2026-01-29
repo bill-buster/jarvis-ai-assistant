@@ -211,35 +211,57 @@ CAPABILITY_TESTS = {
     # Test 1: Can it output structured format (ASK vs REPLY)?
     "structured_format": {
         "prompt": """Help me reply to this text.
-Output your response in ONE of these formats:
-- ASK: <question for me> (if you need info from me first)
-- REPLY: <the reply> (if you can answer directly)
+
+Output ONLY one of these (nothing else):
+- ASK: <question> - if you need to know my intent first
+- REPLY: <message> - if you can reply directly
+
+Example:
+them: want to come to my party?
+ASK: Do you want to go?
 
 them: wanna grab dinner tonight?
-
-Output:""",
+""",
         "evaluator": lambda output: evaluate_asks_vs_replies(output, should_ask=True),
         "description": "Uses structured ASK:/REPLY: format",
     },
 
     # Test 2: Does it know to ASK for invitations?
     "ask_on_invitation": {
-        "prompt": """Help me reply to this text. If you need to know whether I want to accept or decline, ask me first.
+        "prompt": """Help me reply to this text.
 
+Rules:
+- If they're inviting me somewhere, ASK me first whether I want to go
+- Don't assume my answer - I need to decide
+
+Example:
+them: wanna get coffee tomorrow?
+Output: ASK: Do you want to go get coffee with them?
+
+Now your turn:
 them: wanna play basketball tomorrow?
 
-Output (ASK: or REPLY:):""",
+Output:""",
         "evaluator": lambda output: evaluate_asks_vs_replies(output, should_ask=True),
         "description": "Asks for intent on invitations",
     },
 
     # Test 3: Does it REPLY for simple reactions?
     "reply_on_reaction": {
-        "prompt": """Help me reply to this text. Reply directly for casual chat.
+        "prompt": """Help me reply to this text.
 
+Rules:
+- For casual reactions/banter, just give a direct reply
+- No need to ask me anything - just respond naturally
+
+Example:
+them: haha nice one
+Output: REPLY: lol thanks
+
+Now your turn:
 them: lol that's hilarious
 
-Output (ASK: or REPLY:):""",
+Output:""",
         "evaluator": lambda output: evaluate_asks_vs_replies(output, should_ask=False),
         "description": "Replies directly to reactions",
     },
@@ -257,40 +279,53 @@ me:""",
 
     # Test 5: Few-shot style following
     "few_shot_style": {
-        "prompt": """Reply like these examples:
+        "prompt": """Reply like a friend texting. Rules: lowercase, 2-4 words max, no emoji.
 
-them: wanna hang?
-me: yeah down
-
-them: nice job!
-me: thanks man
+them: wanna hang? → yeah down
+them: nice job! → lol thanks
+them: you coming? → yea omw
+them: got plans? → nah not really
 
 them: you free later?
-me:""",
+→""",
         "evaluator": lambda output: evaluate_style_match(output, "casual"),
         "description": "Follows few-shot casual style",
     },
 
     # Test 6: Uncertainty detection
     "uncertainty_detection": {
-        "prompt": """Help me reply. This needs info only I would know.
+        "prompt": """Help me reply. You don't know my schedule - ask me first.
+
+Output format: ASK: <short question>
+
+them: what time works for you?
+ASK: What time should I say?
+
+them: where should we meet?
+ASK: Where do you want to meet?
 
 them: when should I pick you up?
-
-Output ASK: if you need info, or REPLY: if you can answer:""",
+ASK:""",
         "evaluator": lambda output: evaluate_asks_vs_replies(output, should_ask=True),
         "description": "Recognizes when it needs info",
     },
 
     # Test 7: Generate diverse options
     "diverse_options": {
-        "prompt": """Generate 3 different reply options:
+        "prompt": """Generate exactly 3 different reply options for this message.
 
+Example:
+them: want to grab lunch?
+1) yeah I'm down
+2) can't today, maybe tomorrow?
+3) where were you thinking?
+
+Now your turn:
 them: hey are you free this weekend?
 
-Option 1:
-Option 2:
-Option 3:""",
+1)
+2)
+3)""",
         "evaluator": lambda output: evaluate_diverse_options(output, n_options=3),
         "description": "Generates 3 diverse options",
     },

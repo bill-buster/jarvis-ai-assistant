@@ -1143,6 +1143,545 @@ class EmbeddingStore:
             if len(replies) >= min_replies
         }
 
+    def _get_phone_to_chatids_cache_path(self) -> Path:
+        """Get path for cached phone-to-chat_ids mapping."""
+        FAISS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        return FAISS_CACHE_DIR / "phone_to_chatids.json"
+
+    def _get_or_build_phone_to_chatids(self) -> dict[str, list[str]]:
+        """Get or build mapping of phone numbers to actual chat_ids.
+
+        Queries the database once to find all chat_ids where each phone
+        appears as a sender. Cached to disk for fast startup.
+
+        Returns:
+            Dict mapping normalized phone -> list of chat_ids
+        """
+        cache_key = "__phone_to_chatids__"
+
+        # Check memory cache
+        cached = self._faiss_cache_get(cache_key)
+        if cached is not None:
+            return cached[0]  # Returns (mapping, None) tuple
+
+        # Check disk cache
+        cache_path = self._get_phone_to_chatids_cache_path()
+        if cache_path.exists():
+            try:
+                import json
+                with open(cache_path) as f:
+                    mapping = json.load(f)
+
+                # Verify it's not stale (check message count)
+                with self._get_connection() as conn:
+                    current_count = conn.execute(
+                        "SELECT COUNT(*) FROM message_embeddings"
+                    ).fetchone()[0]
+
+                cached_count = mapping.get("__message_count__", 0)
+                if current_count == cached_count:
+                    del mapping["__message_count__"]
+                    logger.info(
+                        f"Loaded phone-to-chatids mapping from cache "
+                        f"({len(mapping)} phones)"
+                    )
+                    self._faiss_cache_set(cache_key, (mapping, None))
+                    return mapping
+                else:
+                    logger.info("Phone-to-chatids cache stale, rebuilding")
+            except Exception as e:
+                logger.warning(f"Failed to load phone-to-chatids cache: {e}")
+
+        # Build mapping from database
+        logger.info("Building phone-to-chatids mapping...")
+        start = time.time()
+
+        mapping: dict[str, list[str]] = {}
+
+        with self._get_connection() as conn:
+            # Get all unique (sender, chat_id) pairs where sender looks like a phone
+            rows = conn.execute(
+                """
+                SELECT DISTINCT sender, chat_id
+                FROM message_embeddings
+                WHERE sender LIKE '+%'
+                  AND is_from_me = 0
+                """
+            ).fetchall()
+
+            for row in rows:
+                phone = row["sender"]
+                chat_id = row["chat_id"]
+
+                # Normalize phone (keep only + and digits)
+                import re
+                normalized = "+" + re.sub(r"\D", "", phone[1:]) if phone.startswith("+") else phone
+
+                if normalized not in mapping:
+                    mapping[normalized] = []
+                if chat_id not in mapping[normalized]:
+                    mapping[normalized].append(chat_id)
+
+            # Store message count for staleness check
+            message_count = conn.execute(
+                "SELECT COUNT(*) FROM message_embeddings"
+            ).fetchone()[0]
+
+        # Persist to disk
+        try:
+            import json
+            cache_data = dict(mapping)
+            cache_data["__message_count__"] = message_count
+            with open(cache_path, "w") as f:
+                json.dump(cache_data, f)
+            logger.debug(f"Cached phone-to-chatids mapping to {cache_path}")
+        except Exception as e:
+            logger.warning(f"Failed to cache phone-to-chatids: {e}")
+
+        elapsed = (time.time() - start) * 1000
+        logger.info(
+            f"Built phone-to-chatids mapping: {len(mapping)} phones, "
+            f"{sum(len(v) for v in mapping.values())} chat_ids in {elapsed:.0f}ms"
+        )
+
+        self._faiss_cache_set(cache_key, (mapping, None))
+        return mapping
+
+    def resolve_phones_to_chatids(self, phones: list[str]) -> list[str]:
+        """Resolve phone numbers to actual chat_ids from the database.
+
+        Args:
+            phones: List of phone numbers (e.g., ["+15551234567", "+15559876543"])
+
+        Returns:
+            List of actual chat_ids found in the database
+        """
+        mapping = self._get_or_build_phone_to_chatids()
+
+        chat_ids = set()
+        for phone in phones:
+            # Normalize phone
+            import re
+            if phone.startswith("+"):
+                normalized = "+" + re.sub(r"\D", "", phone[1:])
+            else:
+                normalized = phone
+
+            # Look up in mapping
+            if normalized in mapping:
+                chat_ids.update(mapping[normalized])
+
+        return list(chat_ids)
+
+    def _get_global_index_cache_path(self) -> Path:
+        """Get path for cached global FAISS index."""
+        FAISS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        return FAISS_CACHE_DIR / "global_index.faiss"
+
+    def _get_global_metadata_cache_path(self) -> Path:
+        """Get path for cached global metadata."""
+        return self._get_global_index_cache_path().with_suffix(".meta.json")
+
+    def _get_or_build_global_faiss_index(self) -> tuple[Any, list[dict]] | None:
+        """Get or build global FAISS index for ALL conversations.
+
+        This index contains all messages from all conversations, enabling
+        cross-conversation search for relationship-aware RAG.
+
+        Uses HNSW for O(log n) search on ~337K vectors.
+
+        Returns:
+            (faiss_index, metadata_list) or None if FAISS unavailable
+        """
+        if not FAISS_AVAILABLE:
+            return None
+
+        cache_key = "__global__"
+
+        # Check memory cache first
+        cached = self._faiss_cache_get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Check disk cache
+        index_path = self._get_global_index_cache_path()
+        meta_path = self._get_global_metadata_cache_path()
+
+        if index_path.exists() and meta_path.exists():
+            try:
+                start = time.time()
+                index = faiss.read_index(str(index_path))
+
+                import json
+                with open(meta_path) as f:
+                    metadata = json.load(f)
+
+                # Verify count matches
+                with self._get_connection() as conn:
+                    current_count = conn.execute(
+                        "SELECT COUNT(*) FROM message_embeddings"
+                    ).fetchone()[0]
+
+                if current_count == len(metadata):
+                    elapsed = (time.time() - start) * 1000
+                    logger.info(
+                        f"Loaded global FAISS index from cache "
+                        f"({len(metadata)} vectors) in {elapsed:.0f}ms"
+                    )
+
+                    self._faiss_cache_set(cache_key, (index, metadata))
+                    return index, metadata
+                else:
+                    logger.info(
+                        f"Global index stale (cached={len(metadata)}, "
+                        f"current={current_count}), rebuilding"
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to load cached global index: {e}, rebuilding")
+
+        # Build index for ALL messages
+        start = time.time()
+        logger.info("Building global FAISS index (this may take a minute)...")
+
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT message_id, chat_id, embedding, text_preview,
+                       sender, sender_name, timestamp, is_from_me
+                FROM message_embeddings
+                """
+            ).fetchall()
+
+        if not rows:
+            logger.warning("No messages found for global index")
+            return None
+
+        # Build numpy array of embeddings
+        embeddings = np.array(
+            [np.frombuffer(row["embedding"], dtype=np.float32) for row in rows],
+            dtype=np.float32
+        )
+
+        # Normalize for cosine similarity
+        faiss.normalize_L2(embeddings)
+
+        # Always use HNSW for global index (many vectors)
+        index = faiss.IndexHNSWFlat(EMBEDDING_DIM, HNSW_M)
+        index.hnsw.efConstruction = HNSW_EF_CONSTRUCTION
+        index.hnsw.efSearch = HNSW_EF_SEARCH
+        index.add(embeddings)
+
+        # Store metadata for lookup
+        metadata = [
+            {
+                "message_id": row["message_id"],
+                "chat_id": row["chat_id"],
+                "text": row["text_preview"] or "",
+                "sender": row["sender"],
+                "sender_name": row["sender_name"],
+                "timestamp": row["timestamp"],
+                "is_from_me": bool(row["is_from_me"]),
+            }
+            for row in rows
+        ]
+
+        # Persist to disk
+        try:
+            import json
+            faiss.write_index(index, str(index_path))
+            with open(meta_path, "w") as f:
+                json.dump(metadata, f)
+            logger.debug(f"Cached global FAISS index to {index_path}")
+        except Exception as e:
+            logger.warning(f"Failed to cache global index: {e}")
+
+        elapsed = (time.time() - start) * 1000
+        logger.info(
+            f"Built global FAISS HNSW index with {len(rows)} vectors "
+            f"in {elapsed:.0f}ms"
+        )
+
+        self._faiss_cache_set(cache_key, (index, metadata))
+        return index, metadata
+
+    def _get_reply_pairs_index_path(self) -> Path:
+        """Get path for cached reply-pairs FAISS index."""
+        FAISS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        return FAISS_CACHE_DIR / "reply_pairs_index.faiss"
+
+    def _get_reply_pairs_metadata_path(self) -> Path:
+        """Get path for cached reply-pairs metadata."""
+        return self._get_reply_pairs_index_path().with_suffix(".meta.json")
+
+    def _get_or_build_reply_pairs_index(self) -> tuple[Any, list[dict]] | None:
+        """Get or build FAISS index of (incoming_message -> your_reply) pairs.
+
+        This is the FAST index for cross-conversation search:
+        - Only indexes incoming messages that YOU replied to
+        - Stores your reply directly in metadata (no DB lookup needed)
+        - ~50-100K vectors vs 336K in global index
+
+        Returns:
+            (faiss_index, metadata_list) or None if FAISS unavailable
+        """
+        if not FAISS_AVAILABLE:
+            return None
+
+        cache_key = "__reply_pairs__"
+
+        # Check memory cache
+        cached = self._faiss_cache_get(cache_key)
+        if cached is not None:
+            return cached
+
+        # Check disk cache
+        index_path = self._get_reply_pairs_index_path()
+        meta_path = self._get_reply_pairs_metadata_path()
+
+        if index_path.exists() and meta_path.exists():
+            try:
+                start = time.time()
+                index = faiss.read_index(str(index_path))
+
+                import json
+                with open(meta_path) as f:
+                    metadata = json.load(f)
+
+                elapsed = (time.time() - start) * 1000
+                logger.info(
+                    f"Loaded reply-pairs index from cache "
+                    f"({len(metadata)} pairs) in {elapsed:.0f}ms"
+                )
+
+                self._faiss_cache_set(cache_key, (index, metadata))
+                return index, metadata
+
+            except Exception as e:
+                logger.warning(f"Failed to load reply-pairs index: {e}, rebuilding")
+
+        # Build index of reply pairs
+        start = time.time()
+        logger.info("Building reply-pairs index (this may take a minute)...")
+
+        # Query: find all (their_message, your_reply) pairs
+        # Your reply must be within 5 minutes after their message
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    m1.message_id as their_msg_id,
+                    m1.chat_id,
+                    m1.embedding as their_embedding,
+                    m1.text_preview as their_text,
+                    m1.sender,
+                    m1.sender_name,
+                    m1.timestamp as their_ts,
+                    m2.text_preview as your_reply
+                FROM message_embeddings m1
+                JOIN message_embeddings m2 ON m2.chat_id = m1.chat_id
+                WHERE m1.is_from_me = 0
+                  AND m2.is_from_me = 1
+                  AND m2.timestamp > m1.timestamp
+                  AND m2.timestamp < m1.timestamp + 300
+                  AND m1.text_preview IS NOT NULL
+                  AND m2.text_preview IS NOT NULL
+                  AND LENGTH(m1.text_preview) >= 3
+                  AND LENGTH(m2.text_preview) >= 2
+                ORDER BY m1.timestamp DESC
+                """
+            ).fetchall()
+
+        if not rows:
+            logger.warning("No reply pairs found for index")
+            return None
+
+        # Build numpy array of embeddings (only their messages)
+        embeddings = np.array(
+            [np.frombuffer(row["their_embedding"], dtype=np.float32) for row in rows],
+            dtype=np.float32
+        )
+
+        # Normalize for cosine similarity
+        faiss.normalize_L2(embeddings)
+
+        # Use HNSW for fast search
+        if len(rows) < 1000:
+            index = faiss.IndexFlatIP(EMBEDDING_DIM)
+        else:
+            index = faiss.IndexHNSWFlat(EMBEDDING_DIM, HNSW_M)
+            index.hnsw.efConstruction = HNSW_EF_CONSTRUCTION
+            index.hnsw.efSearch = HNSW_EF_SEARCH
+
+        index.add(embeddings)
+
+        # Store metadata WITH your reply (no DB lookup needed during search!)
+        metadata = [
+            {
+                "their_text": row["their_text"],
+                "your_reply": row["your_reply"],
+                "chat_id": row["chat_id"],
+                "sender": row["sender"],
+                "sender_name": row["sender_name"],
+                "timestamp": row["their_ts"],
+            }
+            for row in rows
+        ]
+
+        # Persist to disk
+        try:
+            import json
+            faiss.write_index(index, str(index_path))
+            with open(meta_path, "w") as f:
+                json.dump(metadata, f)
+            logger.debug(f"Cached reply-pairs index to {index_path}")
+        except Exception as e:
+            logger.warning(f"Failed to cache reply-pairs index: {e}")
+
+        elapsed = (time.time() - start) * 1000
+        logger.info(
+            f"Built reply-pairs HNSW index with {len(rows)} pairs "
+            f"in {elapsed:.0f}ms"
+        )
+
+        self._faiss_cache_set(cache_key, (index, metadata))
+        return index, metadata
+
+    def find_your_past_replies_cross_conversation(
+        self,
+        incoming_message: str,
+        target_chat_ids: list[str] | None = None,
+        limit: int = 5,
+        min_similarity: float = 0.55,
+    ) -> list[tuple[str, str, float, str]]:
+        """Find YOUR past replies across multiple conversations.
+
+        FAST VERSION: Uses pre-computed reply-pairs index.
+        No DB queries during search - all data in FAISS metadata.
+
+        Args:
+            incoming_message: The message you received
+            target_chat_ids: List of chat_ids to search in (e.g., all "friend" chat_ids).
+                           If None, searches ALL conversations.
+            limit: Max results
+            min_similarity: Minimum similarity threshold
+
+        Returns:
+            List of (their_message, your_reply, score, chat_id) tuples
+        """
+        # Use reply-pairs index (FAST - no DB queries)
+        faiss_result = self._get_or_build_reply_pairs_index()
+        if not faiss_result:
+            logger.info("Reply-pairs index not available")
+            return []
+
+        index, metadata = faiss_result
+
+        # Embed query
+        from .model import get_embedding_model
+        model = get_embedding_model()
+        query_embedding = model.embed(incoming_message).astype(np.float32)
+
+        # Normalize query for cosine similarity
+        search_start = time.time()
+        query_norm = query_embedding.reshape(1, -1).copy()
+        faiss.normalize_L2(query_norm)
+
+        # Build chat_id filter set if provided
+        target_set = set(target_chat_ids) if target_chat_ids else None
+
+        # Search - get more than needed for filtering
+        k = min(limit * 10, len(metadata))
+        similarities, indices = index.search(query_norm, k)
+
+        # Collect results (no DB query needed - reply is in metadata!)
+        results = []
+        seen_replies = set()  # Deduplicate by reply text
+
+        for sim, idx in zip(similarities[0], indices[0]):
+            if idx < 0 or sim < min_similarity:
+                continue
+
+            meta = metadata[idx]
+
+            # Filter by chat_id if specified
+            if target_set and meta["chat_id"] not in target_set:
+                continue
+
+            # Deduplicate by reply text
+            reply_key = meta["your_reply"].lower().strip()
+            if reply_key in seen_replies:
+                continue
+            seen_replies.add(reply_key)
+
+            results.append((
+                meta["their_text"],
+                meta["your_reply"],
+                float(sim),
+                meta["chat_id"],
+            ))
+
+            if len(results) >= limit:
+                break
+
+        search_time = (time.time() - search_start) * 1000
+        logger.info(
+            f"Reply-pairs search: {len(results)} results in {search_time:.1f}ms "
+            f"(index: {len(metadata)} pairs)"
+        )
+
+        return results
+
+        # Deduplicate by reply text (avoid "yeah" 5 times)
+        seen_replies = set()
+        deduplicated = []
+        for item in results:
+            reply_key = item[1].lower().strip()
+            if reply_key not in seen_replies:
+                seen_replies.add(reply_key)
+                deduplicated.append(item)
+                if len(deduplicated) >= limit:
+                    break
+
+        logger.info(
+            f"Cross-conversation search: {len(deduplicated)} unique replies "
+            f"from {len(by_chat)} conversations"
+        )
+
+        return deduplicated
+
+    def is_global_index_ready(self) -> bool:
+        """Check if global FAISS index is already built and cached.
+
+        Returns:
+            True if global index is in memory or on disk
+        """
+        if not FAISS_AVAILABLE:
+            return False
+
+        # Check memory cache
+        if "__global__" in self._faiss_indices:
+            return True
+
+        # Check disk cache
+        index_path = self._get_global_index_cache_path()
+        meta_path = self._get_global_metadata_cache_path()
+        return index_path.exists() and meta_path.exists()
+
+    def preload_global_index(self) -> None:
+        """Pre-build global FAISS index in the background.
+
+        Call this during startup to avoid delay on first cross-conversation search.
+        """
+        import threading
+
+        def _build():
+            self._get_or_build_global_faiss_index()
+
+        if not self.is_global_index_ready():
+            thread = threading.Thread(target=_build, daemon=True)
+            thread.start()
+            logger.info("Started background global FAISS index build")
+
     def get_stats(self) -> dict[str, Any]:
         """Get index statistics."""
         with self._get_connection() as conn:
@@ -1154,6 +1693,7 @@ class EmbeddingStore:
                 "unique_conversations": chats,
                 "db_path": str(self.db_path),
                 "db_size_mb": self.db_path.stat().st_size / (1024 * 1024) if self.db_path.exists() else 0,
+                "global_index_ready": self.is_global_index_ready(),
             }
 
     def clear(self) -> None:

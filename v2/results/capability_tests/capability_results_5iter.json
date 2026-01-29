@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-01-29 11:47:16",
-  "n_iterations": 3,
+  "timestamp": "2026-01-29 11:45:12",
+  "n_iterations": 5,
   "models": {
-    "qwen2.5-1.5b": {
+    "lfm2.5-1.2b": {
       "reliable_tests": 8,
       "total_tests": 8,
-      "avg_score": 0.9,
+      "avg_score": 0.9375,
       "test_summaries": {
         "structured_format": {
           "pass_rate": 1.0,
-          "avg_score": 0.6999999999999998
+          "avg_score": 1.0
         },
         "ask_on_invitation": {
           "pass_rate": 1.0,
@@ -25,11 +25,11 @@
         },
         "few_shot_style": {
           "pass_rate": 1.0,
-          "avg_score": 0.5
+          "avg_score": 0.7999999999999999
         },
         "uncertainty_detection": {
           "pass_rate": 1.0,
-          "avg_score": 1.0
+          "avg_score": 0.7
         },
         "diverse_options": {
           "pass_rate": 1.0,

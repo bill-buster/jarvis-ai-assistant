@@ -488,6 +488,34 @@ def build_conversation_prompt(
     )
 
 
+def build_balanced_few_shot() -> str:
+    """Build a balanced few-shot example set covering multiple intents.
+
+    Selects 1 example from each major intent category to ensure the model
+    sees a diverse range of response types (questions, statements, reactions).
+    """
+    selected = []
+    
+    # Priority intents to include
+    intents = [
+        "yes_no_question", "open_question", "statement", 
+        "emotional", "greeting", "logistics"
+    ]
+    
+    lines = ["casual texts between friends:\n"]
+    
+    for intent in intents:
+        examples = FEW_SHOT_EXAMPLES.get(intent, [])
+        if examples:
+            # deterministic selection (always take first one) for consistency
+            ex = examples[0]
+            lines.append(f"them: {ex['message']}")
+            lines.append(f"me: {ex['replies'][0]}") # Take first reply variation
+            lines.append("")
+            
+    return "\n".join(lines)
+
+
 def build_reply_prompt(
     messages: list[dict],
     last_message: str,
@@ -522,8 +550,8 @@ def build_reply_prompt(
     Returns:
         Complete prompt string for Llama 3.2
     """
-    # Start with default few-shot examples
-    few_shot = CASUAL_FEW_SHOT
+    # Start with balanced few-shot examples (better than generic static ones)
+    few_shot = build_balanced_few_shot()
 
     # If we have user's past replies, use those instead (more personalized)
     if past_replies and len(past_replies) >= 2:

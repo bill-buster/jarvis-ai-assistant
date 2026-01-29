@@ -65,6 +65,19 @@ def _get_contact_profile(chat_id: str, include_topics: bool = True):
         return None
 
 
+def _get_relationship_registry():
+    """Lazy import relationship registry."""
+    try:
+        from core.embeddings.relationship_registry import get_relationship_registry
+        return get_relationship_registry()
+    except ImportError:
+        logger.debug("Relationship registry not installed")
+        return None
+    except Exception as e:
+        logger.warning(f"Relationship registry failed unexpectedly: {e}")
+        return None
+
+
 @dataclass
 class ChatState:
     """Per-conversation state for reply generation."""
@@ -217,6 +230,7 @@ class ReplyGenerator:
         chat_id: str | None = None,
         num_replies: int = 3,
         user_name: str = "me",
+        contact_name: str | None = None,
     ) -> ReplyGenerationResult:
         """Generate reply suggestions for a conversation.
 
@@ -226,10 +240,13 @@ class ReplyGenerator:
             chat_id: Optional conversation ID for style caching
             num_replies: Number of replies to generate
             user_name: User's name for personalized context
+            contact_name: Optional contact name for relationship lookup
+                         (used when chat_id doesn't contain phone number)
 
         Returns:
             ReplyGenerationResult with suggestions and metadata
         """
+        self._contact_name = contact_name
         self._user_name = user_name
         start_time = time.time()
         timings: dict[str, float] = {}
@@ -751,8 +768,8 @@ class ReplyGenerator:
     ) -> list[tuple[str, str, float]]:
         """Find YOUR past replies to similar incoming messages.
 
-        Now context-aware: considers recency, time-of-day, and
-        availability signals from recent conversation.
+        Now relationship-aware: searches same conversation AND
+        cross-conversation from contacts with similar relationships.
 
         Args:
             incoming_message: The message to find similar responses for
@@ -767,63 +784,212 @@ class ReplyGenerator:
             return []
 
         try:
-            # Get past replies with time-weighting
-            results = store.find_your_past_replies(
+            # 1. Same-conversation search (high priority)
+            same_convo_results = store.find_your_past_replies(
                 incoming_message=incoming_message,
                 chat_id=chat_id,
-                limit=8,  # Get more to filter by availability
-                min_similarity=0.55,  # Slightly lower since time-weighting adds score
+                limit=5,
+                min_similarity=0.55,
                 use_time_weighting=True,
             )
 
-            # Apply availability-based filtering if we have context
+            # 2. Cross-conversation search (relationship-aware)
+            cross_convo_results = self._find_cross_conversation_replies(
+                incoming_message=incoming_message,
+                current_chat_id=chat_id,
+                limit=5,
+            )
+
+            # 3. Merge results (prioritize same-conversation)
+            results = self._merge_past_replies(same_convo_results, cross_convo_results)
+
+            # 4. Apply availability-based filtering
             availability = self._extract_availability_signal(recent_messages)
-
             if availability != "unknown" and results:
-                # Keywords that suggest accept vs decline responses
-                accept_keywords = {
-                    "yes", "yeah", "yea", "sure", "ok", "okay", "down", "in", "sounds good"
-                }
-                decline_keywords = {
-                    "no", "nah", "can't", "cant", "sorry", "busy", "won't", "wont"
-                }
-
-                def response_type(reply: str) -> str:
-                    reply_lower = reply.lower().strip()
-                    words = set(reply_lower.split())
-                    if words & accept_keywords or reply_lower.startswith(tuple(accept_keywords)):
-                        return "accept"
-                    if words & decline_keywords or reply_lower.startswith(tuple(decline_keywords)):
-                        return "decline"
-                    return "neutral"
-
-                # Boost or penalize based on availability
-                adjusted = []
-                for their_msg, your_reply, score in results:
-                    rtype = response_type(your_reply)
-                    if availability == "busy" and rtype == "decline":
-                        score += 0.1  # Boost decline responses when busy
-                    elif availability == "busy" and rtype == "accept":
-                        score -= 0.05  # Slight penalty for accept when busy
-                    elif availability == "free" and rtype == "accept":
-                        score += 0.1  # Boost accept responses when free
-                    adjusted.append((their_msg, your_reply, score))
-
-                # Re-sort and limit
-                adjusted.sort(key=lambda x: x[2], reverse=True)
-                results = adjusted[:5]
-
-                if availability != "unknown":
-                    logger.debug(
-                        f"Availability signal: {availability}, "
-                        f"adjusted {len(results)} past replies"
-                    )
+                results = self._filter_by_availability(results, availability)
 
             return results[:5]
 
         except Exception as e:
             logger.debug(f"Failed to find past replies: {e}")
             return []
+
+    def _find_cross_conversation_replies(
+        self,
+        incoming_message: str,
+        current_chat_id: str | None,
+        limit: int = 5,
+    ) -> list[tuple[str, str, float]]:
+        """Find past replies from contacts with similar relationships.
+
+        Uses the RelationshipRegistry to find contacts in the same category
+        (friend/family/work/other) and searches their conversations.
+
+        Args:
+            incoming_message: The message to find similar responses for
+            current_chat_id: Current conversation's chat_id
+            limit: Max results
+
+        Returns:
+            List of (their_message, your_reply, score) tuples
+        """
+        store = _get_embedding_store()
+        registry = _get_relationship_registry()
+
+        if not store or not registry:
+            return []
+
+        try:
+            # Get relationship info - try chat_id first, then contact_name fallback
+            relationship_info = None
+            if current_chat_id:
+                relationship_info = registry.get_relationship_from_chat_id(current_chat_id)
+
+            # Fallback to contact_name if chat_id lookup failed
+            if not relationship_info and hasattr(self, '_contact_name') and self._contact_name:
+                relationship_info = registry.get_relationship(self._contact_name)
+                if relationship_info:
+                    logger.debug(f"Using contact_name fallback for {self._contact_name}")
+
+            if not relationship_info:
+                logger.debug(f"No relationship info found for chat_id={current_chat_id}, contact_name={getattr(self, '_contact_name', None)}")
+                return []
+
+            # Get all contacts in same category
+            similar_contacts = registry.get_similar_contacts(current_chat_id)
+            if not similar_contacts:
+                logger.debug(f"No similar contacts found for category {relationship_info.category}")
+                return []
+
+            # Get phone numbers for similar contacts
+            phones_by_contact = registry.get_phones_for_contacts(similar_contacts)
+
+            # Collect all phones
+            all_phones = []
+            for phones in phones_by_contact.values():
+                all_phones.extend(phones)
+
+            # Resolve to ACTUAL chat_ids from database (cached)
+            target_chat_ids = store.resolve_phones_to_chatids(all_phones)
+
+            if not target_chat_ids:
+                logger.debug("No target chat_ids resolved for cross-conversation search")
+                return []
+
+            logger.debug(
+                f"Cross-conversation search: category={relationship_info.category}, "
+                f"searching {len(similar_contacts)} contacts, "
+                f"{len(target_chat_ids)} potential chat_ids"
+            )
+
+            # Search across these conversations
+            cross_results = store.find_your_past_replies_cross_conversation(
+                incoming_message=incoming_message,
+                target_chat_ids=target_chat_ids,
+                limit=limit,
+                min_similarity=0.55,
+            )
+
+            # Convert to same format (drop chat_id from tuple)
+            return [
+                (their_msg, your_reply, score)
+                for their_msg, your_reply, score, _ in cross_results
+            ]
+
+        except Exception as e:
+            logger.debug(f"Cross-conversation search failed: {e}")
+            return []
+
+    def _merge_past_replies(
+        self,
+        same_convo: list[tuple[str, str, float]],
+        cross_convo: list[tuple[str, str, float]],
+        same_convo_boost: float = 0.05,
+    ) -> list[tuple[str, str, float]]:
+        """Merge same-conversation and cross-conversation results.
+
+        Prioritizes same-conversation results with a small score boost.
+        Deduplicates by reply text.
+
+        Args:
+            same_convo: Results from same conversation
+            cross_convo: Results from similar-relationship conversations
+            same_convo_boost: Score boost for same-conversation results
+
+        Returns:
+            Merged and deduplicated list of (their_msg, your_reply, score)
+        """
+        # Boost same-conversation scores
+        boosted_same = [
+            (their_msg, your_reply, score + same_convo_boost)
+            for their_msg, your_reply, score in same_convo
+        ]
+
+        # Combine and sort
+        combined = boosted_same + list(cross_convo)
+        combined.sort(key=lambda x: x[2], reverse=True)
+
+        # Deduplicate by reply text (case-insensitive)
+        seen_replies = set()
+        deduplicated = []
+        for their_msg, your_reply, score in combined:
+            reply_key = your_reply.lower().strip()
+            if reply_key not in seen_replies:
+                seen_replies.add(reply_key)
+                deduplicated.append((their_msg, your_reply, score))
+
+        return deduplicated
+
+    def _filter_by_availability(
+        self,
+        results: list[tuple[str, str, float]],
+        availability: str,
+    ) -> list[tuple[str, str, float]]:
+        """Filter/adjust results based on availability signal.
+
+        Args:
+            results: List of (their_msg, your_reply, score) tuples
+            availability: "busy", "free", or "unknown"
+
+        Returns:
+            Adjusted results list
+        """
+        # Keywords that suggest accept vs decline responses
+        accept_keywords = {
+            "yes", "yeah", "yea", "sure", "ok", "okay", "down", "in", "sounds good"
+        }
+        decline_keywords = {
+            "no", "nah", "can't", "cant", "sorry", "busy", "won't", "wont"
+        }
+
+        def response_type(reply: str) -> str:
+            reply_lower = reply.lower().strip()
+            words = set(reply_lower.split())
+            if words & accept_keywords or reply_lower.startswith(tuple(accept_keywords)):
+                return "accept"
+            if words & decline_keywords or reply_lower.startswith(tuple(decline_keywords)):
+                return "decline"
+            return "neutral"
+
+        adjusted = []
+        for their_msg, your_reply, score in results:
+            rtype = response_type(your_reply)
+            if availability == "busy" and rtype == "decline":
+                score += 0.1  # Boost decline responses when busy
+            elif availability == "busy" and rtype == "accept":
+                score -= 0.05  # Slight penalty for accept when busy
+            elif availability == "free" and rtype == "accept":
+                score += 0.1  # Boost accept responses when free
+            adjusted.append((their_msg, your_reply, score))
+
+        # Re-sort by adjusted scores
+        adjusted.sort(key=lambda x: x[2], reverse=True)
+
+        logger.debug(
+            f"Availability signal: {availability}, adjusted {len(adjusted)} past replies"
+        )
+
+        return adjusted
 
     def _refresh_context_for_topic(
         self,

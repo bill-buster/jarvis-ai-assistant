@@ -247,6 +247,29 @@ def mock_global_style():
 
 
 @pytest.fixture
+def mock_relationship_registry():
+    """Mock relationship registry for testing."""
+
+    @dataclass
+    class MockRelationshipInfo:
+        contact_name: str = "Alice"
+        relationship: str = "best friend"
+        category: str = "friend"
+        is_group: bool = False
+        phones: list = field(default_factory=lambda: ["+15551234567"])
+
+    mock = MagicMock()
+    mock.get_relationship.return_value = MockRelationshipInfo()
+    mock.get_relationship_from_chat_id.return_value = MockRelationshipInfo()
+    mock.get_similar_contacts.return_value = ["Bob", "Charlie"]
+    mock.get_phones_for_contacts.return_value = {
+        "Bob": ["+15552345678"],
+        "Charlie": ["+15553456789"],
+    }
+    return mock
+
+
+@pytest.fixture
 def reply_generator_with_mocks(mock_model_loader):
     """Create a ReplyGenerator with all external dependencies mocked."""
     from core.generation.reply_generator import ReplyGenerator
@@ -259,6 +282,8 @@ def reply_generator_with_mocks(mock_model_loader):
         "core.generation.reply_generator._get_contact_profile", return_value=None
     ), patch(
         "core.generation.reply_generator.get_global_user_style", return_value=None
+    ), patch(
+        "core.generation.reply_generator._get_relationship_registry", return_value=None
     ):
         generator = ReplyGenerator(mock_model_loader)
         generator._template_matcher = None

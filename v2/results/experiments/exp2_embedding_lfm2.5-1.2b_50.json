@@ -1,0 +1,780 @@
+{
+  "model": "lfm2.5-1.2b",
+  "n_samples": 50,
+  "elapsed": 13.236360788345337,
+  "intent_match_rate": 0.18,
+  "expectation_accuracy": 0.26,
+  "results": [
+    {
+      "sample_id": 0,
+      "last_message": "Jwalin i am so sorry wtf this is terrible",
+      "incoming_type": "statement",
+      "incoming_score": 0.319541335105896,
+      "expected_responses": [
+        "acknowledge",
+        "reaction"
+      ],
+      "gold": "Eh it be like that",
+      "gold_intent": "reaction",
+      "generated": "Sure! Here's a casual response:",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": true
+    },
+    {
+      "sample_id": 1,
+      "last_message": "Y'all just keep me updated if y'all do prac I'll come so I can give you cleats",
+      "incoming_type": "info_share",
+      "incoming_score": 0.3347093462944031,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "0% baby lets ho",
+      "gold_intent": "info",
+      "generated": "On my way!",
+      "gen_intent": "info",
+      "intent_match": true,
+      "expected_match": false
+    },
+    {
+      "sample_id": 2,
+      "last_message": "Is Databases a project?",
+      "incoming_type": "question",
+      "incoming_score": 0.14849966764450073,
+      "expected_responses": [
+        "info"
+      ],
+      "gold": "Yeah just class projects",
+      "gold_intent": "acknowledge",
+      "generated": "Yes",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 3,
+      "last_message": "Fractured my foot",
+      "incoming_type": "news",
+      "incoming_score": 0.4013330340385437,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "Wait wtf happened bro",
+      "gold_intent": "question",
+      "generated": "Ugh, that was rough \ud83d\ude05",
+      "gen_intent": "info",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 4,
+      "last_message": "Shivu said he\u2019s down too",
+      "incoming_type": "invitation",
+      "incoming_score": 0.43536126613616943,
+      "expected_responses": [
+        "accept",
+        "decline"
+      ],
+      "gold": "Bet I just texted him actually",
+      "gold_intent": "accept",
+      "generated": "Yep, let's go! \ud83d\ude0a",
+      "gen_intent": "accept",
+      "intent_match": true,
+      "expected_match": true
+    },
+    {
+      "sample_id": 5,
+      "last_message": "Are you thinking of sticking it out with these guys",
+      "incoming_type": "invitation",
+      "incoming_score": 0.3707777261734009,
+      "expected_responses": [
+        "accept",
+        "decline"
+      ],
+      "gold": "Uhhh operations coordinator is technically my role",
+      "gold_intent": "acknowledge",
+      "generated": "Yep, let's go! \ud83d\ude0a",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 6,
+      "last_message": "I wish I could but I have an exam right after and I still haven't finished studying RIP",
+      "incoming_type": "news",
+      "incoming_score": 0.3880668580532074,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "Aight yeah study dude that's way more important",
+      "gold_intent": "acknowledge",
+      "generated": "Haha, that was epic! \ud83d\ude02",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 7,
+      "last_message": "what about you",
+      "incoming_type": "news",
+      "incoming_score": 0.3297409415245056,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "I am p good",
+      "gold_intent": "info",
+      "generated": "Lol, nice! \ud83d\ude04",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 8,
+      "last_message": "Omw, I kinda lost track of time",
+      "incoming_type": "logistics",
+      "incoming_score": 0.3842121958732605,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "Ur good should I come to the same parking lot as last time?",
+      "gold_intent": "info",
+      "generated": "Sure! Here's a casual response:",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 9,
+      "last_message": "no way",
+      "incoming_type": "reaction",
+      "incoming_score": 0.9999999403953552,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "Yes way",
+      "gold_intent": "reaction",
+      "generated": "Haha, yeah! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": true,
+      "expected_match": true
+    },
+    {
+      "sample_id": 10,
+      "last_message": "congrats!!!",
+      "incoming_type": "thanks",
+      "incoming_score": 0.35217827558517456,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "Thanks mom",
+      "gold_intent": "reaction",
+      "generated": "cool",
+      "gen_intent": "acknowledge",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 11,
+      "last_message": "He canceled class 3 times in the past month including last week. I'm kinda nervous whether or not I'll pass now tbh",
+      "incoming_type": "news",
+      "incoming_score": 0.34567326307296753,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "Eyy thats good",
+      "gold_intent": "reaction",
+      "generated": "Ugh, stress. \ud83d\ude29",
+      "gen_intent": "decline",
+      "intent_match": false,
+      "expected_match": true
+    },
+    {
+      "sample_id": 12,
+      "last_message": "they give a hell a good deal for the first time",
+      "incoming_type": "info_share",
+      "incoming_score": 0.21909868717193604,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "My dad is like just go to the dealer",
+      "gold_intent": "reaction",
+      "generated": "Sure! Here's a casual response:",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 13,
+      "last_message": "She\u2019s saying light purple for tmrw and then the other dark purple fancy dress for saturday night",
+      "incoming_type": "info_share",
+      "incoming_score": 0.24432459473609924,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "be busy kishbob",
+      "gold_intent": "decline",
+      "generated": "Cool plan!",
+      "gen_intent": "question",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 14,
+      "last_message": "yesss it was fun :)",
+      "incoming_type": "reaction",
+      "incoming_score": 0.2596781849861145,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "Ur welcome",
+      "gold_intent": "acknowledge",
+      "generated": "Yup, it was awesome! \ud83d\ude04",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": true
+    },
+    {
+      "sample_id": 15,
+      "last_message": "hey, let me know what your timings are for tomorrow. I was planning on taking the Caltrain down around 2:30-3:00",
+      "incoming_type": "question",
+      "incoming_score": 0.3562190532684326,
+      "expected_responses": [
+        "info"
+      ],
+      "gold": "https://maps.app.goo.gl/jg11NAiRCxBAi3S87?g_st=ipc",
+      "gold_intent": "info",
+      "generated": "Sure! Here's a casual response:",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": true
+    },
+    {
+      "sample_id": 16,
+      "last_message": "id have to take a look at how cameras are polled over there, been a minute",
+      "incoming_type": "info_share",
+      "incoming_score": 0.19538259506225586,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "Would it not be the same as how you do ur and fr there?",
+      "gold_intent": "reaction",
+      "generated": "Sure! Here's a casual response:",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 17,
+      "last_message": "Yeah try and get it to him today they on my ass",
+      "incoming_type": "thanks",
+      "incoming_score": 0.2898387610912323,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "by 3 max",
+      "gold_intent": "reaction",
+      "generated": "Got it!",
+      "gen_intent": "acknowledge",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 18,
+      "last_message": "Yeah",
+      "incoming_type": "news",
+      "incoming_score": 0.6074137687683105,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "They\u2019re delaying the wedding 25 min",
+      "gold_intent": "info",
+      "generated": "Haha, cool! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 19,
+      "last_message": "Boooo",
+      "incoming_type": "reaction",
+      "incoming_score": 0.47721192240715027,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "I wish I could have bro",
+      "gold_intent": "reaction",
+      "generated": "Haha, yeah! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": true,
+      "expected_match": true
+    },
+    {
+      "sample_id": 20,
+      "last_message": "Alright",
+      "incoming_type": "statement",
+      "incoming_score": 0.4485223889350891,
+      "expected_responses": [
+        "acknowledge",
+        "reaction"
+      ],
+      "gold": "just let nand know ur gonna come",
+      "gold_intent": "info",
+      "generated": "Got it!",
+      "gen_intent": "acknowledge",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 21,
+      "last_message": "Wanna play foosball?",
+      "incoming_type": "invitation",
+      "incoming_score": 0.3707565665245056,
+      "expected_responses": [
+        "accept",
+        "decline"
+      ],
+      "gold": "Can't at the library finishing essay",
+      "gold_intent": "decline",
+      "generated": "Yes!",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": true
+    },
+    {
+      "sample_id": 22,
+      "last_message": "Wedding at 9:30 am, Reception at 6pm",
+      "incoming_type": "question",
+      "incoming_score": 0.3876468241214752,
+      "expected_responses": [
+        "info"
+      ],
+      "gold": "What\u2019s the sit for gifts",
+      "gold_intent": "info",
+      "generated": "Wedding at 9:30, reception at 6pm.",
+      "gen_intent": "info",
+      "intent_match": true,
+      "expected_match": true
+    },
+    {
+      "sample_id": 23,
+      "last_message": "Wdym destroying them?",
+      "incoming_type": "news",
+      "incoming_score": 0.20526963472366333,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "the soles come off",
+      "gold_intent": "question",
+      "generated": "No way \ud83d\ude02",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 24,
+      "last_message": "sf",
+      "incoming_type": "reaction",
+      "incoming_score": 0.46705928444862366,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "go work there",
+      "gold_intent": "info",
+      "generated": "Haha, cool! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 25,
+      "last_message": "Idk how to check",
+      "incoming_type": "info_share",
+      "incoming_score": 0.40583792328834534,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "Search my name",
+      "gold_intent": "accept",
+      "generated": "Got it!",
+      "gen_intent": "acknowledge",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 26,
+      "last_message": "Mama was asking",
+      "incoming_type": "reaction",
+      "incoming_score": 0.32308030128479004,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "I texted her",
+      "gold_intent": "reaction",
+      "generated": "Haha, yeah! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": true,
+      "expected_match": true
+    },
+    {
+      "sample_id": 27,
+      "last_message": "ubering",
+      "incoming_type": "logistics",
+      "incoming_score": 0.3812326192855835,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "Ok",
+      "gold_intent": "acknowledge",
+      "generated": "On my way",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": true
+    },
+    {
+      "sample_id": 28,
+      "last_message": "Bet",
+      "incoming_type": "news",
+      "incoming_score": 0.4445568025112152,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "Bet just lmk where u are tmrw",
+      "gold_intent": "accept",
+      "generated": "Haha, cool! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 29,
+      "last_message": "yep",
+      "incoming_type": "news",
+      "incoming_score": 0.4942702054977417,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "rip they gave it away",
+      "gold_intent": "question",
+      "generated": "Haha, yeah! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 30,
+      "last_message": "Thank you \ud83d\ude42\u200d\u2195\ufe0f",
+      "incoming_type": "thanks",
+      "incoming_score": 0.6829560995101929,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "Worst case we get nothing",
+      "gold_intent": "question",
+      "generated": "Hey! \ud83d\udc4d",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 31,
+      "last_message": "Then will keep whatever we had",
+      "incoming_type": "invitation",
+      "incoming_score": 0.3749285638332367,
+      "expected_responses": [
+        "accept",
+        "decline"
+      ],
+      "gold": "Ok",
+      "gold_intent": "acknowledge",
+      "generated": "Yep, see you tonight!",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 32,
+      "last_message": "Let me check.",
+      "incoming_type": "logistics",
+      "incoming_score": 0.38419321179389954,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "What was left behind?",
+      "gold_intent": "question",
+      "generated": "On it!",
+      "gen_intent": "info",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 33,
+      "last_message": "lit",
+      "incoming_type": "reaction",
+      "incoming_score": 0.34490692615509033,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "yall can plan",
+      "gold_intent": "question",
+      "generated": "Haha, yeah! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 34,
+      "last_message": "no i need to sleep now bc i have raas bonding tn so no sleep basically",
+      "incoming_type": "invitation",
+      "incoming_score": 0.28342142701148987,
+      "expected_responses": [
+        "accept",
+        "decline"
+      ],
+      "gold": "brooooo",
+      "gold_intent": "reaction",
+      "generated": "Awesome! Let's hang then. \ud83d\ude0a",
+      "gen_intent": "acknowledge",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 35,
+      "last_message": "nothing tbh haha",
+      "incoming_type": "reaction",
+      "incoming_score": 0.3363359570503235,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "Lol do something",
+      "gold_intent": "reaction",
+      "generated": "Lol, yeah! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": true,
+      "expected_match": true
+    },
+    {
+      "sample_id": 36,
+      "last_message": "Hi",
+      "incoming_type": "reaction",
+      "incoming_score": 0.39671558141708374,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "Miss ash",
+      "gold_intent": "question",
+      "generated": "Haha, cool! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 37,
+      "last_message": "Lmk when I should walk out",
+      "incoming_type": "logistics",
+      "incoming_score": 0.3292664885520935,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "Omg ur coming out",
+      "gold_intent": "reaction",
+      "generated": "On time!",
+      "gen_intent": "question",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 38,
+      "last_message": "damn",
+      "incoming_type": "reaction",
+      "incoming_score": 0.9999998807907104,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "Wb u het",
+      "gold_intent": "reaction",
+      "generated": "Haha, yeah! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": true,
+      "expected_match": true
+    },
+    {
+      "sample_id": 39,
+      "last_message": "Ope didn\u2019t know you sent it",
+      "incoming_type": "news",
+      "incoming_score": 0.30648118257522583,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "Rishi I pickin u up?",
+      "gold_intent": "acknowledge",
+      "generated": "Lol, nice! \ud83d\ude04",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 40,
+      "last_message": "I\u2019m finishing up giving the option for the difficulty in the menu",
+      "incoming_type": "statement",
+      "incoming_score": 0.3271057605743408,
+      "expected_responses": [
+        "acknowledge",
+        "reaction"
+      ],
+      "gold": "Wdym by difficulty?",
+      "gold_intent": "decline",
+      "generated": "Sure! Here\u2019s a casual response:",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 41,
+      "last_message": "Hbu, you still at UTD",
+      "incoming_type": "logistics",
+      "incoming_score": 0.32824379205703735,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "Yeah I am still got 2 years left",
+      "gold_intent": "reaction",
+      "generated": "Yeah, still here.",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 42,
+      "last_message": "What time we going",
+      "incoming_type": "question",
+      "incoming_score": 0.6224267482757568,
+      "expected_responses": [
+        "info"
+      ],
+      "gold": "Ohhh yea",
+      "gold_intent": "accept",
+      "generated": "7pm",
+      "gen_intent": "info",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 43,
+      "last_message": "It\u2019s only 20 min not 30 dw",
+      "incoming_type": "logistics",
+      "incoming_score": 0.27030497789382935,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "bet im timing u",
+      "gold_intent": "accept",
+      "generated": "On track!",
+      "gen_intent": "accept",
+      "intent_match": true,
+      "expected_match": false
+    },
+    {
+      "sample_id": 44,
+      "last_message": "Just the new slides he posted",
+      "incoming_type": "statement",
+      "incoming_score": 0.27860885858535767,
+      "expected_responses": [
+        "acknowledge",
+        "reaction"
+      ],
+      "gold": "bet thanks bro",
+      "gold_intent": "accept",
+      "generated": "Got it!",
+      "gen_intent": "acknowledge",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 45,
+      "last_message": "So he has the Austin ones already?",
+      "incoming_type": "statement",
+      "incoming_score": 0.23447361588478088,
+      "expected_responses": [
+        "acknowledge",
+        "reaction"
+      ],
+      "gold": "No like he says I cud give em to him tmrw cuz no rush",
+      "gold_intent": "decline",
+      "generated": "Yeah",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 46,
+      "last_message": "what do you wanna do",
+      "incoming_type": "news",
+      "incoming_score": 0.41285160183906555,
+      "expected_responses": [
+        "reaction"
+      ],
+      "gold": "\u2026 why are u scared",
+      "gold_intent": "question",
+      "generated": "Cool! \ud83d\ude0e What\u2019s next?",
+      "gen_intent": "acknowledge",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 47,
+      "last_message": "Actually NVM we just need the key",
+      "incoming_type": "reaction",
+      "incoming_score": 0.2629827558994293,
+      "expected_responses": [
+        "reaction",
+        "acknowledge"
+      ],
+      "gold": "i can pick up if needed",
+      "gold_intent": "accept",
+      "generated": "Haha, yeah! \ud83c\udf89",
+      "gen_intent": "reaction",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 48,
+      "last_message": "confirmed ill be moving to la on aug 1st so we should hang before then",
+      "incoming_type": "invitation",
+      "incoming_score": 0.48283880949020386,
+      "expected_responses": [
+        "accept",
+        "decline"
+      ],
+      "gold": "Mb my head hurt and then I got depresso again",
+      "gold_intent": "reaction",
+      "generated": "Yep, see you then!",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    },
+    {
+      "sample_id": 49,
+      "last_message": "i\u2019m here?",
+      "incoming_type": "logistics",
+      "incoming_score": 0.810645580291748,
+      "expected_responses": [
+        "acknowledge"
+      ],
+      "gold": "I\u2019m not",
+      "gold_intent": "info",
+      "generated": "On my way",
+      "gen_intent": "accept",
+      "intent_match": false,
+      "expected_match": false
+    }
+  ]
+}
