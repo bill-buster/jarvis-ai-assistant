@@ -20,11 +20,41 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+# Register custom timestamp converter that handles timezone-aware timestamps
+def _convert_timestamp(val: bytes) -> datetime:
+    """Convert timestamp bytes to datetime, handling timezone info."""
+    datepart, timepart = val.split(b" ")
+    year, month, day = (int(x) for x in datepart.split(b"-"))
+
+    # Handle timezone offset (e.g., "14:30:00.123456+00:00")
+    if b"+" in timepart:
+        timepart, tz_offset = timepart.rsplit(b"+", 1)
+    elif timepart.count(b"-") == 1:
+        timepart, tz_offset = timepart.rsplit(b"-", 1)
+    else:
+        tz_offset = None
+
+    # Handle microseconds
+    if b"." in timepart:
+        timepart, microseconds = timepart.split(b".")
+        microseconds = int(microseconds)
+    else:
+        microseconds = 0
+
+    hours, minutes, seconds = (int(x) for x in timepart.split(b":"))
+
+    return datetime(year, month, day, hours, minutes, seconds, microseconds)
+
+
+# Register the custom converter
+sqlite3.register_converter("TIMESTAMP", _convert_timestamp)
 
 # Default database path
 JARVIS_DB_PATH = Path.home() / ".jarvis" / "jarvis.db"

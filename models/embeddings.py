@@ -59,7 +59,7 @@ class MLXEmbeddingError(JarvisError):
     """Raised when MLX embedding operations fail."""
 
     default_message = "MLX embedding operation failed"
-    default_code = ErrorCode.MODEL_ERROR
+    default_code = ErrorCode.MDL_LOAD_FAILED
 
 
 class MLXModelNotAvailableError(MLXEmbeddingError):
