@@ -133,11 +133,14 @@ class MLXGenerator:
             # Build formatted prompt
             formatted_prompt = self._prompt_builder.build(request)
 
-            # Generate with model
+            # Generate with model using LFM-optimal parameters
             result = self._loader.generate_sync(
                 prompt=formatted_prompt,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
+                top_p=request.top_p,
+                top_k=request.top_k,
+                repetition_penalty=request.repetition_penalty,
                 stop_sequences=request.stop_sequences,
             )
 

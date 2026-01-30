@@ -102,6 +102,8 @@ class Pair:
     response_msg_id: int | None = None  # First response msg ID if multi-message
     trigger_msg_ids_json: str | None = None  # JSON array for multi-message triggers
     response_msg_ids_json: str | None = None  # JSON array for multi-message responses
+    # Conversation context (messages leading up to the trigger)
+    context_text: str | None = None  # Previous messages before trigger for LLM context
     # Quality and filtering
     quality_score: float = 1.0
     flags_json: str | None = None  # JSON: {"attachment_only":true, "short":true}
@@ -213,6 +215,8 @@ CREATE TABLE IF NOT EXISTS pairs (
     response_msg_id INTEGER,          -- primary response message ID
     trigger_msg_ids_json TEXT,        -- JSON array for multi-message triggers
     response_msg_ids_json TEXT,       -- JSON array for multi-message responses
+    -- Conversation context
+    context_text TEXT,                -- previous messages before trigger (for LLM context)
     -- Quality and filtering
     quality_score REAL DEFAULT 1.0,   -- 0.0-1.0, lower = worse
     flags_json TEXT,                  -- JSON: {"attachment_only":true, "short":true}
@@ -265,7 +269,7 @@ CREATE INDEX IF NOT EXISTS idx_embeddings_index ON pair_embeddings(index_version
 CREATE INDEX IF NOT EXISTS idx_embeddings_faiss ON pair_embeddings(faiss_id);
 """
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3  # Added context_text column to pairs
 
 
 class JarvisDB:
@@ -332,6 +336,16 @@ class JarvisDB:
             if current_version >= CURRENT_SCHEMA_VERSION:
                 logger.debug("Schema already at version %d", current_version)
                 return False
+
+            # Apply migrations for existing databases
+            if current_version == 2:
+                # Migration v2 -> v3: Add context_text column to pairs
+                try:
+                    conn.execute("ALTER TABLE pairs ADD COLUMN context_text TEXT")
+                    logger.info("Added context_text column to pairs table")
+                except sqlite3.OperationalError:
+                    # Column already exists (e.g., during development)
+                    pass
 
             # Apply schema
             conn.executescript(SCHEMA_SQL)
@@ -531,12 +545,16 @@ class JarvisDB:
         response_msg_id: int | None = None,
         trigger_msg_ids: list[int] | None = None,
         response_msg_ids: list[int] | None = None,
+        context_text: str | None = None,
         quality_score: float = 1.0,
         flags: dict[str, Any] | None = None,
     ) -> Pair | None:
         """Add a (trigger, response) pair.
 
         Ignores duplicates based on (trigger_msg_id, response_msg_id).
+
+        Args:
+            context_text: Previous messages before trigger for LLM context.
 
         Returns:
             The created Pair, or None if duplicate.
@@ -552,8 +570,9 @@ class JarvisDB:
                     INSERT INTO pairs
                     (contact_id, trigger_text, response_text, trigger_timestamp,
                      response_timestamp, chat_id, trigger_msg_id, response_msg_id,
-                     trigger_msg_ids_json, response_msg_ids_json, quality_score, flags_json)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     trigger_msg_ids_json, response_msg_ids_json, context_text,
+                     quality_score, flags_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         contact_id,
@@ -566,6 +585,7 @@ class JarvisDB:
                         response_msg_id,
                         trigger_msg_ids_json,
                         response_msg_ids_json,
+                        context_text,
                         quality_score,
                         flags_json,
                     ),
@@ -582,6 +602,7 @@ class JarvisDB:
                     response_msg_id=response_msg_id,
                     trigger_msg_ids_json=trigger_msg_ids_json,
                     response_msg_ids_json=response_msg_ids_json,
+                    context_text=context_text,
                     quality_score=quality_score,
                     flags_json=flags_json,
                 )
@@ -617,8 +638,9 @@ class JarvisDB:
                         INSERT INTO pairs
                         (contact_id, trigger_text, response_text, trigger_timestamp,
                          response_timestamp, chat_id, trigger_msg_id, response_msg_id,
-                         trigger_msg_ids_json, response_msg_ids_json, quality_score, flags_json)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         trigger_msg_ids_json, response_msg_ids_json, context_text,
+                         quality_score, flags_json)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             pair.get("contact_id"),
@@ -631,6 +653,7 @@ class JarvisDB:
                             pair.get("response_msg_id"),
                             trigger_msg_ids_json,
                             response_msg_ids_json,
+                            pair.get("context_text"),
                             pair.get("quality_score", 1.0),
                             flags_json,
                         ),
@@ -725,6 +748,7 @@ class JarvisDB:
             response_msg_ids_json=row["response_msg_ids_json"]
             if "response_msg_ids_json" in row.keys()
             else None,
+            context_text=row["context_text"] if "context_text" in row.keys() else None,
             quality_score=row["quality_score"] if "quality_score" in row.keys() else 1.0,
             flags_json=row["flags_json"] if "flags_json" in row.keys() else None,
         )

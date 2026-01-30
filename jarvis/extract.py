@@ -106,10 +106,12 @@ class ExtractedPair:
     response_msg_id: int  # Primary response message ID
     trigger_msg_ids: list[int]  # All trigger message IDs
     response_msg_ids: list[int]  # All response message IDs
+    # Conversation context (messages before the trigger)
+    context_text: str | None = None  # Previous messages for LLM context
     # Metadata
-    time_delta_seconds: float
-    trigger_message_count: int
-    response_message_count: int
+    time_delta_seconds: float = 0.0
+    trigger_message_count: int = 1
+    response_message_count: int = 1
     # Quality signals
     quality_score: float = 1.0
     flags: dict[str, Any] = field(default_factory=dict)
@@ -195,8 +197,13 @@ class TurnBasedExtractor:
 
                 stats.candidate_pairs += 1
 
+                # Gather context from previous turns (up to 5 turns before trigger)
+                context_turns = turns[max(0, i - 5) : i]
+
                 # Validate and create pair
-                pair = self._create_pair(turn, response_turn, chat_id, time_delta, stats)
+                pair = self._create_pair(
+                    turn, response_turn, chat_id, time_delta, stats, context_turns
+                )
                 if pair:
                     pairs.append(pair)
                     stats.kept_pairs += 1
@@ -263,13 +270,29 @@ class TurnBasedExtractor:
         chat_id: str,
         time_delta: timedelta,
         stats: ExtractionStats,
+        context_turns: list[Turn] | None = None,
     ) -> ExtractedPair | None:
         """Create a pair from trigger and response turns, with validation.
+
+        Args:
+            context_turns: Previous turns before the trigger (for LLM context).
 
         Returns None if validation fails.
         """
         trigger_text = self._clean_text(trigger_turn.text)
         response_text = self._clean_text(response_turn.text)
+
+        # Build context text from previous turns
+        context_text = None
+        if context_turns:
+            context_lines = []
+            for turn in context_turns:
+                turn_text = self._clean_text(turn.text)
+                if turn_text:
+                    speaker = "You" if turn.is_from_me else "Them"
+                    context_lines.append(f"[{speaker}]: {turn_text}")
+            if context_lines:
+                context_text = "\n".join(context_lines)
 
         # Validate trigger
         if not trigger_text:
@@ -308,6 +331,7 @@ class TurnBasedExtractor:
             response_msg_id=response_turn.primary_msg_id or 0,
             trigger_msg_ids=trigger_turn.message_ids,
             response_msg_ids=response_turn.message_ids,
+            context_text=context_text,
             time_delta_seconds=time_delta.total_seconds(),
             trigger_message_count=len(trigger_turn.messages),
             response_message_count=len(response_turn.messages),
@@ -330,6 +354,44 @@ class TurnBasedExtractor:
 
         return cleaned
 
+    # Generic responses that are too context-dependent for templates
+    GENERIC_RESPONSES = frozenset({
+        "ok", "okay", "k", "kk", "yes", "yeah", "yep", "yup", "no", "nope", "nah",
+        "sure", "thanks", "thank you", "thx", "ty", "np", "cool", "nice", "good",
+        "great", "awesome", "alright", "sounds good", "got it", "lol", "haha",
+        "hahaha", "lmao", "omw", "on my way", "be there soon", "see you", "bye",
+        "later", "ttyl", "👍", "👌", "🙏", "😂", "😊", "❤️", "🔥", "💯",
+    })
+
+    # Emoji pattern for detecting emoji-only responses
+    EMOJI_PATTERN = re.compile(
+        r'^[\U0001F300-\U0001F9FF\U00002600-\U000027BF\U0001F600-\U0001F64F'
+        r'\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\s]+$'
+    )
+
+    def _is_generic_response(self, text: str) -> bool:
+        """Check if response is a generic/context-dependent phrase."""
+        normalized = text.lower().strip()
+        return normalized in self.GENERIC_RESPONSES
+
+    def _is_emoji_only(self, text: str) -> bool:
+        """Check if response contains only emojis."""
+        return bool(self.EMOJI_PATTERN.match(text.strip()))
+
+    def _extract_proper_nouns(self, text: str) -> set[str]:
+        """Extract potential proper nouns (capitalized words not at start of sentence)."""
+        words = text.split()
+        proper_nouns = set()
+        for i, word in enumerate(words):
+            # Skip first word of each sentence (often capitalized anyway)
+            if i == 0:
+                continue
+            # Check if word is capitalized and not all caps
+            clean_word = re.sub(r'[^\w]', '', word)
+            if clean_word and clean_word[0].isupper() and not clean_word.isupper():
+                proper_nouns.add(clean_word.lower())
+        return proper_nouns
+
     def _calculate_quality(
         self,
         trigger_text: str,
@@ -344,6 +406,10 @@ class TurnBasedExtractor:
         - Response length relative to trigger (not too short, not way too long)
         - Response time (faster = more natural)
         - Multi-message turns (indicates conversational flow)
+        - Generic response detection (context-dependent phrases)
+        - Question response to non-question (context-dependent)
+        - Personal reference detection (proper nouns not in trigger)
+        - Emoji-only responses (not templatable)
 
         Returns:
             Tuple of (quality_score 0.0-1.0, flags dict).
@@ -353,6 +419,38 @@ class TurnBasedExtractor:
 
         trigger_words = len(trigger_text.split())
         response_words = len(response_text.split())
+
+        # === NEW QUALITY RULES ===
+
+        # 1. Generic response penalty - these are too context-dependent
+        if self._is_generic_response(response_text):
+            flags["generic_response"] = True
+            quality *= 0.3
+
+        # 2. Question response to non-question penalty
+        if response_text.strip().endswith("?") and not trigger_text.strip().endswith("?"):
+            flags["question_to_statement"] = True
+            quality *= 0.5
+
+        # 3. Personal reference penalty - response mentions names not in trigger
+        trigger_nouns = self._extract_proper_nouns(trigger_text)
+        response_nouns = self._extract_proper_nouns(response_text)
+        unrelated_nouns = response_nouns - trigger_nouns
+        if unrelated_nouns:
+            flags["unrelated_proper_nouns"] = list(unrelated_nouns)
+            quality *= 0.6
+
+        # 4. Emoji-only response penalty
+        if self._is_emoji_only(response_text):
+            flags["emoji_only"] = True
+            quality *= 0.4
+
+        # 5. Very short + generic combination (extra penalty)
+        if response_words < 3 and self._is_generic_response(response_text):
+            flags["short_generic"] = True
+            quality *= 0.2  # Stacks with generic penalty
+
+        # === EXISTING QUALITY RULES ===
 
         # Flag very short responses
         if response_words <= 2:
@@ -420,6 +518,7 @@ def extract_pairs_from_reader(
             "response_msg_id": pair.response_msg_id,
             "trigger_msg_ids": pair.trigger_msg_ids,
             "response_msg_ids": pair.response_msg_ids,
+            "context_text": pair.context_text,  # Conversation context for LLM
             "quality_score": pair.quality_score,
             "flags": pair.flags,
             "source_timestamp": pair.trigger_timestamp,  # For freshness/decay

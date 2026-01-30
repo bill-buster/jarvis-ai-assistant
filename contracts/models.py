@@ -9,13 +9,21 @@ from typing import Protocol
 
 @dataclass
 class GenerationRequest:
-    """Request for text generation."""
+    """Request for text generation.
+
+    Default parameters are optimized for LFM2.5-1.2B-Instruct.
+    Source: https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct
+    """
 
     prompt: str
     context_documents: list[str]  # RAG context to inject
     few_shot_examples: list[tuple[str, str]]  # (input, output) pairs
     max_tokens: int = 100
-    temperature: float = 0.7
+    # LFM2.5-1.2B-Instruct optimal parameters
+    temperature: float = 0.1  # Low temp for focused, consistent output
+    top_p: float = 0.1  # Nucleus sampling threshold
+    top_k: int = 50  # Limit vocabulary to top-k tokens
+    repetition_penalty: float = 1.05  # Slight penalty to avoid repetition
     stop_sequences: list[str] | None = None
 
 

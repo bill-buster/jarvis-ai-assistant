@@ -32,7 +32,7 @@ from typing import Any
 import mlx.core as mx
 import psutil
 from mlx_lm import generate, load
-from mlx_lm.sample_utils import make_sampler
+from mlx_lm.sample_utils import make_repetition_penalty, make_sampler
 
 from jarvis.errors import (
     ErrorCode,
@@ -308,6 +308,9 @@ class MLXModelLoader:
         prompt: str,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        top_p: float | None = None,
+        top_k: int | None = None,
+        repetition_penalty: float | None = None,
         stop_sequences: list[str] | None = None,
         timeout_seconds: float | None = None,
     ) -> GenerationResult:
@@ -316,7 +319,10 @@ class MLXModelLoader:
         Args:
             prompt: Input prompt text
             max_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
+            temperature: Sampling temperature (LFM optimal: 0.1)
+            top_p: Nucleus sampling threshold (LFM optimal: 0.1)
+            top_k: Top-k sampling limit (LFM optimal: 50)
+            repetition_penalty: Penalty for repeated tokens (LFM optimal: 1.05)
             stop_sequences: Strings that stop generation
             timeout_seconds: Timeout for generation (overrides config if provided)
 
@@ -343,6 +349,11 @@ class MLXModelLoader:
 
         max_tokens = max_tokens or self.config.default_max_tokens
         temperature = temperature if temperature is not None else self.config.default_temperature
+        # LFM2.5-1.2B-Instruct optimal defaults
+        top_p = top_p if top_p is not None else 0.1
+        top_k = top_k if top_k is not None else 50
+        repetition_penalty = repetition_penalty if repetition_penalty is not None else 1.05
+
         # Use provided timeout, fall back to config, then None (no timeout)
         effective_timeout: float | None
         if timeout_seconds is not None:
@@ -351,14 +362,19 @@ class MLXModelLoader:
             effective_timeout = self.config.generation_timeout_seconds
 
         try:
-            # Format prompt for Qwen2.5-Instruct chat template
+            # Format prompt for chat template
             messages = [{"role": "user", "content": prompt}]
             formatted_prompt = self._tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )
 
-            # Create sampler with temperature
-            sampler = make_sampler(temp=temperature)
+            # Create sampler with LFM-optimal parameters
+            sampler = make_sampler(temp=temperature, top_p=top_p, top_k=top_k)
+
+            # Create logits processors for repetition penalty
+            logits_processors = None
+            if repetition_penalty > 1.0:
+                logits_processors = [make_repetition_penalty(repetition_penalty)]
 
             # Generate with timeout handling
             start_time = time.perf_counter()
@@ -371,6 +387,7 @@ class MLXModelLoader:
                     prompt=formatted_prompt,
                     max_tokens=max_tokens,
                     sampler=sampler,
+                    logits_processors=logits_processors,
                     verbose=False,
                 )
 
