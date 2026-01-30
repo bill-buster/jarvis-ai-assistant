@@ -36,9 +36,7 @@ def calculate_sender_diversity(patterns: list[dict]) -> list[dict]:
 
 
 def filter_by_sender_diversity(
-    patterns: list[dict],
-    min_senders: int = 3,
-    min_diversity_score: float = 0.3
+    patterns: list[dict], min_senders: int = 3, min_diversity_score: float = 0.3
 ) -> list[dict]:
     """Filter patterns by sender diversity.
 
@@ -69,22 +67,20 @@ def filter_by_sender_diversity(
                 pattern.get("representative_incoming", "")[:40],
                 pattern.get("representative_response", "")[:40],
                 num_senders,
-                diversity_score
+                diversity_score,
             )
 
     logger.info(
         "Sender diversity filter: kept %d patterns, removed %d (%.1f%% kept)",
         len(filtered),
         removed_count,
-        100 * len(filtered) / max(1, len(patterns))
+        100 * len(filtered) / max(1, len(patterns)),
     )
 
     return filtered
 
 
-def analyze_sender_distribution(
-    response_groups: list[dict]
-) -> dict[str, Any]:
+def analyze_sender_distribution(response_groups: list[dict]) -> dict[str, Any]:
     """Analyze distribution of senders.
 
     Args:
@@ -99,7 +95,7 @@ def analyze_sender_distribution(
     for group in response_groups:
         pattern = (
             group.get("incoming", "").lower().strip(),
-            group.get("response", "").lower().strip()
+            group.get("response", "").lower().strip(),
         )
         sender_id = group.get("sender_id")
 
@@ -123,17 +119,12 @@ def analyze_sender_distribution(
         "patterns_single_sender": sum(1 for d in diversities if d == 1),
         "patterns_multi_sender": sum(1 for d in diversities if d >= 3),
         "most_prolific_senders": sorted(
-            sender_message_counts.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )[:10]
+            sender_message_counts.items(), key=lambda x: x[1], reverse=True
+        )[:10],
     }
 
 
-def detect_overfitting_to_sender(
-    pattern: dict,
-    sender_threshold: float = 0.7
-) -> bool:
+def detect_overfitting_to_sender(pattern: dict, sender_threshold: float = 0.7) -> bool:
     """Detect if pattern is overfitted to a specific sender.
 
     Args:
@@ -159,10 +150,7 @@ def detect_overfitting_to_sender(
     return max_sender_ratio > sender_threshold
 
 
-def add_sender_distribution(
-    patterns: list[dict],
-    response_groups: list[dict]
-) -> list[dict]:
+def add_sender_distribution(patterns: list[dict], response_groups: list[dict]) -> list[dict]:
     """Add detailed sender distribution to patterns.
 
     Args:
@@ -178,7 +166,7 @@ def add_sender_distribution(
     for group in response_groups:
         pattern_key = (
             group.get("incoming", "").lower().strip(),
-            group.get("response", "").lower().strip()
+            group.get("response", "").lower().strip(),
         )
         sender_id = group.get("sender_id")
 
@@ -189,7 +177,7 @@ def add_sender_distribution(
     for pattern in patterns:
         pattern_key = (
             pattern.get("representative_incoming", "").lower().strip(),
-            pattern.get("representative_response", "").lower().strip()
+            pattern.get("representative_response", "").lower().strip(),
         )
 
         if pattern_key in pattern_sender_counts:

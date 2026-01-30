@@ -26,7 +26,6 @@ from integrations.imessage.reader import ChatDBReader
 from models.loader import MLXModelLoader, ModelConfig
 from models.templates import TemplateMatcher, unload_sentence_model
 
-
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -45,6 +44,7 @@ NUM_RESPONSES_PER_CONTEXT = 3  # Generate 3 variations per context
 # ============================================================================
 # Step 1: Extract Real Conversation Threads
 # ============================================================================
+
 
 def extract_conversation_threads(num_threads: int = 20) -> list[dict[str, Any]]:
     """Extract real conversation threads from iMessage database."""
@@ -87,6 +87,7 @@ def extract_conversation_threads(num_threads: int = 20) -> list[dict[str, Any]]:
 # Step 2: Template Matching (Fast Path)
 # ============================================================================
 
+
 def test_template_matching(threads: list[dict[str, Any]]) -> dict[str, Any]:
     """Test template matching on real conversations."""
 
@@ -99,7 +100,7 @@ def test_template_matching(threads: list[dict[str, Any]]) -> dict[str, Any]:
         "template_hits": 0,
         "template_misses": 0,
         "avg_latency_ms": 0,
-        "matches": []
+        "matches": [],
     }
 
     total_latency = 0
@@ -115,13 +116,15 @@ def test_template_matching(threads: list[dict[str, Any]]) -> dict[str, Any]:
 
         if match:
             results["template_hits"] += 1
-            results["matches"].append({
-                "query": query,
-                "matched_pattern": match.matched_pattern,
-                "template_response": match.template.response,
-                "confidence": match.similarity,
-                "latency_ms": latency_ms
-            })
+            results["matches"].append(
+                {
+                    "query": query,
+                    "matched_pattern": match.matched_pattern,
+                    "template_response": match.template.response,
+                    "confidence": match.similarity,
+                    "latency_ms": latency_ms,
+                }
+            )
         else:
             results["template_misses"] += 1
 
@@ -138,11 +141,9 @@ def test_template_matching(threads: list[dict[str, Any]]) -> dict[str, Any]:
 # Step 3: LLM Generation (Fallback)
 # ============================================================================
 
+
 def generate_reply_autonomous(
-    loader: MLXModelLoader,
-    context: list[str],
-    last_message: str,
-    is_group: bool
+    loader: MLXModelLoader, context: list[str], last_message: str, is_group: bool
 ) -> dict[str, Any]:
     """Generate reply WITHOUT instructions - autonomous generation."""
 
@@ -172,29 +173,21 @@ Your reply:"""
         result = loader.generate_sync(
             prompt=prompt,
             max_tokens=30,  # Keep it brief
-            temperature=0.8  # Higher temp for variety
+            temperature=0.8,  # Higher temp for variety
         )
 
         return {
             "reply": result.text.strip(),
             "latency_ms": int(result.generation_time_ms),
             "tokens": result.tokens_generated,
-            "success": True
+            "success": True,
         }
     except Exception as e:
-        return {
-            "reply": "",
-            "latency_ms": 0,
-            "tokens": 0,
-            "success": False,
-            "error": str(e)
-        }
+        return {"reply": "", "latency_ms": 0, "tokens": 0, "success": False, "error": str(e)}
 
 
 def test_llm_generation(
-    model_info: dict[str, str],
-    threads: list[dict[str, Any]],
-    num_variations: int = 3
+    model_info: dict[str, str], threads: list[dict[str, Any]], num_variations: int = 3
 ) -> dict[str, Any]:
     """Test LLM generation on conversation threads."""
 
@@ -208,7 +201,7 @@ def test_llm_generation(
 
     try:
         loader = MLXModelLoader(config)
-        print(f"  ✓ Model loaded")
+        print("  ✓ Model loaded")
     except Exception as e:
         print(f"  ✗ Failed to load: {e}")
         return {"error": str(e)}
@@ -222,8 +215,8 @@ def test_llm_generation(
             "failures": 0,
             "avg_latency_ms": 0,
             "avg_tokens": 0,
-            "avg_length_chars": 0
-        }
+            "avg_length_chars": 0,
+        },
     }
 
     total_latency = 0
@@ -233,17 +226,14 @@ def test_llm_generation(
 
     # Test on subset of threads (those that didn't match templates)
     for thread in threads[:10]:  # First 10 threads
-        display = thread['display_name'] or "Unknown"
+        display = thread["display_name"] or "Unknown"
         print(f"  Thread: {display[:30]}...")
 
         # Generate multiple variations
         variations = []
         for i in range(num_variations):
             gen = generate_reply_autonomous(
-                loader,
-                thread["context"],
-                thread["last_message"],
-                thread["is_group"]
+                loader, thread["context"], thread["last_message"], thread["is_group"]
             )
 
             if gen["success"]:
@@ -252,20 +242,24 @@ def test_llm_generation(
                 total_tokens += gen["tokens"]
                 total_length += len(gen["reply"])
 
-                variations.append({
-                    "reply": gen["reply"],
-                    "latency_ms": gen["latency_ms"],
-                    "tokens": gen["tokens"],
-                    "length_chars": len(gen["reply"])
-                })
+                variations.append(
+                    {
+                        "reply": gen["reply"],
+                        "latency_ms": gen["latency_ms"],
+                        "tokens": gen["tokens"],
+                        "length_chars": len(gen["reply"]),
+                    }
+                )
 
             results["stats"]["total_tests"] += 1
 
-        results["generations"].append({
-            "display_name": thread["display_name"] or "Unknown",
-            "last_message": thread["last_message"],
-            "variations": variations
-        })
+        results["generations"].append(
+            {
+                "display_name": thread["display_name"] or "Unknown",
+                "last_message": thread["last_message"],
+                "variations": variations,
+            }
+        )
 
     # Calculate stats
     results["stats"]["successes"] = successes
@@ -286,6 +280,7 @@ def test_llm_generation(
 # Step 4: Evaluation Metrics
 # ============================================================================
 
+
 def evaluate_quality(results: dict[str, Any]) -> dict[str, Any]:
     """Evaluate response quality with better metrics than HHEM."""
 
@@ -294,7 +289,7 @@ def evaluate_quality(results: dict[str, Any]) -> dict[str, Any]:
     metrics = {
         "brevity_score": 0,  # % of responses under 100 chars
         "variety_score": 0,  # Avg unique responses per context
-        "naturalness_notes": []
+        "naturalness_notes": [],
     }
 
     for model_results in results:
@@ -332,6 +327,7 @@ def evaluate_quality(results: dict[str, Any]) -> dict[str, Any]:
 # Main
 # ============================================================================
 
+
 def main():
     """Run realistic reply generation tests."""
 
@@ -341,9 +337,9 @@ def main():
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     output_file = output_dir / f"realistic_reply_test_{timestamp}.json"
 
-    print("="*60)
+    print("=" * 60)
     print("REALISTIC IMESSAGE REPLY GENERATION TEST")
-    print("="*60)
+    print("=" * 60)
     print()
     print("Approach:")
     print("  1. Extract real conversation threads from iMessage")
@@ -382,11 +378,11 @@ def main():
         "config": {
             "num_conversations": NUM_CONVERSATIONS,
             "num_variations": NUM_RESPONSES_PER_CONTEXT,
-            "models_tested": len(MODELS_TO_TEST)
+            "models_tested": len(MODELS_TO_TEST),
         },
         "template_matching": template_results,
         "llm_generation": llm_results,
-        "quality_metrics": quality_metrics
+        "quality_metrics": quality_metrics,
     }
 
     # Save results
@@ -394,9 +390,9 @@ def main():
         json.dump(final_results, f, indent=2)
 
     print()
-    print("="*60)
+    print("=" * 60)
     print("TEST COMPLETE")
-    print("="*60)
+    print("=" * 60)
     print(f"\nResults saved to: {output_file}")
     print()
     print("Summary:")

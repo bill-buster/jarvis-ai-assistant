@@ -27,6 +27,7 @@ from tqdm import tqdm
 # Conditional imports for sentence transformers
 try:
     from sentence_transformers import SentenceTransformer
+
     HAS_SENTENCE_TRANSFORMERS = True
 except ImportError:
     HAS_SENTENCE_TRANSFORMERS = False
@@ -168,9 +169,7 @@ class TemplateMiner:
 
         return embeddings
 
-    def cluster_messages(
-        self, embeddings: np.ndarray
-    ) -> tuple[np.ndarray, dict[int, list[int]]]:
+    def cluster_messages(self, embeddings: np.ndarray) -> tuple[np.ndarray, dict[int, list[int]]]:
         """Cluster messages using DBSCAN.
 
         Args:
@@ -289,13 +288,13 @@ class TemplateMiner:
             return MiningResult(
                 templates=[],
                 stats=MiningStats(
-                    total_messages=int(0),
-                    messages_sampled=int(0),
-                    templates_extracted=int(0),
-                    coverage=float(0.0),
-                    largest_cluster_size=int(0),
-                    embedding_time_seconds=float(0.0),
-                    clustering_time_seconds=float(0.0),
+                    total_messages=0,
+                    messages_sampled=0,
+                    templates_extracted=0,
+                    coverage=0.0,
+                    largest_cluster_size=0,
+                    embedding_time_seconds=0.0,
+                    clustering_time_seconds=0.0,
                 ),
                 config={
                     "model_name": self.model_name,
@@ -453,7 +452,7 @@ def main() -> int:
         print(f"Largest cluster:       {result.stats.largest_cluster_size}")
         print(f"Embedding time:        {result.stats.embedding_time_seconds:.1f}s")
         print(f"Clustering time:       {result.stats.clustering_time_seconds:.1f}s")
-        print(f"\nTop 10 templates:")
+        print("\nTop 10 templates:")
         for i, template in enumerate(result.templates[:10], 1):
             print(f"  {i}. [{template.frequency:3d} uses] {template.representative[:70]}")
         print("=" * 60)

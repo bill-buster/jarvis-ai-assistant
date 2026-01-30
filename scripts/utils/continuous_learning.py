@@ -11,7 +11,7 @@ Handles:
 import json
 import logging
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_recency_boost(
-    pattern_dates: list[int],
-    current_time_ns: int,
-    recency_window_days: int = 90
+    pattern_dates: list[int], current_time_ns: int, recency_window_days: int = 90
 ) -> float:
     """Calculate boost for recent usage.
 
@@ -35,19 +33,13 @@ def calculate_recency_boost(
     """
     recency_window_ns = recency_window_days * 24 * 3600 * 1_000_000_000
 
-    recent_count = sum(
-        1 for d in pattern_dates
-        if (current_time_ns - d) <= recency_window_ns
-    )
+    recent_count = sum(1 for d in pattern_dates if (current_time_ns - d) <= recency_window_ns)
 
     # Boost by 2× for each recent use
     return 1.0 + (recent_count * 2.0)
 
 
-def calculate_stability_discount(
-    pattern_age_days: int,
-    decay_rate: float = 0.1
-) -> float:
+def calculate_stability_discount(pattern_age_days: int, decay_rate: float = 0.1) -> float:
     """Calculate discount for old patterns.
 
     Older patterns get discounted to prefer current style.
@@ -66,10 +58,7 @@ def calculate_stability_discount(
 
 
 def calculate_adaptive_weight(
-    pattern: dict,
-    current_time_ns: int,
-    recency_window_days: int = 90,
-    decay_rate: float = 0.1
+    pattern: dict, current_time_ns: int, recency_window_days: int = 90, decay_rate: float = 0.1
 ) -> float:
     """Calculate adaptive weight for pattern.
 
@@ -91,11 +80,7 @@ def calculate_adaptive_weight(
 
     # Recency boost
     pattern_dates = pattern.get("all_dates", [])
-    recency_boost = calculate_recency_boost(
-        pattern_dates,
-        current_time_ns,
-        recency_window_days
-    )
+    recency_boost = calculate_recency_boost(pattern_dates, current_time_ns, recency_window_days)
 
     # Stability discount
     age_days = pattern.get("age_days", 0)
@@ -108,9 +93,7 @@ def calculate_adaptive_weight(
 
 
 def detect_concept_drift(
-    historical_patterns: list[dict],
-    recent_messages: list[dict],
-    drift_threshold: float = 0.3
+    historical_patterns: list[dict], recent_messages: list[dict], drift_threshold: float = 0.3
 ) -> dict[str, Any]:
     """Detect if communication style has drifted.
 
@@ -152,7 +135,9 @@ def detect_concept_drift(
     import numpy as np
 
     # Formality drift
-    hist_formal_ratio = historical_formality.get("formal", 0) / max(1, sum(historical_formality.values()))
+    hist_formal_ratio = historical_formality.get("formal", 0) / max(
+        1, sum(historical_formality.values())
+    )
     recent_formal_ratio = recent_formality.get("formal", 0) / max(1, sum(recent_formality.values()))
     formality_drift = abs(hist_formal_ratio - recent_formal_ratio)
 
@@ -175,15 +160,12 @@ def detect_concept_drift(
         "recent_formal_ratio": recent_formal_ratio,
         "historical_avg_length": hist_avg_length,
         "recent_avg_length": recent_avg_length,
-        "recommendation": "Retrain templates" if drift_detected else "Templates still valid"
+        "recommendation": "Retrain templates" if drift_detected else "Templates still valid",
     }
 
 
 def deprecate_outdated_patterns(
-    patterns: list[dict],
-    current_time_ns: int,
-    max_age_days: int = 730,
-    min_recent_usage: int = 2
+    patterns: list[dict], current_time_ns: int, max_age_days: int = 730, min_recent_usage: int = 2
 ) -> list[dict]:
     """Deprecate patterns that haven't been used recently.
 
@@ -206,10 +188,7 @@ def deprecate_outdated_patterns(
         all_dates = pattern.get("all_dates", [])
 
         # Count recent uses
-        recent_count = sum(
-            1 for d in all_dates
-            if (current_time_ns - d) <= recency_window_ns
-        )
+        recent_count = sum(1 for d in all_dates if (current_time_ns - d) <= recency_window_ns)
 
         # Deprecate if old and not recently used
         if age_days > max_age_days and recent_count < min_recent_usage:
@@ -219,7 +198,7 @@ def deprecate_outdated_patterns(
                 pattern.get("representative_incoming", "")[:40],
                 pattern.get("representative_response", "")[:40],
                 age_days,
-                recent_count
+                recent_count,
             )
             pattern["deprecated"] = True
             pattern["deprecation_reason"] = f"Not used in last 6 months (age={age_days}d)"
@@ -229,7 +208,7 @@ def deprecate_outdated_patterns(
     logger.info(
         "Deprecated %d outdated patterns (%.1f%%)",
         deprecated_count,
-        100 * deprecated_count / max(1, len(patterns))
+        100 * deprecated_count / max(1, len(patterns)),
     )
 
     return filtered
@@ -268,12 +247,16 @@ class IncrementalTemplateIndex:
         """Save state to disk."""
         try:
             self.state_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.state_file, 'w') as f:
-                json.dump({
-                    "last_processed_rowid": self.last_processed_rowid,
-                    "patterns": self.patterns,
-                    "last_updated": datetime.now().isoformat()
-                }, f, indent=2)
+            with open(self.state_file, "w") as f:
+                json.dump(
+                    {
+                        "last_processed_rowid": self.last_processed_rowid,
+                        "patterns": self.patterns,
+                        "last_updated": datetime.now().isoformat(),
+                    },
+                    f,
+                    indent=2,
+                )
             logger.info("Saved incremental state: last_rowid=%d", self.last_processed_rowid)
         except Exception as e:
             logger.error("Failed to save state: %s", e)
@@ -320,7 +303,8 @@ class IncrementalTemplateIndex:
         # 3. Recalculate scores
         # 4. Merge with existing patterns
 
-        logger.info("Processed %d new messages, last_rowid=%d",
-                    len(new_messages), self.last_processed_rowid)
+        logger.info(
+            "Processed %d new messages, last_rowid=%d", len(new_messages), self.last_processed_rowid
+        )
 
         self.save_state()

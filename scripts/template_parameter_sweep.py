@@ -65,8 +65,7 @@ def load_messages(db_path: Path, sample_size: int | None = None) -> list[str]:
 
 
 def generate_embeddings(
-    messages: list[str],
-    model_name: str = "sentence-transformers/all-mpnet-base-v2"
+    messages: list[str], model_name: str = "sentence-transformers/all-mpnet-base-v2"
 ) -> np.ndarray:
     """Generate embeddings for messages."""
 
@@ -77,10 +76,7 @@ def generate_embeddings(
     start = time.time()
 
     embeddings = model.encode(
-        messages,
-        show_progress_bar=True,
-        batch_size=32,
-        convert_to_numpy=True
+        messages, show_progress_bar=True, batch_size=32, convert_to_numpy=True
     )
 
     elapsed = time.time() - start
@@ -95,11 +91,11 @@ def save_cache(messages: list[str], embeddings: np.ndarray):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info("Saving embeddings to %s", EMBEDDINGS_FILE)
-    with open(EMBEDDINGS_FILE, 'wb') as f:
+    with open(EMBEDDINGS_FILE, "wb") as f:
         pickle.dump(embeddings, f)
 
     logger.info("Saving messages to %s", MESSAGES_FILE)
-    with open(MESSAGES_FILE, 'wb') as f:
+    with open(MESSAGES_FILE, "wb") as f:
         pickle.dump(messages, f)
 
     logger.info("Cache saved successfully")
@@ -112,11 +108,11 @@ def load_cache() -> tuple[list[str], np.ndarray]:
         raise FileNotFoundError("Cache not found. Run with --generate-embeddings first.")
 
     logger.info("Loading embeddings from %s", EMBEDDINGS_FILE)
-    with open(EMBEDDINGS_FILE, 'rb') as f:
+    with open(EMBEDDINGS_FILE, "rb") as f:
         embeddings = pickle.load(f)
 
     logger.info("Loading messages from %s", MESSAGES_FILE)
-    with open(MESSAGES_FILE, 'rb') as f:
+    with open(MESSAGES_FILE, "rb") as f:
         messages = pickle.load(f)
 
     logger.info("Loaded %d messages and embeddings", len(messages))
@@ -128,14 +124,14 @@ def cluster_and_extract(
     embeddings: np.ndarray,
     eps: float,
     min_samples: int,
-    min_frequency: int = 8
+    min_frequency: int = 8,
 ) -> dict:
     """Cluster embeddings and extract templates."""
 
     logger.info("Clustering with DBSCAN (eps=%.2f, min_samples=%d)", eps, min_samples)
     start = time.time()
 
-    clusterer = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine', n_jobs=-1)
+    clusterer = DBSCAN(eps=eps, min_samples=min_samples, metric="cosine", n_jobs=-1)
     labels = clusterer.fit_predict(embeddings)
 
     cluster_time = time.time() - start
@@ -159,14 +155,17 @@ def cluster_and_extract(
 
         # Use most common message as representative
         from collections import Counter
+
         msg_counts = Counter(cluster_messages)
         representative, frequency = msg_counts.most_common(1)[0]
 
-        templates.append({
-            "representative": representative,
-            "frequency": frequency,
-            "cluster_size": len(cluster_messages)
-        })
+        templates.append(
+            {
+                "representative": representative,
+                "frequency": frequency,
+                "cluster_size": len(cluster_messages),
+            }
+        )
 
         covered_messages += len(cluster_messages)
 
@@ -185,7 +184,7 @@ def cluster_and_extract(
         "coverage": coverage,
         "largest_cluster": templates[0]["cluster_size"] if templates else 0,
         "clustering_time_s": cluster_time,
-        "top_10_templates": templates[:10]
+        "top_10_templates": templates[:10],
     }
 
 
@@ -208,7 +207,10 @@ def parameter_sweep(messages: list[str], embeddings: np.ndarray) -> list[dict]:
 
             logger.info(
                 "  eps=%.2f, min_samples=%d: %d templates, %.1f%% coverage",
-                eps, min_samples, result["templates_extracted"], result["coverage"] * 100
+                eps,
+                min_samples,
+                result["templates_extracted"],
+                result["coverage"] * 100,
             )
 
     return results
@@ -219,24 +221,22 @@ def main():
     parser.add_argument(
         "--generate-embeddings",
         action="store_true",
-        help="Generate and cache embeddings (slow, run once)"
+        help="Generate and cache embeddings (slow, run once)",
     )
     parser.add_argument(
-        "--sweep",
-        action="store_true",
-        help="Run parameter sweep using cached embeddings (fast)"
+        "--sweep", action="store_true", help="Run parameter sweep using cached embeddings (fast)"
     )
     parser.add_argument(
         "--sample-size",
         type=int,
         default=None,
-        help="Number of messages to sample (default: all received messages)"
+        help="Number of messages to sample (default: all received messages)",
     )
     parser.add_argument(
         "--output",
         type=str,
         default="results/parameter_sweep_results.json",
-        help="Output file for results"
+        help="Output file for results",
     )
 
     args = parser.parse_args()
@@ -264,12 +264,16 @@ def main():
         output_file = Path(args.output)
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_file, 'w') as f:
-            json.dump({
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "num_messages": len(messages),
-                "results": results
-            }, f, indent=2)
+        with open(output_file, "w") as f:
+            json.dump(
+                {
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "num_messages": len(messages),
+                    "results": results,
+                },
+                f,
+                indent=2,
+            )
 
         logger.info("✓ Results saved to: %s", output_file)
 

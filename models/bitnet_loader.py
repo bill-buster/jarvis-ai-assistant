@@ -11,14 +11,14 @@ from typing import Any
 
 try:
     import mlx.core as mx
-    from mlx_bitnet import BitNetModel, BitNetConfig
+    from mlx_bitnet import BitNetConfig, BitNetModel
 
     HAS_MLX_BITNET = True
 except ImportError:
     HAS_MLX_BITNET = False
 
 from jarvis.errors import ModelLoadError
-from models.loader import ModelConfig, GenerationResult
+from models.loader import GenerationResult, ModelConfig
 
 logger = logging.getLogger(__name__)
 

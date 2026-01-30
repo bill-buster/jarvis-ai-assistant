@@ -129,9 +129,7 @@ def get_response_groups(
         if chat_id != current_chat:
             if chat_messages:
                 pairs = extract_pairs_from_chat(
-                    chat_messages,
-                    max_time_gap_seconds,
-                    max_burst_gap_seconds
+                    chat_messages, max_time_gap_seconds, max_burst_gap_seconds
                 )
                 response_groups.extend(pairs)
 
@@ -142,20 +140,18 @@ def get_response_groups(
         if is_system_message(text):
             continue
 
-        chat_messages.append({
-            "rowid": rowid,
-            "text": text,
-            "is_from_me": is_from_me,
-            "date_ns": date_ns,
-        })
+        chat_messages.append(
+            {
+                "rowid": rowid,
+                "text": text,
+                "is_from_me": is_from_me,
+                "date_ns": date_ns,
+            }
+        )
 
     # Process last chat
     if chat_messages:
-        pairs = extract_pairs_from_chat(
-            chat_messages,
-            max_time_gap_seconds,
-            max_burst_gap_seconds
-        )
+        pairs = extract_pairs_from_chat(chat_messages, max_time_gap_seconds, max_burst_gap_seconds)
         response_groups.extend(pairs)
 
     conn.close()
@@ -216,11 +212,13 @@ def extract_pairs_from_chat(
         if response_texts:
             combined_response = " ".join(response_texts)
 
-            pairs.append({
-                "incoming": incoming_text,
-                "response": combined_response,
-                "response_dates": response_dates,
-            })
+            pairs.append(
+                {
+                    "incoming": incoming_text,
+                    "response": combined_response,
+                    "response_dates": response_dates,
+                }
+            )
 
         i = j if j > i + 1 else i + 1
 
@@ -230,7 +228,7 @@ def extract_pairs_from_chat(
 def generate_embeddings(
     response_groups: list[dict],
     model_name: str = "sentence-transformers/all-mpnet-base-v2",
-    use_cache: bool = True
+    use_cache: bool = True,
 ) -> tuple[np.ndarray, SentenceTransformer]:
     """Generate embeddings for response pairs.
 
@@ -241,9 +239,9 @@ def generate_embeddings(
     # Check cache
     if use_cache and EMBEDDINGS_FILE.exists() and PAIRS_FILE.exists():
         logger.info("Loading cached embeddings from %s", EMBEDDINGS_FILE)
-        with open(EMBEDDINGS_FILE, 'rb') as f:
+        with open(EMBEDDINGS_FILE, "rb") as f:
             embeddings = pickle.load(f)
-        with open(PAIRS_FILE, 'rb') as f:
+        with open(PAIRS_FILE, "rb") as f:
             cached_groups = pickle.load(f)
 
         # Verify cache matches
@@ -273,18 +271,17 @@ def generate_embeddings(
         show_progress_bar=True,
         batch_size=32,
         convert_to_numpy=True,
-        normalize_embeddings=True  # Normalize for cosine similarity
+        normalize_embeddings=True,  # Normalize for cosine similarity
     )
 
     elapsed = time.time() - start
-    logger.info("Generated embeddings in %.1fs (%.1f pairs/sec)",
-                elapsed, len(texts) / elapsed)
+    logger.info("Generated embeddings in %.1fs (%.1f pairs/sec)", elapsed, len(texts) / elapsed)
 
     # Cache embeddings
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    with open(EMBEDDINGS_FILE, 'wb') as f:
+    with open(EMBEDDINGS_FILE, "wb") as f:
         pickle.dump(embeddings, f)
-    with open(PAIRS_FILE, 'wb') as f:
+    with open(PAIRS_FILE, "wb") as f:
         pickle.dump(response_groups, f)
     logger.info("✓ Cached embeddings to %s", EMBEDDINGS_FILE)
 
@@ -292,10 +289,7 @@ def generate_embeddings(
 
 
 def semantic_clustering(
-    response_groups: list[dict],
-    embeddings: np.ndarray,
-    eps: float = 0.30,
-    min_samples: int = 2
+    response_groups: list[dict], embeddings: np.ndarray, eps: float = 0.30, min_samples: int = 2
 ) -> list[dict]:
     """Cluster semantically similar response pairs.
 
@@ -313,7 +307,7 @@ def semantic_clustering(
     start = time.time()
 
     # Use cosine distance (1 - cosine similarity)
-    clusterer = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine', n_jobs=-1)
+    clusterer = DBSCAN(eps=eps, min_samples=min_samples, metric="cosine", n_jobs=-1)
     labels = clusterer.fit_predict(embeddings)
 
     elapsed = time.time() - start
@@ -321,8 +315,7 @@ def semantic_clustering(
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     n_noise = list(labels).count(-1)
 
-    logger.info("Found %d clusters, %d noise points in %.1fs",
-                n_clusters, n_noise, elapsed)
+    logger.info("Found %d clusters, %d noise points in %.1fs", n_clusters, n_noise, elapsed)
 
     # Group pairs by cluster
     clusters = defaultdict(list)
@@ -355,15 +348,17 @@ def semantic_clustering(
         # Calculate temporal scores
         temporal_scores = calculate_temporal_scores_for_cluster(all_dates)
 
-        cluster_patterns.append({
-            "cluster_id": cluster_id,
-            "representative_incoming": rep_incoming,
-            "representative_response": rep_response,
-            "total_frequency": len(pairs),
-            "incoming_variations": list(incoming_counter.keys())[:5],  # Top 5
-            "response_variations": list(response_counter.keys())[:5],   # Top 5
-            **temporal_scores
-        })
+        cluster_patterns.append(
+            {
+                "cluster_id": cluster_id,
+                "representative_incoming": rep_incoming,
+                "representative_response": rep_response,
+                "total_frequency": len(pairs),
+                "incoming_variations": list(incoming_counter.keys())[:5],  # Top 5
+                "response_variations": list(response_counter.keys())[:5],  # Top 5
+                **temporal_scores,
+            }
+        )
 
     # Sort by combined score
     cluster_patterns.sort(key=lambda x: x["combined_score"], reverse=True)
@@ -415,14 +410,14 @@ def calculate_temporal_scores_for_cluster(dates: list[int]) -> dict:
         "combined_score": float(combined_score),
         "years_active": [int(y) for y in sorted(year_counts.keys())],
         "age_days": int(age_days),
-        "most_recent": imessage_timestamp_to_datetime(most_recent_date_ns).strftime("%Y-%m-%d")
+        "most_recent": imessage_timestamp_to_datetime(most_recent_date_ns).strftime("%Y-%m-%d"),
     }
 
 
 def test_multiple_eps(
     response_groups: list[dict],
     embeddings: np.ndarray,
-    eps_values: list[float] = [0.20, 0.25, 0.30, 0.35, 0.40]
+    eps_values: list[float] = [0.20, 0.25, 0.30, 0.35, 0.40],
 ) -> dict:
     """Test multiple eps values to find optimal clustering."""
 
@@ -443,11 +438,16 @@ def test_multiple_eps(
             "num_clusters": total_patterns,
             "total_coverage": total_coverage,
             "avg_cluster_size": avg_cluster_size,
-            "top_10_patterns": clusters[:10]
+            "top_10_patterns": clusters[:10],
         }
 
-        logger.info("  eps=%.2f: %d clusters, %.1f avg size, %d total pairs covered",
-                    eps, total_patterns, avg_cluster_size, total_coverage)
+        logger.info(
+            "  eps=%.2f: %d clusters, %.1f avg size, %d total pairs covered",
+            eps,
+            total_patterns,
+            avg_cluster_size,
+            total_coverage,
+        )
 
     return results
 
@@ -455,31 +455,35 @@ def test_multiple_eps(
 def analyze_results(cluster_patterns: list[dict]):
     """Display analysis of clustered patterns."""
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("SEMANTIC RESPONSE PAIR CLUSTERING RESULTS")
-    print("="*80)
+    print("=" * 80)
 
     print(f"\nTotal semantic clusters: {len(cluster_patterns)}")
 
     # Top patterns by combined score
     print("\n--- Top 50 Semantic Patterns (by score: freq × consistency × recency) ---\n")
     for i, p in enumerate(cluster_patterns[:50], 1):
-        print(f"{i:2}. Score: {p['combined_score']:>7.1f} | "
-              f"Freq: {p['frequency']:>4} | "
-              f"Age: {p['age_days']:>4}d")
-        print(f"    \"{p['representative_incoming'][:60]}\" → \"{p['representative_response'][:60]}\"")
+        print(
+            f"{i:2}. Score: {p['combined_score']:>7.1f} | "
+            f"Freq: {p['frequency']:>4} | "
+            f"Age: {p['age_days']:>4}d"
+        )
+        print(f'    "{p["representative_incoming"][:60]}" → "{p["representative_response"][:60]}"')
 
         # Show variations if multiple
-        if len(p['incoming_variations']) > 1:
-            incoming_vars = [v[:30] for v in p['incoming_variations'][:3]]
+        if len(p["incoming_variations"]) > 1:
+            incoming_vars = [v[:30] for v in p["incoming_variations"][:3]]
             print(f"    Incoming variations: {incoming_vars}")
-        if len(p['response_variations']) > 1:
-            response_vars = [v[:30] for v in p['response_variations'][:3]]
+        if len(p["response_variations"]) > 1:
+            response_vars = [v[:30] for v in p["response_variations"][:3]]
             print(f"    Response variations: {response_vars}")
 
-        print(f"    Years: {p['years_active']} | "
-              f"Consistency: {p['consistency_score']:.2f} | "
-              f"Recency: {p['recency_weight']:.2f}")
+        print(
+            f"    Years: {p['years_active']} | "
+            f"Consistency: {p['consistency_score']:.2f} | "
+            f"Recency: {p['recency_weight']:.2f}"
+        )
         print()
 
 
@@ -488,26 +492,14 @@ def main():
 
     parser = argparse.ArgumentParser(description="Semantic response pair mining")
     parser.add_argument(
-        "--eps",
-        type=float,
-        default=0.30,
-        help="DBSCAN eps parameter (default: 0.30)"
+        "--eps", type=float, default=0.30, help="DBSCAN eps parameter (default: 0.30)"
     )
     parser.add_argument(
-        "--test-eps",
-        action="store_true",
-        help="Test multiple eps values to find optimal"
+        "--test-eps", action="store_true", help="Test multiple eps values to find optimal"
     )
+    parser.add_argument("--no-cache", action="store_true", help="Don't use cached embeddings")
     parser.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="Don't use cached embeddings"
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="results/response_pairs_semantic.json",
-        help="Output file"
+        "--output", type=str, default="results/response_pairs_semantic.json", help="Output file"
     )
 
     args = parser.parse_args()
@@ -518,10 +510,7 @@ def main():
     response_groups = get_response_groups(db_path)
 
     # Generate embeddings
-    embeddings, model = generate_embeddings(
-        response_groups,
-        use_cache=not args.no_cache
-    )
+    embeddings, model = generate_embeddings(response_groups, use_cache=not args.no_cache)
 
     if args.test_eps:
         # Test multiple eps values
@@ -530,18 +519,14 @@ def main():
         # Save results
         output_file = Path(args.output)
         output_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             json.dump(results, f, indent=2)
 
         logger.info("\n✓ Parameter sweep results saved to: %s", output_file)
 
     else:
         # Single eps value
-        cluster_patterns = semantic_clustering(
-            response_groups,
-            embeddings,
-            eps=args.eps
-        )
+        cluster_patterns = semantic_clustering(response_groups, embeddings, eps=args.eps)
 
         # Analyze
         analyze_results(cluster_patterns)
@@ -549,12 +534,16 @@ def main():
         # Save
         output_file = Path(args.output)
         output_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_file, 'w') as f:
-            json.dump({
-                "total_clusters": len(cluster_patterns),
-                "eps": args.eps,
-                "patterns": cluster_patterns
-            }, f, indent=2)
+        with open(output_file, "w") as f:
+            json.dump(
+                {
+                    "total_clusters": len(cluster_patterns),
+                    "eps": args.eps,
+                    "patterns": cluster_patterns,
+                },
+                f,
+                indent=2,
+            )
 
         logger.info("\n✓ Semantic patterns saved to: %s", output_file)
 

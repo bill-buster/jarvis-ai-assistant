@@ -77,11 +77,13 @@ def mine_response_pairs(
     pairs = []
     for row in cursor.fetchall():
         incoming, response, time_gap_ns = row
-        pairs.append({
-            "incoming": incoming,
-            "response": response,
-            "time_gap_seconds": time_gap_ns / 1_000_000_000
-        })
+        pairs.append(
+            {
+                "incoming": incoming,
+                "response": response,
+                "time_gap_seconds": time_gap_ns / 1_000_000_000,
+            }
+        )
 
     conn.close()
 
@@ -100,11 +102,7 @@ def mine_response_pairs(
         if frequency < 3:  # Minimum frequency threshold
             continue
 
-        templates.append({
-            "incoming": incoming,
-            "response": response,
-            "frequency": frequency
-        })
+        templates.append({"incoming": incoming, "response": response, "frequency": frequency})
 
     logger.info("Found %d unique response patterns (freq >= 3)", len(templates))
 
@@ -119,9 +117,9 @@ def analyze_patterns(templates: list[dict]):
     for t in templates:
         incoming_groups[t["incoming"]].append(t)
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("RESPONSE PATTERN ANALYSIS")
-    print("="*80)
+    print("=" * 80)
 
     print(f"\nTotal unique response patterns: {len(templates)}")
     print(f"Total unique incoming patterns: {len(incoming_groups)}")
@@ -130,22 +128,20 @@ def analyze_patterns(templates: list[dict]):
     print("\n--- Most Common Incoming Messages (with your variations) ---\n")
 
     sorted_incoming = sorted(
-        incoming_groups.items(),
-        key=lambda x: sum(r["frequency"] for r in x[1]),
-        reverse=True
+        incoming_groups.items(), key=lambda x: sum(r["frequency"] for r in x[1]), reverse=True
     )
 
     for incoming, responses in sorted_incoming[:20]:
         total_freq = sum(r["frequency"] for r in responses)
-        print(f"\nIncoming ({total_freq} times): \"{incoming[:60]}\"")
-        print(f"  Your responses:")
+        print(f'\nIncoming ({total_freq} times): "{incoming[:60]}"')
+        print("  Your responses:")
         for resp in sorted(responses, key=lambda x: x["frequency"], reverse=True)[:5]:
-            print(f"    [{resp['frequency']:>4}×] \"{resp['response'][:60]}\"")
+            print(f'    [{resp["frequency"]:>4}×] "{resp["response"][:60]}"')
 
     # Show most common (incoming → response) pairs
     print("\n--- Top 30 Response Pairs ---\n")
     for i, t in enumerate(templates[:30], 1):
-        print(f"{i:2}. [{t['frequency']:>4}×] \"{t['incoming'][:40]}\" → \"{t['response'][:40]}\"")
+        print(f'{i:2}. [{t["frequency"]:>4}×] "{t["incoming"][:40]}" → "{t["response"][:40]}"')
 
 
 def main():
@@ -160,11 +156,8 @@ def main():
 
     # Save
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, 'w') as f:
-        json.dump({
-            "total_patterns": len(templates),
-            "patterns": templates
-        }, f, indent=2)
+    with open(output_file, "w") as f:
+        json.dump({"total_patterns": len(templates), "patterns": templates}, f, indent=2)
 
     logger.info("\n✓ Response pairs saved to: %s", output_file)
 

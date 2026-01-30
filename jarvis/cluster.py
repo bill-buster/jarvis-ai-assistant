@@ -144,9 +144,11 @@ class ResponseClusterer:
         unique_labels = set(labels)
         unique_labels.discard(-1)
 
-        logger.info("Found %d clusters (plus %d noise points)",
-                    len(unique_labels),
-                    sum(1 for l in labels if l == -1))
+        logger.info(
+            "Found %d clusters (plus %d noise points)",
+            len(unique_labels),
+            sum(1 for l in labels if l == -1),
+        )
 
         # Build cluster results
         results: list[ClusterResult] = []
@@ -256,38 +258,88 @@ def suggest_cluster_names(
     # Pattern-based name suggestions
     patterns = {
         "ACCEPT_INVITATION": [
-            "sounds good", "i'm down", "let's do it", "i'm in", "count me in",
-            "works for me", "that works", "sure thing", "absolutely", "definitely",
+            "sounds good",
+            "i'm down",
+            "let's do it",
+            "i'm in",
+            "count me in",
+            "works for me",
+            "that works",
+            "sure thing",
+            "absolutely",
+            "definitely",
         ],
         "DECLINE_POLITELY": [
-            "can't today", "maybe next time", "not today", "sorry can't",
-            "rain check", "busy", "another time", "not this time",
+            "can't today",
+            "maybe next time",
+            "not today",
+            "sorry can't",
+            "rain check",
+            "busy",
+            "another time",
+            "not this time",
         ],
         "CONFIRM_ARRIVAL": [
-            "omw", "on my way", "be there soon", "almost there", "5 min",
-            "leaving now", "heading out", "pulling up",
+            "omw",
+            "on my way",
+            "be there soon",
+            "almost there",
+            "5 min",
+            "leaving now",
+            "heading out",
+            "pulling up",
         ],
         "GREETING": [
-            "hey", "hi", "hello", "what's up", "yo", "sup", "hiya",
+            "hey",
+            "hi",
+            "hello",
+            "what's up",
+            "yo",
+            "sup",
+            "hiya",
         ],
         "ACKNOWLEDGE": [
-            "haha", "lol", "lmao", "nice", "cool", "great", "awesome",
-            "perfect", "sweet", "got it",
+            "haha",
+            "lol",
+            "lmao",
+            "nice",
+            "cool",
+            "great",
+            "awesome",
+            "perfect",
+            "sweet",
+            "got it",
         ],
         "ASK_TIME": [
-            "when", "what time", "how long", "how soon",
+            "when",
+            "what time",
+            "how long",
+            "how soon",
         ],
         "ASK_LOCATION": [
-            "where", "what address", "location",
+            "where",
+            "what address",
+            "location",
         ],
         "CONFIRM_UNDERSTANDING": [
-            "makes sense", "understood", "got it", "roger", "copy that",
+            "makes sense",
+            "understood",
+            "got it",
+            "roger",
+            "copy that",
         ],
         "EXPRESS_THANKS": [
-            "thanks", "thank you", "appreciate", "thx", "ty",
+            "thanks",
+            "thank you",
+            "appreciate",
+            "thx",
+            "ty",
         ],
         "QUESTION_CLARIFICATION": [
-            "what do you mean", "could you explain", "can you clarify", "?",
+            "what do you mean",
+            "could you explain",
+            "can you clarify",
+            "?",
         ],
     }
 
@@ -410,11 +462,13 @@ def cluster_and_store(
             example_responses=result.example_responses,
         )
 
-        stats["clusters_created"].append({
-            "id": cluster.id,
-            "name": cluster.name,
-            "size": result.size,
-        })
+        stats["clusters_created"].append(
+            {
+                "id": cluster.id,
+                "name": cluster.name,
+                "size": result.size,
+            }
+        )
 
         # Note: pair_ids -> cluster mapping will be done in index building
         # because we need FAISS IDs to link everything together

@@ -46,10 +46,7 @@ def check_phrase_contradictions(response_texts: list[str]) -> bool:
     for phrase1, phrase2 in CONTRADICTORY_PHRASES:
         if phrase1 in combined and phrase2 in combined:
             logger.debug(
-                "Found phrase contradiction: '%s' and '%s' in: %s",
-                phrase1,
-                phrase2,
-                combined[:60]
+                "Found phrase contradiction: '%s' and '%s' in: %s", phrase1, phrase2, combined[:60]
             )
             return False
 
@@ -57,9 +54,7 @@ def check_phrase_contradictions(response_texts: list[str]) -> bool:
 
 
 def check_semantic_coherence(
-    response_texts: list[str],
-    model: Any,
-    similarity_threshold: float = 0.3
+    response_texts: list[str], model: Any, similarity_threshold: float = 0.3
 ) -> bool:
     """Check semantic coherence using embeddings.
 
@@ -87,16 +82,14 @@ def check_semantic_coherence(
             emb2 = embeddings[i + 1]
 
             # Cosine similarity
-            similarity = np.dot(emb1, emb2) / (
-                np.linalg.norm(emb1) * np.linalg.norm(emb2)
-            )
+            similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
 
             if similarity < similarity_threshold:
                 logger.debug(
                     "Low semantic similarity (%.2f) between messages: '%s' and '%s'",
                     similarity,
                     response_texts[i][:40],
-                    response_texts[i + 1][:40]
+                    response_texts[i + 1][:40],
                 )
                 return False
 
@@ -123,27 +116,22 @@ def check_temporal_contradictions(response_texts: list[str]) -> bool:
 
     # Time patterns
     import re
-    times = re.findall(r'\b(\d{1,2})\s*(am|pm|:00|:30)?\b', combined)
+
+    times = re.findall(r"\b(\d{1,2})\s*(am|pm|:00|:30)?\b", combined)
 
     # If multiple different times mentioned, flag as suspicious
     if len(set(times)) > 1:
         # Check if they're actually different
         unique_hours = set(t[0] for t in times)
         if len(unique_hours) > 1:
-            logger.debug(
-                "Multiple different times mentioned: %s in: %s",
-                times,
-                combined[:60]
-            )
+            logger.debug("Multiple different times mentioned: %s in: %s", times, combined[:60])
             return False
 
     return True
 
 
 def is_coherent_response(
-    response_texts: list[str],
-    model: Any | None = None,
-    use_semantic_check: bool = True
+    response_texts: list[str], model: Any | None = None, use_semantic_check: bool = True
 ) -> bool:
     """Check if multi-message response is coherent.
 
@@ -178,10 +166,7 @@ def is_coherent_response(
     return True
 
 
-def calculate_coherence_score(
-    response_texts: list[str],
-    model: Any | None = None
-) -> float:
+def calculate_coherence_score(response_texts: list[str], model: Any | None = None) -> float:
     """Calculate a coherence score (0-1).
 
     Args:

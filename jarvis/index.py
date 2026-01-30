@@ -248,9 +248,7 @@ class TriggerIndexSearcher:
         # Check if we need to reload (new active version)
         active_index = self.jarvis_db.get_active_index()
         if active_index is None:
-            raise FileNotFoundError(
-                "No active FAISS index. Run 'jarvis db build-index' first."
-            )
+            raise FileNotFoundError("No active FAISS index. Run 'jarvis db build-index' first.")
 
         if self._index is None or self._active_version != active_index.version_id:
             index_path = JARVIS_DIR / active_index.index_path
@@ -340,19 +338,21 @@ class TriggerIndexSearcher:
                 if embedding and embedding.cluster_id:
                     cluster = self.jarvis_db.get_cluster(embedding.cluster_id)
 
-                results.append({
-                    "similarity": round(score, 3),
-                    "weighted_score": round(final_score, 3),
-                    "trigger_text": pair.trigger_text,
-                    "response_text": pair.response_text,
-                    "chat_id": pair.chat_id,
-                    "faiss_id": faiss_id,
-                    "pair_id": pair.id,
-                    "source_timestamp": pair.source_timestamp,
-                    "quality_score": pair.quality_score,
-                    "cluster_id": embedding.cluster_id if embedding else None,
-                    "cluster_name": cluster.name if cluster else None,
-                })
+                results.append(
+                    {
+                        "similarity": round(score, 3),
+                        "weighted_score": round(final_score, 3),
+                        "trigger_text": pair.trigger_text,
+                        "response_text": pair.response_text,
+                        "chat_id": pair.chat_id,
+                        "faiss_id": faiss_id,
+                        "pair_id": pair.id,
+                        "source_timestamp": pair.source_timestamp,
+                        "quality_score": pair.quality_score,
+                        "cluster_id": embedding.cluster_id if embedding else None,
+                        "cluster_name": cluster.name if cluster else None,
+                    }
+                )
 
         # Sort by weighted score and limit
         results.sort(key=lambda x: x["weighted_score"], reverse=True)
@@ -414,6 +414,7 @@ def get_index_stats(jarvis_db: Any = None) -> dict[str, Any] | None:
         legacy_path = JARVIS_DIR / "triggers.index"
         if legacy_path.exists():
             import faiss
+
             index = faiss.read_index(str(legacy_path))
             return {
                 "exists": True,

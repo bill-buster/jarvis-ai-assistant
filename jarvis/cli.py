@@ -48,6 +48,7 @@ from contracts.models import GenerationRequest
 from core.health import get_degradation_controller, reset_degradation_controller
 from core.memory import get_memory_controller, reset_memory_controller
 from jarvis.context import ContextFetcher
+from jarvis.db import get_db
 from jarvis.errors import (
     ConfigurationError,
     JarvisError,
@@ -71,7 +72,6 @@ from jarvis.system import (
     _check_imessage_access,
     initialize_system,
 )
-from jarvis.db import get_db, JARVIS_DB_PATH
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -1574,7 +1574,9 @@ def cmd_db(args: argparse.Namespace) -> int:
     subcommand = args.db_command
     if subcommand is None:
         console.print("[red]Error: Please specify a db subcommand[/red]")
-        console.print("Available: init, add-contact, list-contacts, extract, cluster, label-cluster, build-index, stats")
+        console.print(
+            "Available: init, add-contact, list-contacts, extract, cluster, label-cluster, build-index, stats"
+        )
         return 1
 
     if subcommand == "init":
@@ -1600,7 +1602,6 @@ def cmd_db(args: argparse.Namespace) -> int:
 
 def _cmd_db_init(args: argparse.Namespace) -> int:
     """Initialize the JARVIS database."""
-    from jarvis.db import get_db
 
     console.print("[bold]Initializing JARVIS database...[/bold]")
 
@@ -1623,7 +1624,6 @@ def _cmd_db_init(args: argparse.Namespace) -> int:
 
 def _cmd_db_add_contact(args: argparse.Namespace) -> int:
     """Add or update a contact."""
-    from jarvis.db import get_db
 
     db = get_db()
 
@@ -1639,7 +1639,7 @@ def _cmd_db_add_contact(args: argparse.Namespace) -> int:
         style_notes=args.style,
     )
 
-    console.print(f"[green]Contact added/updated:[/green]")
+    console.print("[green]Contact added/updated:[/green]")
     console.print(f"  Name: {contact.display_name}")
     if contact.relationship:
         console.print(f"  Relationship: {contact.relationship}")
@@ -1653,7 +1653,6 @@ def _cmd_db_add_contact(args: argparse.Namespace) -> int:
 
 def _cmd_db_list_contacts(args: argparse.Namespace) -> int:
     """List all contacts."""
-    from jarvis.db import get_db
 
     db = get_db()
 
@@ -1691,7 +1690,6 @@ def _cmd_db_extract(args: argparse.Namespace) -> int:
     """Extract (trigger, response) pairs from iMessage history."""
     from rich.progress import Progress, SpinnerColumn, TextColumn
 
-    from jarvis.db import get_db
     from jarvis.extract import ExtractionConfig, extract_all_pairs
 
     if not _check_imessage_access():
@@ -1744,14 +1742,14 @@ def _cmd_db_extract(args: argparse.Namespace) -> int:
     console.print(f"  Duplicates skipped: {stats['pairs_skipped_duplicate']}")
 
     # Show dropped reasons if available
-    dropped = stats.get('dropped_by_reason', {})
+    dropped = stats.get("dropped_by_reason", {})
     if dropped and any(v > 0 for v in dropped.values()):
         console.print("\n[dim]Dropped pairs by reason:[/dim]")
         for reason, count in dropped.items():
             if count > 0:
                 console.print(f"  {reason}: {count}")
 
-    if stats['errors']:
+    if stats["errors"]:
         console.print(f"\n[yellow]Errors: {len(stats['errors'])}[/yellow]")
 
     return 0
@@ -1761,7 +1759,6 @@ def _cmd_db_cluster(args: argparse.Namespace) -> int:
     """Cluster response patterns using HDBSCAN."""
     from rich.progress import Progress, SpinnerColumn, TextColumn
 
-    from jarvis.db import get_db
     from jarvis.cluster import ClusterConfig, cluster_and_store
 
     db = get_db()
@@ -1804,9 +1801,9 @@ def _cmd_db_cluster(args: argparse.Namespace) -> int:
     console.print(f"  Clusters found: {stats['clusters_found']}")
     console.print(f"  Noise (unclustered): {stats['noise_pairs']}")
 
-    if stats['clusters_created']:
+    if stats["clusters_created"]:
         console.print("\n[bold]Clusters:[/bold]")
-        for cluster in stats['clusters_created']:
+        for cluster in stats["clusters_created"]:
             console.print(f"  {cluster['name']}: {cluster['size']} responses")
 
     console.print("\n[dim]Use 'jarvis db label-cluster <id> <name>' to rename clusters[/dim]")
@@ -1816,7 +1813,6 @@ def _cmd_db_cluster(args: argparse.Namespace) -> int:
 
 def _cmd_db_label_cluster(args: argparse.Namespace) -> int:
     """Label a cluster with a name."""
-    from jarvis.db import get_db
 
     db = get_db()
     if not db.exists():
@@ -1844,8 +1840,7 @@ def _cmd_db_build_index(args: argparse.Namespace) -> int:
     """Build FAISS index of triggers."""
     from rich.progress import Progress, SpinnerColumn, TextColumn
 
-    from jarvis.db import get_db
-    from jarvis.index import build_index_from_db, IndexConfig
+    from jarvis.index import build_index_from_db
 
     db = get_db()
     if not db.exists():
@@ -1871,7 +1866,7 @@ def _cmd_db_build_index(args: argparse.Namespace) -> int:
 
         result = build_index_from_db(db, None, progress_cb)
 
-    if not result['success']:
+    if not result["success"]:
         console.print(f"[red]Error: {result.get('error', 'Unknown error')}[/red]")
         return 1
 
@@ -1886,7 +1881,6 @@ def _cmd_db_build_index(args: argparse.Namespace) -> int:
 
 def _cmd_db_stats(args: argparse.Namespace) -> int:
     """Show database statistics."""
-    from jarvis.db import get_db
     from jarvis.index import get_index_stats
 
     db = get_db()
@@ -1904,31 +1898,31 @@ def _cmd_db_stats(args: argparse.Namespace) -> int:
     overview.add_column("Metric", style="bold")
     overview.add_column("Count")
 
-    overview.add_row("Contacts", str(stats['contacts']))
-    overview.add_row("Pairs (total)", str(stats['pairs']))
-    overview.add_row("Pairs (quality >= 0.5)", str(stats.get('pairs_quality_gte_50', 'N/A')))
-    overview.add_row("Clusters", str(stats['clusters']))
-    overview.add_row("Embeddings", str(stats['embeddings']))
+    overview.add_row("Contacts", str(stats["contacts"]))
+    overview.add_row("Pairs (total)", str(stats["pairs"]))
+    overview.add_row("Pairs (quality >= 0.5)", str(stats.get("pairs_quality_gte_50", "N/A")))
+    overview.add_row("Clusters", str(stats["clusters"]))
+    overview.add_row("Embeddings", str(stats["embeddings"]))
 
     console.print(overview)
 
     # Pairs per contact
-    if stats['pairs_per_contact']:
+    if stats["pairs_per_contact"]:
         console.print("\n[bold]Top Contacts by Pairs:[/bold]")
-        for item in stats['pairs_per_contact'][:5]:
-            if item['count'] > 0:
+        for item in stats["pairs_per_contact"][:5]:
+            if item["count"] > 0:
                 console.print(f"  {item['name']}: {item['count']} pairs")
 
     # Index stats (pass db for versioned index support)
     index_stats = get_index_stats(db)
-    if index_stats and index_stats.get('exists'):
+    if index_stats and index_stats.get("exists"):
         console.print("\n[bold]FAISS Index:[/bold]")
         console.print(f"  Version: {index_stats.get('version_id', 'N/A')}")
         console.print(f"  Model: {index_stats.get('model_name', 'N/A')}")
         console.print(f"  Vectors: {index_stats['num_vectors']}")
         console.print(f"  Dimension: {index_stats['dimension']}")
         console.print(f"  Size: {index_stats['size_bytes'] / 1024:.1f} KB")
-        if index_stats.get('created_at'):
+        if index_stats.get("created_at"):
             console.print(f"  Created: {index_stats['created_at']}")
     else:
         console.print("\n[dim]FAISS index not built. Run 'jarvis db build-index'[/dim]")

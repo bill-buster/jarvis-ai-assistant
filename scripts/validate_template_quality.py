@@ -26,11 +26,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def score_template_appropriateness(
-    loader: MLXModelLoader,
-    incoming: str,
-    response: str
-) -> float:
+def score_template_appropriateness(loader: MLXModelLoader, incoming: str, response: str) -> float:
     """Score template appropriateness using LLM-as-judge (0-1).
 
     Args:
@@ -56,11 +52,7 @@ Rating (just the number 0-10):"""
 
     try:
         loader.load()
-        result = loader.generate_sync(
-            prompt=prompt,
-            max_tokens=5,
-            temperature=0.3
-        )
+        result = loader.generate_sync(prompt=prompt, max_tokens=5, temperature=0.3)
 
         # Extract number
         text = result.text.strip()
@@ -78,10 +70,7 @@ Rating (just the number 0-10):"""
         return 0.5
 
 
-def score_template_naturalness(
-    loader: MLXModelLoader,
-    response: str
-) -> float:
+def score_template_naturalness(loader: MLXModelLoader, response: str) -> float:
     """Score how natural the response sounds (0-1).
 
     Args:
@@ -102,11 +91,7 @@ Rating (just the number 0-10):"""
 
     try:
         loader.load()
-        result = loader.generate_sync(
-            prompt=prompt,
-            max_tokens=5,
-            temperature=0.3
-        )
+        result = loader.generate_sync(prompt=prompt, max_tokens=5, temperature=0.3)
 
         text = result.text.strip()
         for char in text:
@@ -142,9 +127,10 @@ def check_template_safety(response: str) -> float:
 
     # Personal info patterns (phone, email, address)
     import re
-    if re.search(r'\d{3}-\d{3}-\d{4}', response):  # Phone number
+
+    if re.search(r"\d{3}-\d{3}-\d{4}", response):  # Phone number
         return 0.3
-    if re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', response):  # Email
+    if re.search(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", response):  # Email
         return 0.3
 
     return 1.0
@@ -174,10 +160,7 @@ def check_template_specificity(incoming: str, response: str) -> float:
 
 
 def validate_template(
-    loader: MLXModelLoader,
-    incoming: str,
-    response: str,
-    use_llm: bool = True
+    loader: MLXModelLoader, incoming: str, response: str, use_llm: bool = True
 ) -> dict[str, Any]:
     """Validate a single template.
 
@@ -209,24 +192,17 @@ def validate_template(
 
     # Overall score (weighted average)
     overall = (
-        scores["appropriateness"] * 0.4 +
-        scores["naturalness"] * 0.3 +
-        scores["safety"] * 0.2 +
-        scores["specificity"] * 0.1
+        scores["appropriateness"] * 0.4
+        + scores["naturalness"] * 0.3
+        + scores["safety"] * 0.2
+        + scores["specificity"] * 0.1
     )
 
-    return {
-        "scores": scores,
-        "overall": overall,
-        "passed": overall >= 0.7
-    }
+    return {"scores": scores, "overall": overall, "passed": overall >= 0.7}
 
 
 def validate_templates(
-    templates_file: Path,
-    output_file: Path,
-    use_llm: bool = True,
-    sample_size: int | None = None
+    templates_file: Path, output_file: Path, use_llm: bool = True, sample_size: int | None = None
 ) -> dict[str, Any]:
     """Validate mined templates.
 
@@ -289,7 +265,7 @@ def validate_templates(
                 "Template failed validation (score=%.2f): '%s' → '%s'",
                 validation["overall"],
                 incoming[:40],
-                response[:40]
+                response[:40],
             )
 
     # Unload model
@@ -298,8 +274,7 @@ def validate_templates(
 
     # Sort by combined score (original metric) and validation score
     validated_patterns.sort(
-        key=lambda x: x["combined_score"] * x["validation"]["overall"],
-        reverse=True
+        key=lambda x: x["combined_score"] * x["validation"]["overall"], reverse=True
     )
 
     # Save results
@@ -316,18 +291,18 @@ def validate_templates(
                 "appropriateness": 0.4,
                 "naturalness": 0.3,
                 "safety": 0.2,
-                "specificity": 0.1
-            }
-        }
+                "specificity": 0.1,
+            },
+        },
     }
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, 'w') as f:
+    with open(output_file, "w") as f:
         json.dump(results, f, indent=2)
 
-    logger.info("\n" + "="*80)
+    logger.info("\n" + "=" * 80)
     logger.info("VALIDATION COMPLETE")
-    logger.info("="*80)
+    logger.info("=" * 80)
     logger.info("Total templates: %d", len(patterns))
     logger.info("Passed: %d (%.1f%%)", passed_count, results["pass_rate"] * 100)
     logger.info("Failed: %d", failed_count)
@@ -340,27 +315,15 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Validate template quality")
+    parser.add_argument("input", type=str, help="Input templates JSON file")
     parser.add_argument(
-        "input",
-        type=str,
-        help="Input templates JSON file"
+        "--output", type=str, default=None, help="Output file (default: input_validated.json)"
     )
     parser.add_argument(
-        "--output",
-        type=str,
-        default=None,
-        help="Output file (default: input_validated.json)"
+        "--no-llm", action="store_true", help="Use only rule-based validation (faster)"
     )
     parser.add_argument(
-        "--no-llm",
-        action="store_true",
-        help="Use only rule-based validation (faster)"
-    )
-    parser.add_argument(
-        "--sample",
-        type=int,
-        default=None,
-        help="Only validate first N templates (for testing)"
+        "--sample", type=int, default=None, help="Only validate first N templates (for testing)"
     )
 
     args = parser.parse_args()
@@ -375,12 +338,7 @@ def main():
     else:
         output_file = input_file.parent / f"{input_file.stem}_validated.json"
 
-    validate_templates(
-        input_file,
-        output_file,
-        use_llm=not args.no_llm,
-        sample_size=args.sample
-    )
+    validate_templates(input_file, output_file, use_llm=not args.no_llm, sample_size=args.sample)
 
 
 if __name__ == "__main__":

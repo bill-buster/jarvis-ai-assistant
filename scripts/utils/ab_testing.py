@@ -25,7 +25,7 @@ class ABTestConfig:
         variant_a: str,
         variant_b: str,
         traffic_split: float = 0.5,
-        enabled: bool = True
+        enabled: bool = True,
     ):
         """Initialize A/B test config.
 
@@ -93,18 +93,11 @@ class ABTestMetrics:
         self.results_dir = results_dir
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
-        self.metrics = defaultdict(lambda: {
-            "variant_a": defaultdict(list),
-            "variant_b": defaultdict(list)
-        })
+        self.metrics = defaultdict(
+            lambda: {"variant_a": defaultdict(list), "variant_b": defaultdict(list)}
+        )
 
-    def log_event(
-        self,
-        test_name: str,
-        variant: str,
-        metric_name: str,
-        value: float
-    ):
+    def log_event(self, test_name: str, variant: str, metric_name: str, value: float):
         """Log a metric event.
 
         Args:
@@ -113,10 +106,9 @@ class ABTestMetrics:
             metric_name: Metric name (e.g., "template_hit", "user_edited")
             value: Metric value
         """
-        self.metrics[test_name][variant][metric_name].append({
-            "value": value,
-            "timestamp": time.time()
-        })
+        self.metrics[test_name][variant][metric_name].append(
+            {"value": value, "timestamp": time.time()}
+        )
 
     def calculate_statistics(self, test_name: str) -> dict[str, Any]:
         """Calculate statistics for a test.
@@ -147,7 +139,7 @@ class ABTestMetrics:
                         "std": np.std(values),
                         "median": np.median(values),
                         "min": np.min(values),
-                        "max": np.max(values)
+                        "max": np.max(values),
                     }
 
             stats[variant] = variant_metrics
@@ -155,10 +147,7 @@ class ABTestMetrics:
         return stats
 
     def compare_variants(
-        self,
-        test_name: str,
-        metric_name: str,
-        min_samples: int = 30
+        self, test_name: str, metric_name: str, min_samples: int = 30
     ) -> dict[str, Any]:
         """Compare variants on a specific metric.
 
@@ -184,21 +173,23 @@ class ABTestMetrics:
                 "error": "Insufficient samples",
                 "variant_a_count": len(variant_a_values),
                 "variant_b_count": len(variant_b_values),
-                "min_samples_required": min_samples
+                "min_samples_required": min_samples,
             }
 
         try:
-            from scipy import stats as scipy_stats
             import numpy as np
+            from scipy import stats as scipy_stats
 
             # T-test
             t_stat, p_value = scipy_stats.ttest_ind(variant_a_values, variant_b_values)
 
             # Effect size (Cohen's d)
-            pooled_std = np.sqrt(
-                (np.var(variant_a_values) + np.var(variant_b_values)) / 2
+            pooled_std = np.sqrt((np.var(variant_a_values) + np.var(variant_b_values)) / 2)
+            effect_size = (
+                (np.mean(variant_b_values) - np.mean(variant_a_values)) / pooled_std
+                if pooled_std > 0
+                else 0
             )
-            effect_size = (np.mean(variant_b_values) - np.mean(variant_a_values)) / pooled_std if pooled_std > 0 else 0
 
             return {
                 "metric": metric_name,
@@ -209,7 +200,11 @@ class ABTestMetrics:
                 "p_value": p_value,
                 "effect_size": effect_size,
                 "significant": p_value < 0.05,
-                "winner": "variant_b" if p_value < 0.05 and effect_size > 0 else "variant_a" if p_value < 0.05 else "no_clear_winner"
+                "winner": "variant_b"
+                if p_value < 0.05 and effect_size > 0
+                else "variant_a"
+                if p_value < 0.05
+                else "no_clear_winner",
             }
 
         except ImportError:
@@ -226,16 +221,20 @@ class ABTestMetrics:
 
         stats = self.calculate_statistics(test_name)
 
-        with open(results_file, 'w') as f:
-            json.dump({
-                "test_name": test_name,
-                "timestamp": datetime.now().isoformat(),
-                "statistics": stats,
-                "raw_metrics": {
-                    k: {vk: len(vv) for vk, vv in v.items()}
-                    for k, v in self.metrics[test_name].items()
-                }
-            }, f, indent=2)
+        with open(results_file, "w") as f:
+            json.dump(
+                {
+                    "test_name": test_name,
+                    "timestamp": datetime.now().isoformat(),
+                    "statistics": stats,
+                    "raw_metrics": {
+                        k: {vk: len(vv) for vk, vv in v.items()}
+                        for k, v in self.metrics[test_name].items()
+                    },
+                },
+                f,
+                indent=2,
+            )
 
         logger.info("Saved A/B test results to: %s", results_file)
 

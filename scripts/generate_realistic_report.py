@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+
 def generate_report(results_file: Path) -> str:
     """Generate markdown report from test results."""
 
@@ -17,23 +18,23 @@ def generate_report(results_file: Path) -> str:
 
     report = f"""# Realistic iMessage Reply Generation Test Results
 
-**Date:** {data['timestamp']}
-**Conversations Tested:** {data['config']['num_conversations']}
-**Variations per Context:** {data['config']['num_variations']}
+**Date:** {data["timestamp"]}
+**Conversations Tested:** {data["config"]["num_conversations"]}
+**Variations per Context:** {data["config"]["num_variations"]}
 
 ---
 
 ## Executive Summary
 
 ### Template Matching (Fast Path)
-- **Hit Rate:** {template['hit_rate']:.1%}
-- **Avg Latency:** {template['avg_latency_ms']:.1f}ms
-- **Verdict:** {'✅ Good coverage' if template['hit_rate'] > 0.3 else '⚠️ Low coverage - needs more templates'}
+- **Hit Rate:** {template["hit_rate"]:.1%}
+- **Avg Latency:** {template["avg_latency_ms"]:.1f}ms
+- **Verdict:** {"✅ Good coverage" if template["hit_rate"] > 0.3 else "⚠️ Low coverage - needs more templates"}
 
 ### LLM Generation (Fallback)
-- **Models Tested:** {data['config']['models_tested']}
-- **Brevity Score:** {quality['brevity_score']:.1%} (responses < 100 chars)
-- **Variety Score:** {quality['variety_score']:.2f} (unique responses per context)
+- **Models Tested:** {data["config"]["models_tested"]}
+- **Brevity Score:** {quality["brevity_score"]:.1%} (responses < 100 chars)
+- **Variety Score:** {quality["variety_score"]:.2f} (unique responses per context)
 
 ---
 
@@ -43,22 +44,22 @@ def generate_report(results_file: Path) -> str:
 
     # Template stats
     report += f"""
-**Total Tests:** {template['total_tests']}
-**Hits:** {template['template_hits']} ({template['hit_rate']:.1%})
-**Misses:** {template['template_misses']}
-**Avg Latency:** {template['avg_latency_ms']:.1f}ms
+**Total Tests:** {template["total_tests"]}
+**Hits:** {template["template_hits"]} ({template["hit_rate"]:.1%})
+**Misses:** {template["template_misses"]}
+**Avg Latency:** {template["avg_latency_ms"]:.1f}ms
 
 ### Sample Matches
 
 """
 
-    for match in template['matches'][:5]:
+    for match in template["matches"][:5]:
         report += f"""
-**Query:** "{match['query'][:80]}"
-**Matched Pattern:** "{match['matched_pattern'][:80]}"
-**Response:** "{match['template_response'][:80]}"
-**Confidence:** {match['confidence']:.2f}
-**Latency:** {match['latency_ms']:.1f}ms
+**Query:** "{match["query"][:80]}"
+**Matched Pattern:** "{match["matched_pattern"][:80]}"
+**Response:** "{match["template_response"][:80]}"
+**Confidence:** {match["confidence"]:.2f}
+**Latency:** {match["latency_ms"]:.1f}ms
 
 """
 
@@ -94,11 +95,11 @@ def generate_report(results_file: Path) -> str:
 
         report += f"\n### {model_result['model']}\n\n"
 
-        for gen in model_result['generations'][:3]:  # Show first 3
+        for gen in model_result["generations"][:3]:  # Show first 3
             report += f"**Context:** {gen['last_message'][:100]}...\n\n"
 
-            for i, var in enumerate(gen['variations'], 1):
-                report += f"{i}. \"{var['reply']}\" ({var['latency_ms']}ms, {var['tokens']} tokens)\n"
+            for i, var in enumerate(gen["variations"], 1):
+                report += f'{i}. "{var["reply"]}" ({var["latency_ms"]}ms, {var["tokens"]} tokens)\n'
 
             report += "\n"
 
@@ -111,7 +112,7 @@ def generate_report(results_file: Path) -> str:
 ### Template Matching
 """
 
-    if template['hit_rate'] > 0.4:
+    if template["hit_rate"] > 0.4:
         report += "- ✅ Template coverage is good (>40% hit rate)\n"
         report += "- Templates handle common queries effectively\n"
         report += f"- Average latency: {template['avg_latency_ms']:.1f}ms (very fast)\n"
@@ -125,8 +126,8 @@ def generate_report(results_file: Path) -> str:
     # Find fastest model
     fastest = min(
         (m for m in llm if "error" not in m),
-        key=lambda x: x['stats']['avg_latency_ms'],
-        default=None
+        key=lambda x: x["stats"]["avg_latency_ms"],
+        default=None,
     )
 
     if fastest:
@@ -135,14 +136,14 @@ def generate_report(results_file: Path) -> str:
     # Find most concise
     most_concise = min(
         (m for m in llm if "error" not in m),
-        key=lambda x: x['stats']['avg_length_chars'],
-        default=None
+        key=lambda x: x["stats"]["avg_length_chars"],
+        default=None,
     )
 
     if most_concise:
         report += f"- 📝 **Most Concise:** {most_concise['model']} ({most_concise['stats']['avg_length_chars']:.0f} chars avg)\n"
 
-    report += f"\n### Quality Metrics\n"
+    report += "\n### Quality Metrics\n"
     report += f"- **Brevity:** {quality['brevity_score']:.1%} of responses are brief (<100 chars)\n"
     report += f"- **Variety:** {quality['variety_score']:.2f} unique responses per context (higher = more creative)\n"
 
@@ -165,13 +166,15 @@ Return response
 **Expected Performance:**
 """
 
-    if template['hit_rate'] > 0:
-        template_time = template['hit_rate'] * template['avg_latency_ms']
-        llm_time = (1 - template['hit_rate']) * (fastest['stats']['avg_latency_ms'] if fastest else 500)
+    if template["hit_rate"] > 0:
+        template_time = template["hit_rate"] * template["avg_latency_ms"]
+        llm_time = (1 - template["hit_rate"]) * (
+            fastest["stats"]["avg_latency_ms"] if fastest else 500
+        )
         hybrid_avg = template_time + llm_time
 
         report += f"- Template hits: {template['hit_rate']:.1%} × {template['avg_latency_ms']:.0f}ms = {template_time:.0f}ms\n"
-        report += f"- LLM fallback: {1-template['hit_rate']:.1%} × {fastest['stats']['avg_latency_ms'] if fastest else 500:.0f}ms = {llm_time:.0f}ms\n"
+        report += f"- LLM fallback: {1 - template['hit_rate']:.1%} × {fastest['stats']['avg_latency_ms'] if fastest else 500:.0f}ms = {llm_time:.0f}ms\n"
         report += f"- **Hybrid Average: {hybrid_avg:.0f}ms**\n"
 
     report += """
@@ -209,8 +212,8 @@ def main():
     report = generate_report(results_file)
 
     # Save report
-    report_file = results_file.with_suffix('.md')
-    with open(report_file, 'w') as f:
+    report_file = results_file.with_suffix(".md")
+    with open(report_file, "w") as f:
         f.write(report)
 
     print(f"Report generated: {report_file}")

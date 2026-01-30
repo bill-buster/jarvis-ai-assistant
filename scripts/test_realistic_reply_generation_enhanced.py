@@ -28,7 +28,6 @@ from integrations.imessage.reader import ChatDBReader
 from models.loader import MLXModelLoader, ModelConfig
 from models.templates import TemplateMatcher, unload_sentence_model
 
-
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -46,6 +45,7 @@ NUM_RESPONSES_PER_CONTEXT = 3  # Generate 3 variations per context
 # Context Detection
 # ============================================================================
 
+
 def detect_formality(text: str) -> str:
     """Detect if message is formal or casual.
 
@@ -56,16 +56,38 @@ def detect_formality(text: str) -> str:
 
     # Formal indicators
     formal_indicators = [
-        "please", "thank you", "sincerely", "regards",
-        "meeting", "schedule", "appointment", "deadline",
-        "professional", "business", "corporate"
+        "please",
+        "thank you",
+        "sincerely",
+        "regards",
+        "meeting",
+        "schedule",
+        "appointment",
+        "deadline",
+        "professional",
+        "business",
+        "corporate",
     ]
 
     # Casual indicators
     casual_indicators = [
-        "lol", "haha", "lmao", "omg", "wtf", "tbh", "ngl",
-        "yeah", "yep", "nah", "gonna", "wanna",
-        "sup", "hey", "yo", "dude", "bro"
+        "lol",
+        "haha",
+        "lmao",
+        "omg",
+        "wtf",
+        "tbh",
+        "ngl",
+        "yeah",
+        "yep",
+        "nah",
+        "gonna",
+        "wanna",
+        "sup",
+        "hey",
+        "yo",
+        "dude",
+        "bro",
     ]
 
     formal_count = sum(1 for ind in formal_indicators if ind in text_lower)
@@ -103,6 +125,7 @@ def detect_message_topic(text: str) -> str:
 # Step 1: Extract Real Conversation Threads with Context
 # ============================================================================
 
+
 def extract_conversation_threads(num_threads: int = 30) -> list[dict[str, Any]]:
     """Extract real conversation threads with context metadata."""
 
@@ -113,7 +136,7 @@ def extract_conversation_threads(num_threads: int = 30) -> list[dict[str, Any]]:
 
     threads = []
 
-    for conv in conversations[:num_threads * 2]:  # Get more than needed for filtering
+    for conv in conversations[: num_threads * 2]:  # Get more than needed for filtering
         # Get last 5 messages from this conversation
         messages = reader.get_messages(conv.chat_id, limit=5)
 
@@ -148,10 +171,14 @@ def extract_conversation_threads(num_threads: int = 30) -> list[dict[str, Any]]:
             break
 
     print(f"✓ Extracted {len(threads)} conversation threads")
-    print(f"  Formality: {sum(1 for t in threads if t['formality'] == 'formal')} formal, "
-          f"{sum(1 for t in threads if t['formality'] == 'casual')} casual")
-    print(f"  Topics: work={sum(1 for t in threads if t['topic'] == 'work')}, "
-          f"social={sum(1 for t in threads if t['topic'] == 'social')}")
+    print(
+        f"  Formality: {sum(1 for t in threads if t['formality'] == 'formal')} formal, "
+        f"{sum(1 for t in threads if t['formality'] == 'casual')} casual"
+    )
+    print(
+        f"  Topics: work={sum(1 for t in threads if t['topic'] == 'work')}, "
+        f"social={sum(1 for t in threads if t['topic'] == 'social')}"
+    )
 
     return threads
 
@@ -159,6 +186,7 @@ def extract_conversation_threads(num_threads: int = 30) -> list[dict[str, Any]]:
 # ============================================================================
 # Step 2: Enhanced Template Matching
 # ============================================================================
+
 
 def test_template_matching_with_context(threads: list[dict[str, Any]]) -> dict[str, Any]:
     """Test template matching with context breakdown."""
@@ -173,7 +201,7 @@ def test_template_matching_with_context(threads: list[dict[str, Any]]) -> dict[s
         "template_misses": 0,
         "avg_latency_ms": 0,
         "matches": [],
-        "by_context": defaultdict(lambda: {"hits": 0, "total": 0})
+        "by_context": defaultdict(lambda: {"hits": 0, "total": 0}),
     }
 
     total_latency = 0
@@ -197,16 +225,18 @@ def test_template_matching_with_context(threads: list[dict[str, Any]]) -> dict[s
         if match:
             results["template_hits"] += 1
             results["by_context"][context_key]["hits"] += 1
-            results["matches"].append({
-                "query": query,
-                "matched_pattern": match.matched_pattern,
-                "template_response": match.template.response,
-                "confidence": match.similarity,
-                "latency_ms": latency_ms,
-                "formality": formality,
-                "topic": topic,
-                "is_group": is_group
-            })
+            results["matches"].append(
+                {
+                    "query": query,
+                    "matched_pattern": match.matched_pattern,
+                    "template_response": match.template.response,
+                    "confidence": match.similarity,
+                    "latency_ms": latency_ms,
+                    "formality": formality,
+                    "topic": topic,
+                    "is_group": is_group,
+                }
+            )
         else:
             results["template_misses"] += 1
 
@@ -221,7 +251,7 @@ def test_template_matching_with_context(threads: list[dict[str, Any]]) -> dict[s
 
     print(f"  Overall hit rate: {results['hit_rate']:.1%}")
     print(f"  Avg latency: {results['avg_latency_ms']:.1f}ms")
-    print(f"\n  Hit rate by context:")
+    print("\n  Hit rate by context:")
     for ctx, rate in sorted(results["hit_rate_by_context"].items()):
         print(f"    {ctx}: {rate:.1%}")
 
@@ -232,12 +262,9 @@ def test_template_matching_with_context(threads: list[dict[str, Any]]) -> dict[s
 # Step 3: LLM Generation with Context
 # ============================================================================
 
+
 def generate_reply_with_context(
-    loader: MLXModelLoader,
-    context: list[str],
-    last_message: str,
-    is_group: bool,
-    formality: str
+    loader: MLXModelLoader, context: list[str], last_message: str, is_group: bool, formality: str
 ) -> dict[str, Any]:
     """Generate reply with context awareness."""
 
@@ -271,32 +298,20 @@ Your reply:"""
     try:
         loader.load()
 
-        result = loader.generate_sync(
-            prompt=prompt,
-            max_tokens=30,
-            temperature=0.8
-        )
+        result = loader.generate_sync(prompt=prompt, max_tokens=30, temperature=0.8)
 
         return {
             "reply": result.text.strip(),
             "latency_ms": int(result.generation_time_ms),
             "tokens": result.tokens_generated,
-            "success": True
+            "success": True,
         }
     except Exception as e:
-        return {
-            "reply": "",
-            "latency_ms": 0,
-            "tokens": 0,
-            "success": False,
-            "error": str(e)
-        }
+        return {"reply": "", "latency_ms": 0, "tokens": 0, "success": False, "error": str(e)}
 
 
 def test_llm_generation_enhanced(
-    model_info: dict[str, str],
-    threads: list[dict[str, Any]],
-    num_variations: int = 3
+    model_info: dict[str, str], threads: list[dict[str, Any]], num_variations: int = 3
 ) -> dict[str, Any]:
     """Test LLM generation with context awareness."""
 
@@ -309,7 +324,7 @@ def test_llm_generation_enhanced(
 
     try:
         loader = MLXModelLoader(config)
-        print(f"  ✓ Model loaded")
+        print("  ✓ Model loaded")
     except Exception as e:
         print(f"  ✗ Failed to load: {e}")
         return {"error": str(e)}
@@ -325,11 +340,7 @@ def test_llm_generation_enhanced(
             "avg_tokens": 0,
             "avg_length_chars": 0,
         },
-        "by_context": defaultdict(lambda: {
-            "count": 0,
-            "avg_length": 0,
-            "total_length": 0
-        })
+        "by_context": defaultdict(lambda: {"count": 0, "avg_length": 0, "total_length": 0}),
     }
 
     total_latency = 0
@@ -338,7 +349,7 @@ def test_llm_generation_enhanced(
     successes = 0
 
     for thread in threads[:10]:
-        display = thread['display_name'] or "Unknown"
+        display = thread["display_name"] or "Unknown"
 
         variations = []
         for i in range(num_variations):
@@ -347,7 +358,7 @@ def test_llm_generation_enhanced(
                 thread["context"],
                 thread["last_message"],
                 thread["is_group"],
-                thread["formality"]
+                thread["formality"],
             )
 
             if gen["success"]:
@@ -361,23 +372,27 @@ def test_llm_generation_enhanced(
                 results["by_context"][context_key]["count"] += 1
                 results["by_context"][context_key]["total_length"] += len(gen["reply"])
 
-                variations.append({
-                    "reply": gen["reply"],
-                    "latency_ms": gen["latency_ms"],
-                    "tokens": gen["tokens"],
-                    "length_chars": len(gen["reply"])
-                })
+                variations.append(
+                    {
+                        "reply": gen["reply"],
+                        "latency_ms": gen["latency_ms"],
+                        "tokens": gen["tokens"],
+                        "length_chars": len(gen["reply"]),
+                    }
+                )
 
             results["stats"]["total_tests"] += 1
 
-        results["generations"].append({
-            "display_name": thread["display_name"] or "Unknown",
-            "last_message": thread["last_message"],
-            "formality": thread["formality"],
-            "topic": thread["topic"],
-            "is_group": thread["is_group"],
-            "variations": variations
-        })
+        results["generations"].append(
+            {
+                "display_name": thread["display_name"] or "Unknown",
+                "last_message": thread["last_message"],
+                "formality": thread["formality"],
+                "topic": thread["topic"],
+                "is_group": thread["is_group"],
+                "variations": variations,
+            }
+        )
 
     # Calculate stats
     results["stats"]["successes"] = successes
@@ -402,6 +417,7 @@ def test_llm_generation_enhanced(
 # ============================================================================
 # Step 4: Enhanced Evaluation Metrics
 # ============================================================================
+
 
 def evaluate_appropriateness_rule_based(incoming: str, response: str) -> float:
     """Rule-based appropriateness check (0-1).
@@ -442,16 +458,16 @@ def evaluate_tone_match(incoming_formality: str, response: str) -> float:
         return 0.8
 
     # Mismatch
-    if (incoming_formality == "formal" and response_formality == "casual") or \
-       (incoming_formality == "casual" and response_formality == "formal"):
+    if (incoming_formality == "formal" and response_formality == "casual") or (
+        incoming_formality == "casual" and response_formality == "formal"
+    ):
         return 0.3
 
     return 0.6
 
 
 def evaluate_quality_enhanced(
-    template_results: dict[str, Any],
-    llm_results: list[dict[str, Any]]
+    template_results: dict[str, Any], llm_results: list[dict[str, Any]]
 ) -> dict[str, Any]:
     """Enhanced quality evaluation with multiple metrics."""
 
@@ -461,7 +477,7 @@ def evaluate_quality_enhanced(
         "template_quality": {
             "avg_appropriateness": 0,
             "avg_tone_match": 0,
-            "coverage_by_context": {}
+            "coverage_by_context": {},
         },
         "llm_quality": {},
         "brevity_score": 0,
@@ -476,19 +492,17 @@ def evaluate_quality_enhanced(
         for match in template_results["matches"]:
             # Appropriateness
             app_score = evaluate_appropriateness_rule_based(
-                match["query"],
-                match["template_response"]
+                match["query"], match["template_response"]
             )
             appropriateness_scores.append(app_score)
 
             # Tone match
-            tone_score = evaluate_tone_match(
-                match["formality"],
-                match["template_response"]
-            )
+            tone_score = evaluate_tone_match(match["formality"], match["template_response"])
             tone_scores.append(tone_score)
 
-        metrics["template_quality"]["avg_appropriateness"] = sum(appropriateness_scores) / len(appropriateness_scores)
+        metrics["template_quality"]["avg_appropriateness"] = sum(appropriateness_scores) / len(
+            appropriateness_scores
+        )
         metrics["template_quality"]["avg_tone_match"] = sum(tone_scores) / len(tone_scores)
 
     # Evaluate LLM generations
@@ -518,10 +532,7 @@ def evaluate_quality_enhanced(
 
             # Check appropriateness
             for var in variations:
-                app_score = evaluate_appropriateness_rule_based(
-                    gen["last_message"],
-                    var["reply"]
-                )
+                app_score = evaluate_appropriateness_rule_based(gen["last_message"], var["reply"])
                 appropriateness_scores.append(app_score)
 
                 # Brevity (under 100 chars)
@@ -530,10 +541,7 @@ def evaluate_quality_enhanced(
                     brief_count += 1
 
                 # Tone match
-                tone_score = evaluate_tone_match(
-                    gen["formality"],
-                    var["reply"]
-                )
+                tone_score = evaluate_tone_match(gen["formality"], var["reply"])
                 tone_scores.append(tone_score)
 
             # Variety (unique responses)
@@ -542,13 +550,19 @@ def evaluate_quality_enhanced(
 
         # Aggregate
         if appropriateness_scores:
-            metrics["llm_quality"][model_name]["avg_appropriateness"] = sum(appropriateness_scores) / len(appropriateness_scores)
+            metrics["llm_quality"][model_name]["avg_appropriateness"] = sum(
+                appropriateness_scores
+            ) / len(appropriateness_scores)
         if tone_scores:
-            metrics["llm_quality"][model_name]["avg_tone_match"] = sum(tone_scores) / len(tone_scores)
+            metrics["llm_quality"][model_name]["avg_tone_match"] = sum(tone_scores) / len(
+                tone_scores
+            )
         if total_count > 0:
             metrics["llm_quality"][model_name]["brevity_score"] = brief_count / total_count
         if variety_scores:
-            metrics["llm_quality"][model_name]["variety_score"] = sum(variety_scores) / len(variety_scores)
+            metrics["llm_quality"][model_name]["variety_score"] = sum(variety_scores) / len(
+                variety_scores
+            )
 
     return metrics
 
@@ -556,6 +570,7 @@ def evaluate_quality_enhanced(
 # ============================================================================
 # Main
 # ============================================================================
+
 
 def main():
     """Run enhanced realistic reply generation tests."""
@@ -566,9 +581,9 @@ def main():
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     output_file = output_dir / f"realistic_reply_enhanced_{timestamp}.json"
 
-    print("="*80)
+    print("=" * 80)
     print("ENHANCED REALISTIC IMESSAGE REPLY GENERATION TEST")
-    print("="*80)
+    print("=" * 80)
     print()
     print("NEW FEATURES:")
     print("  ✓ Context-aware evaluation (formality, topic, group)")
@@ -612,12 +627,12 @@ def main():
                 "context_aware",
                 "appropriateness_scoring",
                 "tone_matching",
-                "hit_rate_by_context"
-            ]
+                "hit_rate_by_context",
+            ],
         },
         "template_matching": template_results,
         "llm_generation": llm_results,
-        "quality_metrics": quality_metrics
+        "quality_metrics": quality_metrics,
     }
 
     # Save
@@ -625,14 +640,16 @@ def main():
         json.dump(final_results, f, indent=2)
 
     print()
-    print("="*80)
+    print("=" * 80)
     print("ENHANCED TEST COMPLETE")
-    print("="*80)
+    print("=" * 80)
     print(f"\nResults saved to: {output_file}")
     print()
     print("Summary:")
     print(f"  Template hit rate: {template_results['hit_rate']:.1%}")
-    print(f"  Template appropriateness: {quality_metrics['template_quality']['avg_appropriateness']:.2f}")
+    print(
+        f"  Template appropriateness: {quality_metrics['template_quality']['avg_appropriateness']:.2f}"
+    )
     print(f"  Template tone match: {quality_metrics['template_quality']['avg_tone_match']:.2f}")
     print()
 

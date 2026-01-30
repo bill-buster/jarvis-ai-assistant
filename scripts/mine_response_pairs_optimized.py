@@ -17,7 +17,6 @@ Ranking formula:
 import json
 import logging
 import sqlite3
-import time
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -65,7 +64,7 @@ def is_system_message(text: str) -> bool:
 def get_response_groups(
     db_path: Path,
     max_time_gap_seconds: int = 300,  # 5 min between incoming and response
-    max_burst_gap_seconds: int = 30,   # 30 sec between your consecutive messages
+    max_burst_gap_seconds: int = 30,  # 30 sec between your consecutive messages
 ) -> list[dict]:
     """Get (incoming message → your multi-message response) pairs.
 
@@ -117,9 +116,7 @@ def get_response_groups(
         if chat_id != current_chat:
             if chat_messages:
                 pairs = extract_pairs_from_chat(
-                    chat_messages,
-                    max_time_gap_seconds,
-                    max_burst_gap_seconds
+                    chat_messages, max_time_gap_seconds, max_burst_gap_seconds
                 )
                 response_groups.extend(pairs)
 
@@ -130,20 +127,18 @@ def get_response_groups(
         if is_system_message(text):
             continue
 
-        chat_messages.append({
-            "rowid": rowid,
-            "text": text,
-            "is_from_me": is_from_me,
-            "date_ns": date_ns,
-        })
+        chat_messages.append(
+            {
+                "rowid": rowid,
+                "text": text,
+                "is_from_me": is_from_me,
+                "date_ns": date_ns,
+            }
+        )
 
     # Process last chat
     if chat_messages:
-        pairs = extract_pairs_from_chat(
-            chat_messages,
-            max_time_gap_seconds,
-            max_burst_gap_seconds
-        )
+        pairs = extract_pairs_from_chat(chat_messages, max_time_gap_seconds, max_burst_gap_seconds)
         response_groups.extend(pairs)
 
     conn.close()
@@ -206,11 +201,13 @@ def extract_pairs_from_chat(
             # Combine multi-message responses with space
             combined_response = " ".join(response_texts)
 
-            pairs.append({
-                "incoming": incoming_text,
-                "response": combined_response,
-                "response_dates": response_dates,
-            })
+            pairs.append(
+                {
+                    "incoming": incoming_text,
+                    "response": combined_response,
+                    "response_dates": response_dates,
+                }
+            )
 
         i = j if j > i + 1 else i + 1
 
@@ -285,18 +282,20 @@ def calculate_temporal_scores(response_groups: list[dict]) -> list[dict]:
         # Combined score
         score = frequency * consistency_score * recency_weight * consistency_bonus
 
-        scored_patterns.append({
-            "incoming": incoming,
-            "response": response,
-            "frequency": frequency,
-            "consistency_score": consistency_score,
-            "recency_weight": recency_weight,
-            "consistency_bonus": consistency_bonus,
-            "combined_score": score,
-            "years_active": sorted(year_counts.keys()),
-            "most_recent": max(dates),
-            "age_days": int(age_days),
-        })
+        scored_patterns.append(
+            {
+                "incoming": incoming,
+                "response": response,
+                "frequency": frequency,
+                "consistency_score": consistency_score,
+                "recency_weight": recency_weight,
+                "consistency_bonus": consistency_bonus,
+                "combined_score": score,
+                "years_active": sorted(year_counts.keys()),
+                "most_recent": max(dates),
+                "age_days": int(age_days),
+            }
+        )
 
     # Sort by combined score
     scored_patterns.sort(key=lambda x: x["combined_score"], reverse=True)
@@ -308,47 +307,55 @@ def calculate_temporal_scores(response_groups: list[dict]) -> list[dict]:
 def analyze_patterns(scored_patterns: list[dict]):
     """Analyze and display pattern insights."""
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("RESPONSE PATTERN ANALYSIS (Optimized)")
-    print("="*80)
+    print("=" * 80)
 
     print(f"\nTotal unique patterns: {len(scored_patterns)}")
 
     # Top patterns by combined score
     print("\n--- Top 30 Patterns (by score: freq × consistency × recency × year_bonus) ---\n")
     for i, p in enumerate(scored_patterns[:30], 1):
-        print(f"{i:2}. Score: {p['combined_score']:>6.1f} | "
-              f"Freq: {p['frequency']:>4} | "
-              f"Age: {p['age_days']:>4}d | "
-              f"Recency: {p['recency_weight']:.2f}")
-        print(f"    Consistency: {p['consistency_score']:.2f} | "
-              f"Year Bonus: {p['consistency_bonus']:.2f} | "
-              f"Years: {p['years_active']}")
-        print(f"    \"{p['incoming'][:50]}\" → \"{p['response'][:50]}\"")
+        print(
+            f"{i:2}. Score: {p['combined_score']:>6.1f} | "
+            f"Freq: {p['frequency']:>4} | "
+            f"Age: {p['age_days']:>4}d | "
+            f"Recency: {p['recency_weight']:.2f}"
+        )
+        print(
+            f"    Consistency: {p['consistency_score']:.2f} | "
+            f"Year Bonus: {p['consistency_bonus']:.2f} | "
+            f"Years: {p['years_active']}"
+        )
+        print(f'    "{p["incoming"][:50]}" → "{p["response"][:50]}"')
         print()
 
     # Show high-consistency patterns (reliable over time)
     print("\n--- Most Consistent Patterns (appear across multiple years) ---\n")
-    consistent = sorted(scored_patterns, key=lambda x: x['consistency_score'], reverse=True)
+    consistent = sorted(scored_patterns, key=lambda x: x["consistency_score"], reverse=True)
     for i, p in enumerate(consistent[:10], 1):
-        if len(p['years_active']) < 2:
+        if len(p["years_active"]) < 2:
             continue
-        print(f"{i:2}. Consistency: {p['consistency_score']:.2f} | "
-              f"Years: {len(p['years_active'])} | "
-              f"Freq: {p['frequency']}")
+        print(
+            f"{i:2}. Consistency: {p['consistency_score']:.2f} | "
+            f"Years: {len(p['years_active'])} | "
+            f"Freq: {p['frequency']}"
+        )
         print(f"    Active: {p['years_active']}")
-        print(f"    \"{p['incoming'][:50]}\" → \"{p['response'][:50]}\"")
+        print(f'    "{p["incoming"][:50]}" → "{p["response"][:50]}"')
         print()
 
     # Show most recent patterns
     print("\n--- Most Recent Patterns (current style) ---\n")
-    recent = sorted(scored_patterns, key=lambda x: x['recency_weight'], reverse=True)
+    recent = sorted(scored_patterns, key=lambda x: x["recency_weight"], reverse=True)
     for i, p in enumerate(recent[:10], 1):
-        most_recent_dt = imessage_timestamp_to_datetime(p['most_recent'])
-        print(f"{i:2}. Recency: {p['recency_weight']:.2f} | "
-              f"Last used: {most_recent_dt.strftime('%Y-%m-%d')} | "
-              f"Freq: {p['frequency']}")
-        print(f"    \"{p['incoming'][:50]}\" → \"{p['response'][:50]}\"")
+        most_recent_dt = imessage_timestamp_to_datetime(p["most_recent"])
+        print(
+            f"{i:2}. Recency: {p['recency_weight']:.2f} | "
+            f"Last used: {most_recent_dt.strftime('%Y-%m-%d')} | "
+            f"Freq: {p['frequency']}"
+        )
+        print(f'    "{p["incoming"][:50]}" → "{p["response"][:50]}"')
         print()
 
 
@@ -367,11 +374,10 @@ def main():
 
     # Save
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, 'w') as f:
-        json.dump({
-            "total_patterns": len(scored_patterns),
-            "patterns": scored_patterns
-        }, f, indent=2)
+    with open(output_file, "w") as f:
+        json.dump(
+            {"total_patterns": len(scored_patterns), "patterns": scored_patterns}, f, indent=2
+        )
 
     logger.info("\n✓ Optimized response pairs saved to: %s", output_file)
 

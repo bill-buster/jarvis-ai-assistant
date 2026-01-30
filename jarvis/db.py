@@ -17,11 +17,12 @@ Usage:
 import json
 import logging
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -356,9 +357,7 @@ class JarvisDB:
 
             if chat_id:
                 # Check for existing contact
-                cursor = conn.execute(
-                    "SELECT id FROM contacts WHERE chat_id = ?", (chat_id,)
-                )
+                cursor = conn.execute("SELECT id FROM contacts WHERE chat_id = ?", (chat_id,))
                 existing = cursor.fetchone()
 
                 if existing:
@@ -370,8 +369,15 @@ class JarvisDB:
                             style_notes = ?, handles_json = ?, updated_at = ?
                         WHERE chat_id = ?
                         """,
-                        (display_name, phone_or_email, relationship, style_notes,
-                         handles_json, now, chat_id),
+                        (
+                            display_name,
+                            phone_or_email,
+                            relationship,
+                            style_notes,
+                            handles_json,
+                            now,
+                            chat_id,
+                        ),
                     )
                     return Contact(
                         id=existing["id"],
@@ -448,9 +454,7 @@ class JarvisDB:
     def list_contacts(self, limit: int = 100) -> list[Contact]:
         """List all contacts."""
         with self.connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM contacts ORDER BY display_name LIMIT ?", (limit,)
-            )
+            cursor = conn.execute("SELECT * FROM contacts ORDER BY display_name LIMIT ?", (limit,))
             return [self._row_to_contact(row) for row in cursor]
 
     def delete_contact(self, contact_id: int) -> bool:
@@ -522,9 +526,18 @@ class JarvisDB:
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        contact_id, trigger_text, response_text, trigger_timestamp,
-                        response_timestamp, chat_id, trigger_msg_id, response_msg_id,
-                        trigger_msg_ids_json, response_msg_ids_json, quality_score, flags_json,
+                        contact_id,
+                        trigger_text,
+                        response_text,
+                        trigger_timestamp,
+                        response_timestamp,
+                        chat_id,
+                        trigger_msg_id,
+                        response_msg_id,
+                        trigger_msg_ids_json,
+                        response_msg_ids_json,
+                        quality_score,
+                        flags_json,
                     ),
                 )
                 return Pair(
@@ -559,12 +572,12 @@ class JarvisDB:
         with self.connection() as conn:
             for pair in pairs:
                 trigger_msg_ids_json = (
-                    json.dumps(pair.get("trigger_msg_ids"))
-                    if pair.get("trigger_msg_ids") else None
+                    json.dumps(pair.get("trigger_msg_ids")) if pair.get("trigger_msg_ids") else None
                 )
                 response_msg_ids_json = (
                     json.dumps(pair.get("response_msg_ids"))
-                    if pair.get("response_msg_ids") else None
+                    if pair.get("response_msg_ids")
+                    else None
                 )
                 flags_json = json.dumps(pair.get("flags")) if pair.get("flags") else None
 
@@ -640,7 +653,9 @@ class JarvisDB:
             row = cursor.fetchone()
             return row["cnt"] if row else 0
 
-    def update_pair_quality(self, pair_id: int, quality_score: float, flags: dict[str, Any] | None = None) -> bool:
+    def update_pair_quality(
+        self, pair_id: int, quality_score: float, flags: dict[str, Any] | None = None
+    ) -> bool:
         """Update a pair's quality score and flags."""
         with self.connection() as conn:
             if flags is not None:
@@ -674,8 +689,12 @@ class JarvisDB:
             chat_id=row["chat_id"],
             trigger_msg_id=row["trigger_msg_id"] if "trigger_msg_id" in row.keys() else None,
             response_msg_id=row["response_msg_id"] if "response_msg_id" in row.keys() else None,
-            trigger_msg_ids_json=row["trigger_msg_ids_json"] if "trigger_msg_ids_json" in row.keys() else None,
-            response_msg_ids_json=row["response_msg_ids_json"] if "response_msg_ids_json" in row.keys() else None,
+            trigger_msg_ids_json=row["trigger_msg_ids_json"]
+            if "trigger_msg_ids_json" in row.keys()
+            else None,
+            response_msg_ids_json=row["response_msg_ids_json"]
+            if "response_msg_ids_json" in row.keys()
+            else None,
             quality_score=row["quality_score"] if "quality_score" in row.keys() else 1.0,
             flags_json=row["flags_json"] if "flags_json" in row.keys() else None,
         )
@@ -715,8 +734,12 @@ class JarvisDB:
                 id=row["id"],
                 name=row["name"],
                 description=row["description"],
-                example_triggers=json.loads(row["example_triggers"]) if row["example_triggers"] else [],
-                example_responses=json.loads(row["example_responses"]) if row["example_responses"] else [],
+                example_triggers=json.loads(row["example_triggers"])
+                if row["example_triggers"]
+                else [],
+                example_responses=json.loads(row["example_responses"])
+                if row["example_responses"]
+                else [],
                 created_at=row["created_at"],
             )
 
@@ -744,7 +767,9 @@ class JarvisDB:
             cursor = conn.execute("SELECT * FROM clusters ORDER BY name")
             return [self._row_to_cluster(row) for row in cursor]
 
-    def update_cluster_label(self, cluster_id: int, name: str, description: str | None = None) -> bool:
+    def update_cluster_label(
+        self, cluster_id: int, name: str, description: str | None = None
+    ) -> bool:
         """Update a cluster's name and description."""
         with self.connection() as conn:
             if description is not None:
@@ -773,7 +798,9 @@ class JarvisDB:
             name=row["name"],
             description=row["description"],
             example_triggers=json.loads(row["example_triggers"]) if row["example_triggers"] else [],
-            example_responses=json.loads(row["example_responses"]) if row["example_responses"] else [],
+            example_responses=json.loads(row["example_responses"])
+            if row["example_responses"]
+            else [],
             created_at=row["created_at"],
         )
 
@@ -822,9 +849,7 @@ class JarvisDB:
     def get_embedding_by_pair(self, pair_id: int) -> PairEmbedding | None:
         """Get embedding by pair ID (stable key)."""
         with self.connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM pair_embeddings WHERE pair_id = ?", (pair_id,)
-            )
+            cursor = conn.execute("SELECT * FROM pair_embeddings WHERE pair_id = ?", (pair_id,))
             row = cursor.fetchone()
             if row:
                 return PairEmbedding(
@@ -927,9 +952,7 @@ class JarvisDB:
     def get_active_index(self) -> IndexVersion | None:
         """Get the currently active index version."""
         with self.connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM index_versions WHERE is_active = TRUE LIMIT 1"
-            )
+            cursor = conn.execute("SELECT * FROM index_versions WHERE is_active = TRUE LIMIT 1")
             row = cursor.fetchone()
             if row:
                 return IndexVersion(
@@ -957,9 +980,7 @@ class JarvisDB:
     def list_index_versions(self) -> list[IndexVersion]:
         """List all index versions."""
         with self.connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM index_versions ORDER BY created_at DESC"
-            )
+            cursor = conn.execute("SELECT * FROM index_versions ORDER BY created_at DESC")
             return [
                 IndexVersion(
                     id=row["id"],
@@ -1018,8 +1039,7 @@ class JarvisDB:
                 """
             )
             stats["pairs_per_contact"] = [
-                {"name": row["display_name"], "count": row["pair_count"]}
-                for row in cursor
+                {"name": row["display_name"], "count": row["pair_count"]} for row in cursor
             ]
 
             return stats

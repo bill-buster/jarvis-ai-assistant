@@ -11,21 +11,21 @@ collects ratings, and generates validation report.
 
 import json
 import random
-import sys
 from pathlib import Path
 from typing import Any
 
+
 # Colors for terminal output
 class Colors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 def print_header(text: str):
@@ -49,9 +49,7 @@ def print_warning(text: str):
 
 
 def sample_templates(
-    templates_file: Path,
-    sample_size: int = 50,
-    stratified: bool = True
+    templates_file: Path, sample_size: int = 50, stratified: bool = True
 ) -> list[dict]:
     """Sample templates for human review.
 
@@ -78,6 +76,7 @@ def sample_templates(
     if stratified:
         # Stratify by context_stratum
         from collections import defaultdict
+
         strata = defaultdict(list)
 
         for pattern in patterns:
@@ -96,7 +95,9 @@ def sample_templates(
         remaining = sample_size - len(sampled)
         if remaining > 0:
             remaining_patterns = [p for p in patterns if p not in sampled]
-            sampled.extend(random.sample(remaining_patterns, min(remaining, len(remaining_patterns))))
+            sampled.extend(
+                random.sample(remaining_patterns, min(remaining, len(remaining_patterns)))
+            )
 
         return sampled[:sample_size]
     else:
@@ -127,10 +128,10 @@ def review_template(pattern: dict, index: int, total: int) -> dict[str, Any]:
     print(f"  Frequency: {frequency} occurrences across {num_senders} senders")
     print()
     print(f"  {Colors.OKBLUE}Incoming:{Colors.ENDC}")
-    print(f"    \"{incoming}\"")
+    print(f'    "{incoming}"')
     print()
     print(f"  {Colors.OKGREEN}Response:{Colors.ENDC}")
-    print(f"    \"{response}\"")
+    print(f'    "{response}"')
     print()
 
     # Collect ratings
@@ -144,9 +145,9 @@ def review_template(pattern: dict, index: int, total: int) -> dict[str, Any]:
     while appropriateness is None:
         try:
             val = input("     Rating [1-5]: ").strip()
-            if val == 'q':
+            if val == "q":
                 return {"quit": True}
-            if val == 's':
+            if val == "s":
                 return {"skip": True}
             appropriateness = int(val)
             if not 1 <= appropriateness <= 5:
@@ -163,9 +164,9 @@ def review_template(pattern: dict, index: int, total: int) -> dict[str, Any]:
     while naturalness is None:
         try:
             val = input("     Rating [1-5]: ").strip()
-            if val == 'q':
+            if val == "q":
                 return {"quit": True}
-            if val == 's':
+            if val == "s":
                 return {"skip": True}
             naturalness = int(val)
             if not 1 <= naturalness <= 5:
@@ -182,9 +183,9 @@ def review_template(pattern: dict, index: int, total: int) -> dict[str, Any]:
     while context_match is None:
         try:
             val = input("     Rating [1-5]: ").strip()
-            if val == 'q':
+            if val == "q":
                 return {"quit": True}
-            if val == 's':
+            if val == "s":
                 return {"skip": True}
             context_match = int(val)
             if not 1 <= context_match <= 5:
@@ -199,13 +200,13 @@ def review_template(pattern: dict, index: int, total: int) -> dict[str, Any]:
     overall_accept = None
     while overall_accept is None:
         val = input("     (y/n): ").strip().lower()
-        if val == 'q':
+        if val == "q":
             return {"quit": True}
-        if val == 's':
+        if val == "s":
             return {"skip": True}
-        if val in ['y', 'yes']:
+        if val in ["y", "yes"]:
             overall_accept = True
-        elif val in ['n', 'no']:
+        elif val in ["n", "no"]:
             overall_accept = False
         else:
             print("     Please enter y or n (or 'q' to quit, 's' to skip)")
@@ -221,7 +222,7 @@ def review_template(pattern: dict, index: int, total: int) -> dict[str, Any]:
         "overall_accept": overall_accept,
         "notes": notes if notes else None,
         "skip": False,
-        "quit": False
+        "quit": False,
     }
 
 
@@ -229,27 +230,18 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Human template validation")
+    parser.add_argument("input", type=str, help="Input templates JSON file")
     parser.add_argument(
-        "input",
-        type=str,
-        help="Input templates JSON file"
-    )
-    parser.add_argument(
-        "--sample-size",
-        type=int,
-        default=50,
-        help="Number of templates to review (default: 50)"
+        "--sample-size", type=int, default=50, help="Number of templates to review (default: 50)"
     )
     parser.add_argument(
         "--output",
         type=str,
         default=None,
-        help="Output file for reviews (default: input_humanvalidated.json)"
+        help="Output file for reviews (default: input_humanvalidated.json)",
     )
     parser.add_argument(
-        "--no-stratify",
-        action="store_true",
-        help="Don't stratify sampling by context"
+        "--no-stratify", action="store_true", help="Don't stratify sampling by context"
     )
 
     args = parser.parse_args()
@@ -282,11 +274,7 @@ def main():
 
     # Sample templates
     print_info(f"\nSampling {args.sample_size} templates...")
-    templates = sample_templates(
-        input_file,
-        args.sample_size,
-        stratified=not args.no_stratify
-    )
+    templates = sample_templates(input_file, args.sample_size, stratified=not args.no_stratify)
 
     if not templates:
         print_warning("No templates to review")
@@ -315,7 +303,7 @@ def main():
             "representative_response": pattern.get("representative_response", ""),
             "context_stratum": pattern.get("context_stratum", ""),
             "frequency": pattern.get("frequency", 0),
-            "cluster_id": pattern.get("cluster_id", "")
+            "cluster_id": pattern.get("cluster_id", ""),
         }
 
         reviews.append(result)
@@ -342,11 +330,7 @@ def main():
         print()
 
         # Filter templates based on reviews
-        accepted_clusters = set(
-            r["pattern"]["cluster_id"]
-            for r in reviews
-            if r["overall_accept"]
-        )
+        accepted_clusters = set(r["pattern"]["cluster_id"] for r in reviews if r["overall_accept"])
 
         print_info(f"✓ {len(accepted_clusters)} clusters accepted by human review")
 
@@ -362,10 +346,10 @@ def main():
                 "avg_context_match": float(np.mean(context_match_scores)),
             },
             "reviews": reviews,
-            "accepted_clusters": list(accepted_clusters)
+            "accepted_clusters": list(accepted_clusters),
         }
 
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             json.dump(output_data, f, indent=2)
 
         print_success(f"\n✓ Saved validation results to: {output_file}")

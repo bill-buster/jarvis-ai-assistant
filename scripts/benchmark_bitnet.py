@@ -10,7 +10,6 @@ Usage:
 """
 
 import time
-import sys
 from pathlib import Path
 
 # Test prompts (iMessage scenarios)
@@ -107,7 +106,7 @@ def main():
     if current_speed:
         print(f"Current (Qwen2.5-1.5B): {current_speed:.1f} tokens/sec")
         print(f"Expected (BitNet 2B): ~{current_speed * 2.2:.1f} tokens/sec")
-        print(f"Memory savings: 1.5GB → 0.4GB (73% reduction)")
+        print("Memory savings: 1.5GB → 0.4GB (73% reduction)")
     else:
         print("Current model test failed")
 

@@ -152,7 +152,7 @@ def segment_conversation(messages: list[dict], gap_threshold_hours: int = 24) ->
     current_conv = [messages[0]]
 
     for i in range(1, len(messages)):
-        time_gap_hours = (messages[i]["date_ns"] - messages[i-1]["date_ns"]) / 1e9 / 3600
+        time_gap_hours = (messages[i]["date_ns"] - messages[i - 1]["date_ns"]) / 1e9 / 3600
 
         if time_gap_hours > gap_threshold_hours:
             conversations.append(current_conv)
@@ -211,7 +211,9 @@ def get_response_groups(
     response_groups = []
 
     for row in cursor.fetchall():
-        rowid, text, is_from_me, date_ns, handle_id, chat_id, chat_identifier, participant_count = row
+        rowid, text, is_from_me, date_ns, handle_id, chat_id, chat_identifier, participant_count = (
+            row
+        )
 
         # New chat - process accumulated messages
         if chat_id != current_chat:
@@ -220,10 +222,7 @@ def get_response_groups(
                 conversations = segment_conversation(chat_messages, CONVERSATION_GAP_HOURS)
                 for conversation in conversations:
                     pairs = extract_pairs_from_chat(
-                        conversation,
-                        max_time_gap_seconds,
-                        max_burst_gap_seconds,
-                        participant_count
+                        conversation, max_time_gap_seconds, max_burst_gap_seconds, participant_count
                     )
                     response_groups.extend(pairs)
 
@@ -234,14 +233,16 @@ def get_response_groups(
         if is_system_message(text):
             continue
 
-        chat_messages.append({
-            "rowid": rowid,
-            "text": text,
-            "is_from_me": is_from_me,
-            "date_ns": date_ns,
-            "handle_id": handle_id,
-            "participant_count": participant_count,
-        })
+        chat_messages.append(
+            {
+                "rowid": rowid,
+                "text": text,
+                "is_from_me": is_from_me,
+                "date_ns": date_ns,
+                "handle_id": handle_id,
+                "participant_count": participant_count,
+            }
+        )
 
     # Process last chat
     if chat_messages:
@@ -251,7 +252,7 @@ def get_response_groups(
                 conversation,
                 max_time_gap_seconds,
                 max_burst_gap_seconds,
-                chat_messages[0]["participant_count"]
+                chat_messages[0]["participant_count"],
             )
             response_groups.extend(pairs)
 
@@ -320,15 +321,17 @@ def extract_pairs_from_chat(
             hour_of_day = dt.hour
             is_group = participant_count > 2
 
-            pairs.append({
-                "incoming": incoming_text,
-                "response": combined_response,
-                "response_dates": response_dates,
-                "sender_id": sender_id,
-                "is_group": is_group,
-                "hour_of_day": hour_of_day,
-                "participant_count": participant_count,
-            })
+            pairs.append(
+                {
+                    "incoming": incoming_text,
+                    "response": combined_response,
+                    "response_dates": response_dates,
+                    "sender_id": sender_id,
+                    "is_group": is_group,
+                    "hour_of_day": hour_of_day,
+                    "participant_count": participant_count,
+                }
+            )
 
         i = j if j > i + 1 else i + 1
 
@@ -362,8 +365,7 @@ def calculate_adaptive_decay_constant(message_count: int, time_span_days: int) -
 
 
 def calculate_temporal_scores_for_cluster(
-    dates: list[int],
-    decay_constant: int | None = None
+    dates: list[int], decay_constant: int | None = None
 ) -> dict:
     """Calculate consistency and recency scores for a cluster.
 
@@ -418,23 +420,23 @@ def calculate_temporal_scores_for_cluster(
         "decay_constant": int(decay_constant),
         "years_active": [int(y) for y in sorted(year_counts.keys())],
         "age_days": int(age_days),
-        "most_recent": imessage_timestamp_to_datetime(most_recent_date_ns).strftime("%Y-%m-%d")
+        "most_recent": imessage_timestamp_to_datetime(most_recent_date_ns).strftime("%Y-%m-%d"),
     }
 
 
 def generate_embeddings(
     response_groups: list[dict],
     model_name: str = "sentence-transformers/all-mpnet-base-v2",
-    use_cache: bool = True
+    use_cache: bool = True,
 ) -> tuple[np.ndarray, SentenceTransformer]:
     """Generate embeddings for response pairs."""
 
     # Check cache
     if use_cache and EMBEDDINGS_FILE.exists() and PAIRS_FILE.exists():
         logger.info("Loading cached embeddings from %s", EMBEDDINGS_FILE)
-        with open(EMBEDDINGS_FILE, 'rb') as f:
+        with open(EMBEDDINGS_FILE, "rb") as f:
             embeddings = pickle.load(f)
-        with open(PAIRS_FILE, 'rb') as f:
+        with open(PAIRS_FILE, "rb") as f:
             cached_groups = pickle.load(f)
 
         # Verify cache matches
@@ -465,18 +467,17 @@ def generate_embeddings(
         show_progress_bar=True,
         batch_size=32,
         convert_to_numpy=True,
-        normalize_embeddings=True
+        normalize_embeddings=True,
     )
 
     elapsed = time.time() - start
-    logger.info("Generated embeddings in %.1fs (%.1f pairs/sec)",
-                elapsed, len(texts) / elapsed)
+    logger.info("Generated embeddings in %.1fs (%.1f pairs/sec)", elapsed, len(texts) / elapsed)
 
     # Cache embeddings
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    with open(EMBEDDINGS_FILE, 'wb') as f:
+    with open(EMBEDDINGS_FILE, "wb") as f:
         pickle.dump(embeddings, f)
-    with open(PAIRS_FILE, 'wb') as f:
+    with open(PAIRS_FILE, "wb") as f:
         pickle.dump(response_groups, f)
     logger.info("✓ Cached embeddings to %s", EMBEDDINGS_FILE)
 
@@ -486,7 +487,7 @@ def generate_embeddings(
 def find_optimal_eps_silhouette(
     embeddings: np.ndarray,
     eps_values: list[float] = [0.20, 0.25, 0.30, 0.35, 0.40],
-    min_samples: int = 2
+    min_samples: int = 2,
 ) -> dict[str, Any]:
     """Find optimal eps using silhouette score.
 
@@ -507,7 +508,7 @@ def find_optimal_eps_silhouette(
     scores = {}
 
     for eps in eps_values:
-        clusterer = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine', n_jobs=-1)
+        clusterer = DBSCAN(eps=eps, min_samples=min_samples, metric="cosine", n_jobs=-1)
         labels = clusterer.fit_predict(embeddings)
 
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
@@ -519,15 +520,20 @@ def find_optimal_eps_silhouette(
                 # Filter out noise points for silhouette calculation
                 mask = labels != -1
                 if mask.sum() > 0:
-                    score = silhouette_score(embeddings[mask], labels[mask], metric='cosine')
+                    score = silhouette_score(embeddings[mask], labels[mask], metric="cosine")
                     scores[eps] = {
                         "silhouette": float(score),
                         "n_clusters": n_clusters,
-                        "n_noise": n_noise
+                        "n_noise": n_noise,
                     }
 
-                    logger.info("  eps=%.2f: silhouette=%.3f, clusters=%d, noise=%d",
-                                eps, score, n_clusters, n_noise)
+                    logger.info(
+                        "  eps=%.2f: silhouette=%.3f, clusters=%d, noise=%d",
+                        eps,
+                        score,
+                        n_clusters,
+                        n_noise,
+                    )
 
                     if score > best_score:
                         best_score = score
@@ -535,8 +541,12 @@ def find_optimal_eps_silhouette(
             except Exception as e:
                 logger.warning("  eps=%.2f: failed to compute silhouette: %s", eps, e)
         else:
-            logger.info("  eps=%.2f: clusters=%d, noise=%d (skipped - too few clusters)",
-                        eps, n_clusters, n_noise)
+            logger.info(
+                "  eps=%.2f: clusters=%d, noise=%d (skipped - too few clusters)",
+                eps,
+                n_clusters,
+                n_noise,
+            )
 
     if best_eps is None:
         logger.warning("No good eps found, defaulting to 0.30")
@@ -544,17 +554,11 @@ def find_optimal_eps_silhouette(
     else:
         logger.info("✓ Best eps: %.2f (silhouette=%.3f)", best_eps, best_score)
 
-    return {
-        "best_eps": best_eps,
-        "best_silhouette": best_score,
-        "scores": scores
-    }
+    return {"best_eps": best_eps, "best_silhouette": best_score, "scores": scores}
 
 
 def semantic_clustering_hdbscan(
-    response_groups: list[dict],
-    embeddings: np.ndarray,
-    min_cluster_size: int = 2
+    response_groups: list[dict], embeddings: np.ndarray, min_cluster_size: int = 2
 ) -> list[dict]:
     """Cluster using HDBSCAN (automatic eps selection).
 
@@ -562,13 +566,12 @@ def semantic_clustering_hdbscan(
     """
     try:
         import hdbscan
+
         logger.info("Clustering with HDBSCAN (min_cluster_size=%d)", min_cluster_size)
         start = time.time()
 
         clusterer = hdbscan.HDBSCAN(
-            min_cluster_size=min_cluster_size,
-            metric='cosine',
-            core_dist_n_jobs=-1
+            min_cluster_size=min_cluster_size, metric="cosine", core_dist_n_jobs=-1
         )
         labels = clusterer.fit_predict(embeddings)
 
@@ -577,8 +580,9 @@ def semantic_clustering_hdbscan(
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
         n_noise = list(labels).count(-1)
 
-        logger.info("Found %d clusters, %d noise points in %.1fs (HDBSCAN)",
-                    n_clusters, n_noise, elapsed)
+        logger.info(
+            "Found %d clusters, %d noise points in %.1fs (HDBSCAN)", n_clusters, n_noise, elapsed
+        )
 
     except ImportError:
         logger.warning("HDBSCAN not available, falling back to DBSCAN with optimal eps")
@@ -591,7 +595,8 @@ def semantic_clustering_hdbscan(
         start = time.time()
 
         from sklearn.cluster import DBSCAN
-        clusterer = DBSCAN(eps=best_eps, min_samples=2, metric='cosine', n_jobs=-1)
+
+        clusterer = DBSCAN(eps=best_eps, min_samples=2, metric="cosine", n_jobs=-1)
         labels = clusterer.fit_predict(embeddings)
 
         elapsed = time.time() - start
@@ -599,8 +604,9 @@ def semantic_clustering_hdbscan(
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
         n_noise = list(labels).count(-1)
 
-        logger.info("Found %d clusters, %d noise points in %.1fs (DBSCAN)",
-                    n_clusters, n_noise, elapsed)
+        logger.info(
+            "Found %d clusters, %d noise points in %.1fs (DBSCAN)", n_clusters, n_noise, elapsed
+        )
 
     # Group pairs by cluster
     clusters = defaultdict(list)
@@ -638,18 +644,20 @@ def semantic_clustering_hdbscan(
         # Calculate temporal scores
         temporal_scores = calculate_temporal_scores_for_cluster(all_dates)
 
-        cluster_patterns.append({
-            "cluster_id": cluster_id,
-            "representative_incoming": rep_incoming,
-            "representative_response": rep_response,
-            "total_frequency": len(pairs),
-            "incoming_variations": list(incoming_counter.keys())[:5],
-            "response_variations": list(response_counter.keys())[:5],
-            "num_senders": len(sender_ids),
-            "is_group_ratio": sum(is_group_msgs) / len(is_group_msgs),
-            "avg_hour": sum(hours) / len(hours),
-            **temporal_scores
-        })
+        cluster_patterns.append(
+            {
+                "cluster_id": cluster_id,
+                "representative_incoming": rep_incoming,
+                "representative_response": rep_response,
+                "total_frequency": len(pairs),
+                "incoming_variations": list(incoming_counter.keys())[:5],
+                "response_variations": list(response_counter.keys())[:5],
+                "num_senders": len(sender_ids),
+                "is_group_ratio": sum(is_group_msgs) / len(is_group_msgs),
+                "avg_hour": sum(hours) / len(hours),
+                **temporal_scores,
+            }
+        )
 
     # Sort by combined score
     cluster_patterns.sort(key=lambda x: x["combined_score"], reverse=True)
@@ -661,30 +669,34 @@ def semantic_clustering_hdbscan(
 def analyze_results(cluster_patterns: list[dict]):
     """Display analysis of clustered patterns."""
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("ENHANCED SEMANTIC RESPONSE PAIR CLUSTERING")
-    print("="*80)
+    print("=" * 80)
 
     print(f"\nTotal semantic clusters: {len(cluster_patterns)}")
 
     # Top patterns by combined score
     print("\n--- Top 50 Patterns (with context) ---\n")
     for i, p in enumerate(cluster_patterns[:50], 1):
-        print(f"{i:2}. Score: {p['combined_score']:>7.1f} | "
-              f"Freq: {p['total_frequency']:>4} | "
-              f"Age: {p['age_days']:>4}d | "
-              f"Senders: {p['num_senders']}")
-        print(f"    \"{p['representative_incoming'][:60]}\" → \"{p['representative_response'][:60]}\"")
+        print(
+            f"{i:2}. Score: {p['combined_score']:>7.1f} | "
+            f"Freq: {p['total_frequency']:>4} | "
+            f"Age: {p['age_days']:>4}d | "
+            f"Senders: {p['num_senders']}"
+        )
+        print(f'    "{p["representative_incoming"][:60]}" → "{p["representative_response"][:60]}"')
 
         # Context info
-        group_pct = p['is_group_ratio'] * 100
-        hour = int(p['avg_hour'])
-        print(f"    Context: {group_pct:.0f}% group | Avg hour: {hour}:00 | "
-              f"Consistency: {p['consistency_score']:.2f}")
+        group_pct = p["is_group_ratio"] * 100
+        hour = int(p["avg_hour"])
+        print(
+            f"    Context: {group_pct:.0f}% group | Avg hour: {hour}:00 | "
+            f"Consistency: {p['consistency_score']:.2f}"
+        )
 
         # Show variations if multiple
-        if len(p['incoming_variations']) > 1:
-            incoming_vars = [v[:30] for v in p['incoming_variations'][:3]]
+        if len(p["incoming_variations"]) > 1:
+            incoming_vars = [v[:30] for v in p["incoming_variations"][:3]]
             print(f"    Incoming variations: {incoming_vars}")
 
         print()
@@ -695,20 +707,11 @@ def main():
 
     parser = argparse.ArgumentParser(description="Enhanced semantic response pair mining")
     parser.add_argument(
-        "--use-hdbscan",
-        action="store_true",
-        help="Use HDBSCAN instead of DBSCAN (auto eps)"
+        "--use-hdbscan", action="store_true", help="Use HDBSCAN instead of DBSCAN (auto eps)"
     )
+    parser.add_argument("--no-cache", action="store_true", help="Don't use cached embeddings")
     parser.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="Don't use cached embeddings"
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="results/response_pairs_enhanced.json",
-        help="Output file"
+        "--output", type=str, default="results/response_pairs_enhanced.json", help="Output file"
     )
 
     args = parser.parse_args()
@@ -719,17 +722,10 @@ def main():
     response_groups = get_response_groups(db_path)
 
     # Generate embeddings
-    embeddings, model = generate_embeddings(
-        response_groups,
-        use_cache=not args.no_cache
-    )
+    embeddings, model = generate_embeddings(response_groups, use_cache=not args.no_cache)
 
     # Cluster with HDBSCAN or DBSCAN
-    cluster_patterns = semantic_clustering_hdbscan(
-        response_groups,
-        embeddings,
-        min_cluster_size=2
-    )
+    cluster_patterns = semantic_clustering_hdbscan(response_groups, embeddings, min_cluster_size=2)
 
     # Analyze
     analyze_results(cluster_patterns)
@@ -737,22 +733,26 @@ def main():
     # Save
     output_file = Path(args.output)
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, 'w') as f:
-        json.dump({
-            "total_clusters": len(cluster_patterns),
-            "patterns": cluster_patterns,
-            "metadata": {
-                "total_response_groups": len(response_groups),
-                "clustering_method": "HDBSCAN" if args.use_hdbscan else "DBSCAN",
-                "embedding_model": "all-mpnet-base-v2",
-                "features": [
-                    "context_aware",
-                    "coherence_filtered",
-                    "adaptive_decay",
-                    "conversation_segmented"
-                ]
-            }
-        }, f, indent=2)
+    with open(output_file, "w") as f:
+        json.dump(
+            {
+                "total_clusters": len(cluster_patterns),
+                "patterns": cluster_patterns,
+                "metadata": {
+                    "total_response_groups": len(response_groups),
+                    "clustering_method": "HDBSCAN" if args.use_hdbscan else "DBSCAN",
+                    "embedding_model": "all-mpnet-base-v2",
+                    "features": [
+                        "context_aware",
+                        "coherence_filtered",
+                        "adaptive_decay",
+                        "conversation_segmented",
+                    ],
+                },
+            },
+            f,
+            indent=2,
+        )
 
     logger.info("\n✓ Enhanced patterns saved to: %s", output_file)
 

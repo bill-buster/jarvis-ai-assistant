@@ -8,7 +8,6 @@ Identifies patterns that should NOT be used as templates:
 """
 
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +36,7 @@ NEGATIVE_REACTIONS = [
 ]
 
 
-def mine_negative_patterns(
-    messages: list[dict],
-    lookback_window: int = 3
-) -> list[tuple[str, str]]:
+def mine_negative_patterns(messages: list[dict], lookback_window: int = 3) -> list[tuple[str, str]]:
     """Mine patterns where response was followed by apology/clarification.
 
     Args:
@@ -74,22 +70,19 @@ def mine_negative_patterns(
 
                         if not incoming_msg.get("is_from_me"):
                             # Found the incoming message
-                            negative_patterns.append((
-                                incoming_msg.get("text", ""),
-                                prev_msg.get("text", "")
-                            ))
+                            negative_patterns.append(
+                                (incoming_msg.get("text", ""), prev_msg.get("text", ""))
+                            )
                             break
                     break
 
-    logger.info("Mined %d negative patterns (responses followed by apology)", len(negative_patterns))
+    logger.info(
+        "Mined %d negative patterns (responses followed by apology)", len(negative_patterns)
+    )
     return negative_patterns
 
 
-def check_negative_reaction(
-    incoming: str,
-    response: str,
-    subsequent_messages: list[str]
-) -> bool:
+def check_negative_reaction(incoming: str, response: str, subsequent_messages: list[str]) -> bool:
     """Check if response got negative reaction.
 
     Args:
@@ -109,7 +102,7 @@ def check_negative_reaction(
                     "Negative reaction detected for: '%s' → '%s' (reaction: '%s')",
                     incoming[:40],
                     response[:40],
-                    msg[:40]
+                    msg[:40],
                 )
                 return True
 
@@ -117,9 +110,7 @@ def check_negative_reaction(
 
 
 def filter_negative_patterns(
-    patterns: list[dict],
-    negative_patterns: list[tuple[str, str]],
-    threshold: float = 0.8
+    patterns: list[dict], negative_patterns: list[tuple[str, str]], threshold: float = 0.8
 ) -> list[dict]:
     """Filter out patterns that match negative examples.
 
@@ -139,8 +130,7 @@ def filter_negative_patterns(
 
     # Create set of negative patterns (lowercased and stripped)
     negative_set = set(
-        (inc.lower().strip(), resp.lower().strip())
-        for inc, resp in negative_patterns
+        (inc.lower().strip(), resp.lower().strip()) for inc, resp in negative_patterns
     )
 
     for pattern in patterns:
@@ -151,18 +141,12 @@ def filter_negative_patterns(
 
         if pattern_tuple in negative_set:
             removed_count += 1
-            logger.debug(
-                "Removed negative pattern: '%s' → '%s'",
-                incoming[:40],
-                response[:40]
-            )
+            logger.debug("Removed negative pattern: '%s' → '%s'", incoming[:40], response[:40])
         else:
             filtered.append(pattern)
 
     logger.info(
-        "Negative pattern filter: kept %d patterns, removed %d",
-        len(filtered),
-        removed_count
+        "Negative pattern filter: kept %d patterns, removed %d", len(filtered), removed_count
     )
 
     return filtered
@@ -185,10 +169,22 @@ def detect_sensitive_context(text: str) -> bool:
     text_lower = text.lower()
 
     sensitive_markers = [
-        "died", "passed away", "hospital", "sick", "cancer",
-        "broke up", "divorce", "fired", "laid off",
-        "depressed", "anxious", "crying", "hurt",
-        "emergency", "accident", "police"
+        "died",
+        "passed away",
+        "hospital",
+        "sick",
+        "cancer",
+        "broke up",
+        "divorce",
+        "fired",
+        "laid off",
+        "depressed",
+        "anxious",
+        "crying",
+        "hurt",
+        "emergency",
+        "accident",
+        "police",
     ]
 
     return any(marker in text_lower for marker in sensitive_markers)

@@ -10,7 +10,6 @@ Provides functions for:
 """
 
 from collections import Counter, defaultdict
-from datetime import datetime
 from typing import Any
 
 
@@ -27,16 +26,47 @@ def detect_formality(text: str) -> str:
 
     # Formal indicators
     formal_indicators = [
-        "please", "thank you", "sincerely", "regards", "kindly",
-        "meeting", "schedule", "appointment", "deadline", "appreciate",
-        "professional", "business", "corporate", "respectfully"
+        "please",
+        "thank you",
+        "sincerely",
+        "regards",
+        "kindly",
+        "meeting",
+        "schedule",
+        "appointment",
+        "deadline",
+        "appreciate",
+        "professional",
+        "business",
+        "corporate",
+        "respectfully",
     ]
 
     # Casual indicators
     casual_indicators = [
-        "lol", "haha", "lmao", "omg", "wtf", "tbh", "ngl", "bruh",
-        "yeah", "yep", "nah", "gonna", "wanna", "gotta", "kinda",
-        "sup", "hey", "yo", "dude", "bro", "man", "cool", "chill"
+        "lol",
+        "haha",
+        "lmao",
+        "omg",
+        "wtf",
+        "tbh",
+        "ngl",
+        "bruh",
+        "yeah",
+        "yep",
+        "nah",
+        "gonna",
+        "wanna",
+        "gotta",
+        "kinda",
+        "sup",
+        "hey",
+        "yo",
+        "dude",
+        "bro",
+        "man",
+        "cool",
+        "chill",
     ]
 
     formal_count = sum(1 for ind in formal_indicators if ind in text_lower)
@@ -101,10 +131,7 @@ def get_day_category(weekday: int) -> str:
 
 
 def create_context_key(
-    formality: str,
-    group_category: str,
-    time_category: str,
-    day_category: str
+    formality: str, group_category: str, time_category: str, day_category: str
 ) -> str:
     """Create a unique context key for stratification.
 
@@ -121,8 +148,7 @@ def create_context_key(
 
 
 def stratify_by_context(
-    response_groups: list[dict],
-    min_samples_per_strata: int = 10
+    response_groups: list[dict], min_samples_per_strata: int = 10
 ) -> dict[str, list[dict]]:
     """Stratify response groups by context.
 
@@ -145,29 +171,19 @@ def stratify_by_context(
         day_category = group.get("day_category", "weekday")
 
         # Create context key
-        context_key = create_context_key(
-            formality,
-            group_category,
-            time_category,
-            day_category
-        )
+        context_key = create_context_key(formality, group_category, time_category, day_category)
 
         strata[context_key].append(group)
 
     # Filter out strata with too few samples
     filtered_strata = {
-        key: groups
-        for key, groups in strata.items()
-        if len(groups) >= min_samples_per_strata
+        key: groups for key, groups in strata.items() if len(groups) >= min_samples_per_strata
     }
 
     return filtered_strata
 
 
-def calculate_adaptive_conversation_gap(
-    messages: list[dict],
-    percentile: float = 75.0
-) -> float:
+def calculate_adaptive_conversation_gap(messages: list[dict], percentile: float = 75.0) -> float:
     """Calculate adaptive conversation gap threshold.
 
     Uses historical gaps to determine when a new conversation starts.
@@ -184,7 +200,7 @@ def calculate_adaptive_conversation_gap(
 
     gaps = []
     for i in range(1, len(messages)):
-        gap_hours = (messages[i]["date_ns"] - messages[i-1]["date_ns"]) / (1e9 * 3600)
+        gap_hours = (messages[i]["date_ns"] - messages[i - 1]["date_ns"]) / (1e9 * 3600)
         if 0 < gap_hours < 168:  # Filter out gaps > 1 week (outliers)
             gaps.append(gap_hours)
 
@@ -192,6 +208,7 @@ def calculate_adaptive_conversation_gap(
         return 24.0
 
     import numpy as np
+
     threshold = np.percentile(gaps, percentile)
 
     # Clamp to reasonable range (1-72 hours)
@@ -199,9 +216,7 @@ def calculate_adaptive_conversation_gap(
 
 
 def detect_sender_relationship(
-    sender_id: str,
-    all_messages: list[dict],
-    formality_counts: dict[str, Counter]
+    sender_id: str, all_messages: list[dict], formality_counts: dict[str, Counter]
 ) -> str:
     """Detect relationship type with a sender.
 
@@ -265,11 +280,13 @@ def analyze_context_distribution(response_groups: list[dict]) -> dict[str, Any]:
         "formality": dict(formality_counts),
         "group_size": dict(group_counts),
         "time_of_day": dict(time_counts),
-        "day_of_week": dict(day_counts)
+        "day_of_week": dict(day_counts),
     }
 
 
-def segment_conversation(messages: list[dict], gap_threshold_hours: float = 24.0) -> list[list[dict]]:
+def segment_conversation(
+    messages: list[dict], gap_threshold_hours: float = 24.0
+) -> list[list[dict]]:
     """Split chat into conversations by time gaps.
 
     Args:
@@ -286,7 +303,7 @@ def segment_conversation(messages: list[dict], gap_threshold_hours: float = 24.0
     current_conv = [messages[0]]
 
     for i in range(1, len(messages)):
-        time_gap_hours = (messages[i]["date_ns"] - messages[i-1]["date_ns"]) / (1e9 * 3600)
+        time_gap_hours = (messages[i]["date_ns"] - messages[i - 1]["date_ns"]) / (1e9 * 3600)
 
         if time_gap_hours > gap_threshold_hours:
             conversations.append(current_conv)
