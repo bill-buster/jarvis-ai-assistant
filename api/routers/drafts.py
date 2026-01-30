@@ -17,6 +17,7 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from api.dependencies import get_imessage_reader
@@ -604,4 +605,259 @@ async def summarize_conversation(
             start=oldest_date.strftime("%Y-%m-%d"),
             end=newest_date.strftime("%Y-%m-%d"),
         ),
+    )
+
+
+# =============================================================================
+# Smart Reply (Routed) Endpoint
+# =============================================================================
+
+
+class RoutedReplyRequest(BaseModel):
+    """Request for smart routed reply generation.
+
+    Uses the ReplyRouter to determine whether to use a template,
+    generate with LLM, or request clarification based on similarity
+    to historical conversation patterns.
+    """
+
+    chat_id: str = Field(
+        ...,
+        description="Conversation ID to generate reply for",
+    )
+    last_message: str | None = Field(
+        default=None,
+        description="Override last message (uses latest from chat if not provided)",
+    )
+    instruction: str | None = Field(
+        default=None,
+        description="Optional instruction for reply tone/content",
+    )
+    context_messages: int = Field(
+        default=10,
+        ge=1,
+        le=30,
+        description="Number of previous messages for context (1-30)",
+    )
+
+
+class RoutedReplyResponse(BaseModel):
+    """Response from smart routed reply generation.
+
+    Includes the response type ('template', 'generated', 'clarify'),
+    confidence level, and routing metadata.
+    """
+
+    response: str = Field(
+        ...,
+        description="The generated or template response",
+    )
+    response_type: str = Field(
+        ...,
+        description="How the response was generated: 'template', 'generated', or 'clarify'",
+    )
+    confidence: str = Field(
+        ...,
+        description="Confidence level: 'high', 'medium', or 'low'",
+    )
+    similarity_score: float = Field(
+        default=0.0,
+        description="Best similarity score from pattern matching (0-1)",
+    )
+    cluster_name: str | None = Field(
+        default=None,
+        description="Name of matched cluster (for template responses)",
+    )
+    similar_triggers: list[str] | None = Field(
+        default=None,
+        description="Similar past triggers found during routing",
+    )
+    context_used: ContextInfo | None = Field(
+        default=None,
+        description="Information about the context used",
+    )
+
+
+def _route_reply_sync(
+    chat_id: str,
+    last_message: str,
+    thread_context: list[str],
+) -> dict:
+    """Run the router synchronously (for thread pool execution).
+
+    Args:
+        chat_id: Chat ID for contact lookup.
+        last_message: The message to respond to.
+        thread_context: Previous messages for context.
+
+    Returns:
+        Routing result dict.
+    """
+    from jarvis.router import get_reply_router
+
+    router = get_reply_router()
+    return router.route(
+        incoming=last_message,
+        chat_id=chat_id,
+        thread=thread_context,
+    )
+
+
+@router.post(
+    "/smart-reply",
+    response_model=RoutedReplyResponse,
+    response_model_exclude_unset=True,
+    response_description="Smart routed reply with confidence and source metadata",
+    summary="Generate smart routed reply",
+    responses={
+        200: {
+            "description": "Reply generated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "response": "Sure, sounds great!",
+                        "response_type": "template",
+                        "confidence": "high",
+                        "similarity_score": 0.92,
+                        "cluster_name": "INVITATION_ACCEPT",
+                    }
+                }
+            },
+        },
+        403: {
+            "description": "Full Disk Access not granted",
+            "model": ErrorResponse,
+        },
+        404: {
+            "description": "Conversation not found or no messages",
+            "model": ErrorResponse,
+        },
+        408: {
+            "description": "Request timed out",
+            "model": ErrorResponse,
+        },
+        429: {
+            "description": "Rate limit exceeded",
+            "model": ErrorResponse,
+        },
+        500: {
+            "description": "Failed to generate reply",
+            "model": ErrorResponse,
+        },
+    },
+)
+@limiter.limit(RATE_LIMIT_GENERATION)
+async def generate_smart_reply(
+    routed_request: RoutedReplyRequest,
+    request: Request,
+    reader: ChatDBReader = Depends(get_imessage_reader),
+) -> RoutedReplyResponse:
+    """Generate a smart routed reply using pattern matching and LLM.
+
+    Uses the ReplyRouter to intelligently decide how to respond:
+
+    - **Template (high confidence):** When the incoming message closely matches
+      a pattern we've seen before (similarity >= 0.85), returns a template
+      response instantly without calling the LLM.
+
+    - **Generated (medium confidence):** When there's some similarity to past
+      patterns but not enough for a direct template match, uses the LLM with
+      similar past responses as few-shot examples.
+
+    - **Clarify (low confidence):** When the message is too vague or has
+      references we can't resolve, asks for clarification instead of guessing.
+
+    **Benefits:**
+    - Faster responses for common patterns (no LLM call)
+    - More personalized responses based on your communication history
+    - Transparent confidence indicators for UI display
+
+    **Frontend Display Suggestions:**
+    - `confidence: "high"` - Green indicator, instant response
+    - `confidence: "medium"` - Yellow indicator, "AI suggested"
+    - `confidence: "low"` - Orange indicator, "JARVIS needs more info"
+
+    Args:
+        routed_request: RoutedReplyRequest with chat_id and optional last_message
+        request: FastAPI request object (for rate limiting)
+
+    Returns:
+        RoutedReplyResponse with response, type, confidence, and metadata
+    """
+    # Fetch conversation messages for context
+    try:
+        messages = await run_in_threadpool(
+            reader.get_messages,
+            chat_id=routed_request.chat_id,
+            limit=routed_request.context_messages,
+        )
+    except Exception as e:
+        logger.error("Failed to fetch messages for chat %s: %s", routed_request.chat_id, e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch conversation context: {e}",
+        ) from e
+
+    if not messages:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No messages found for chat_id: {routed_request.chat_id}",
+        )
+
+    # Determine the message to respond to
+    last_message = routed_request.last_message
+    if not last_message and messages:
+        # Use the most recent message that's not from us
+        for msg in messages:
+            if not msg.is_from_me and msg.text:
+                last_message = msg.text
+                break
+
+    if not last_message:
+        # Fall back to the most recent message
+        last_message = messages[0].text if messages[0].text else ""
+
+    # Build thread context (reverse chronological -> chronological)
+    thread_context = [msg.text for msg in reversed(messages) if msg.text and len(msg.text) > 0][
+        -10:
+    ]  # Last 10 messages
+
+    # Build context info for response
+    participants = list({m.sender_name or m.sender for m in messages if not m.is_from_me})
+    context_info = ContextInfo(
+        num_messages=len(messages),
+        participants=participants,
+        last_message=last_message,
+    )
+
+    # Route the reply with timeout
+    try:
+        async with asyncio.timeout(TIMEOUT_GENERATION):
+            result = await run_in_threadpool(
+                _route_reply_sync,
+                routed_request.chat_id,
+                last_message,
+                thread_context,
+            )
+    except TimeoutError:
+        logger.warning("Routed reply timed out after %s seconds", TIMEOUT_GENERATION)
+        raise HTTPException(
+            status_code=408,
+            detail=f"Request timed out after {TIMEOUT_GENERATION} seconds",
+        ) from None
+    except Exception as e:
+        logger.error("Failed to route reply: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate smart reply",
+        ) from e
+
+    return RoutedReplyResponse(
+        response=result["response"],
+        response_type=result["type"],
+        confidence=result["confidence"],
+        similarity_score=result.get("similarity_score", 0.0),
+        cluster_name=result.get("cluster_name"),
+        similar_triggers=result.get("similar_triggers"),
+        context_used=context_info,
     )

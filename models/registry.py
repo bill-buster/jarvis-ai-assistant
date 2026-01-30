@@ -116,10 +116,21 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         description="1.58-bit quantized model. 10x memory efficient, 2x faster on CPU. Experimental.",
         recommended_for=["quick_replies", "cpu_inference"],
     ),
+    "lfm-1.2b": ModelSpec(
+        id="lfm-1.2b",
+        path="mlx-community/LFM-2.5-1.2B-Instruct-4bit",
+        display_name="LFM 2.5 1.2B (Conversational)",
+        size_gb=1.2,
+        min_ram_gb=8,
+        quality_tier="excellent",
+        description="LFM 2.5 1.2B optimized for conversation. Best for natural chat.",
+        recommended_for=["quick_replies", "natural_conversation", "drafting", "iMessage"],
+    ),
 }
 
 # Default model ID when none specified
-DEFAULT_MODEL_ID = "qwen-1.5b"
+# LFM 2.5 is recommended as the default for conversational use cases
+DEFAULT_MODEL_ID = "lfm-1.2b"
 
 
 def get_model_spec(model_id: str) -> ModelSpec | None:

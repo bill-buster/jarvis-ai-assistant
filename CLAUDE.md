@@ -23,14 +23,18 @@ JARVIS is a local-first AI assistant for macOS that provides intelligent iMessag
 | CLI Entry Point | COMPLETE | `jarvis/cli.py` with chat, search, reply, summarize, export, serve commands |
 | FastAPI Layer | COMPLETE | `api/` module for Tauri frontend integration |
 | Config System | COMPLETE | `jarvis/config.py` with nested sections and migration |
-| Model Registry | COMPLETE | `models/registry.py` with multi-model support (0.5B/1.5B/3B tiers) |
+| Model Registry | COMPLETE | `models/registry.py` with multi-model support (0.5B/1.5B/3B/LFM tiers) |
 | Intent Classification | COMPLETE | `jarvis/intent.py` with semantic similarity routing |
 | Metrics System | COMPLETE | `jarvis/metrics.py` and `api/routers/metrics.py` for performance monitoring |
 | Export System | COMPLETE | `jarvis/export.py` and `api/routers/export.py` for JSON/CSV/TXT export |
 | Error Handling | COMPLETE | `jarvis/errors.py` and `api/errors.py` unified exception hierarchy |
 | Prompts Registry | COMPLETE | `jarvis/prompts.py` centralized prompt templates and examples |
+| MLX Embeddings | COMPLETE | `models/embeddings.py` with MLXEmbedder class for Apple Silicon |
+| Reply Router | COMPLETE | `jarvis/router.py` with template/generate/clarify routing logic |
+| FAISS Index | COMPLETE | `jarvis/index.py` for trigger similarity search |
+| JARVIS Database | COMPLETE | `jarvis/db.py` with contacts, pairs, clusters, embeddings |
 
-**Default Model**: Qwen2.5-1.5B-Instruct-4bit (configured in `models/registry.py`)
+**Default Model**: LFM-2.5-1.2B-Instruct-4bit (configured in `models/registry.py`)
 
 See [docs/CODEBASE_AUDIT_REPORT.md](docs/CODEBASE_AUDIT_REPORT.md) for full audit details.
 
@@ -462,7 +466,7 @@ Templates can specify `min_group_size` and `max_group_size` constraints for size
 
 **Singleton Generator**: Use `get_generator()` to get the shared instance, `reset_generator()` to reinitialize.
 
-**Model Registry**: `models/registry.py` provides multi-model support with `MODEL_REGISTRY` containing specs for 0.5B/1.5B/3B Qwen models. Use `get_recommended_model(available_ram_gb)` to select the best model for the user's system.
+**Model Registry**: `models/registry.py` provides multi-model support with `MODEL_REGISTRY` containing specs for 0.5B/1.5B/3B Qwen models and LFM 2.5 1.2B. Use `get_recommended_model(available_ram_gb)` to select the best model for the user's system. Default model is LFM 2.5 1.2B optimized for conversational use.
 
 **Intent Classification**: `IntentClassifier` in `jarvis/intent.py` routes user queries using semantic similarity. Supports REPLY, SUMMARIZE, SEARCH, QUICK_REPLY, GENERAL, and group-specific intents (GROUP_COORDINATION, GROUP_RSVP, GROUP_CELEBRATION) with extracted parameters (person_name, search_query, rsvp_response, poll_choice, etc.).
 
@@ -483,6 +487,23 @@ Templates can specify `min_group_size` and `max_group_size` constraints for size
 **Setup Wizard**: `SetupWizard` in `jarvis/setup.py` validates the environment and guides first-time setup. Checks: platform, Full Disk Access permission, iMessage database schema, system memory, and model availability. Creates `~/.jarvis/config.json` with default settings.
 
 **Export System**: `jarvis/export.py` provides conversation export in JSON (full data with metadata), CSV (flattened for spreadsheets), and TXT (human-readable) formats. Use `export_messages()`, `export_search_results()`, or `export_backup()` functions.
+
+**MLX Embeddings**: `models/embeddings.py` provides `MLXEmbedder` class for fast embedding computation on Apple Silicon using mlx-embeddings. Thread-safe singleton via `get_mlx_embedder()`. Supports bge-small-en-v1.5 (384 dimensions) with automatic L2 normalization.
+
+**Reply Router**: `jarvis/router.py` implements intelligent routing for reply generation via `ReplyRouter`:
+- Template (similarity >= 0.85): Returns cached response instantly from cluster
+- Generate (0.40-0.85): Uses LLM with similar past exchanges as few-shot examples
+- Clarify (< 0.40): Asks for more context when message is vague
+Use `get_reply_router()` for singleton access. API endpoint: `POST /drafts/smart-reply`.
+
+**FAISS Trigger Index**: `jarvis/index.py` provides `TriggerIndexBuilder` and `TriggerIndexSearcher` for versioned vector search. Indexes trigger texts from extracted pairs. Use `build_index_from_db()` to build, `TriggerIndexSearcher.search_with_pairs()` to query.
+
+**JARVIS Database**: `jarvis/db.py` provides `JarvisDB` for managing:
+- Contacts with relationship labels and style notes
+- Extracted (trigger, response) pairs from message history
+- Intent clusters for grouping similar response patterns
+- FAISS vector index metadata and versioning
+Use `get_db()` for singleton access. CLI: `jarvis db init`, `jarvis db extract`, `jarvis db build-index`.
 
 ### Data Flow for Text Generation (Current)
 

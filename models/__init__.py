@@ -19,6 +19,17 @@ Model Registry:
 
 import threading
 
+from models.embeddings import (
+    DEFAULT_MLX_EMBEDDING_MODEL,
+    MLX_EMBEDDING_DIM,
+    MLXEmbedder,
+    MLXEmbeddingError,
+    MLXModelLoadError,
+    MLXModelNotAvailableError,
+    get_mlx_embedder,
+    is_mlx_available,
+    reset_mlx_embedder,
+)
 from models.generator import MLXGenerator
 from models.loader import MLXModelLoader, ModelConfig
 from models.prompt_builder import PromptBuilder
@@ -58,6 +69,16 @@ __all__ = [
     "get_model_spec_by_path",
     "get_recommended_model",
     "is_model_available",
+    # MLX Embeddings
+    "DEFAULT_MLX_EMBEDDING_MODEL",
+    "MLX_EMBEDDING_DIM",
+    "MLXEmbedder",
+    "MLXEmbeddingError",
+    "MLXModelLoadError",
+    "MLXModelNotAvailableError",
+    "get_mlx_embedder",
+    "is_mlx_available",
+    "reset_mlx_embedder",
     # Templates
     "ResponseTemplate",
     "SentenceModelError",
