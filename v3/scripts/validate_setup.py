@@ -162,13 +162,15 @@ def test_style_analysis():
             {"text": msg, "sender": "me", "is_from_me": True} for msg in your_messages
         ]
 
-        style = analyzer.analyze(sample_messages, chat_id="test-chat")
+        style = analyzer.analyze(sample_messages)
 
         print(f"\n✅ Style detected:")
-        print(f"   • Avg length: {style.avg_message_length:.0f} chars")
-        print(f"   • Uses emojis: {style.uses_emojis}")
+        print(f"   • Avg words: {style.avg_word_count:.1f}")
+        print(f"   • Avg chars: {style.avg_char_count:.0f}")
+        print(f"   • Uses emojis: {style.uses_emoji} ({style.emoji_frequency:.0%})")
         print(f"   • Punctuation: {style.punctuation_style}")
-        print(f"   • Formality: {style.formality}")
+        print(f"   • Formality: {style.formality_score:.1f}")
+        print(f"   • Enthusiasm: {style.enthusiasm_level}")
 
         if hasattr(style, "common_phrases") and style.common_phrases:
             print(f"   • Common phrases: {', '.join(style.common_phrases[:3])}")
