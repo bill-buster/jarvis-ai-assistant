@@ -12,6 +12,7 @@ eggs/
 .eggs/
 lib/
 !desktop/src/lib/
+!v2/desktop/src/lib/
 lib64/
 parts/
 sdist/
@@ -98,3 +99,7 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Training data (personal, large, regeneratable)
+training_pairs.jsonl
+response_templates.json

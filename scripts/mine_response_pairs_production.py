@@ -155,7 +155,7 @@ def get_response_groups_with_full_context(
     max_time_gap_seconds: int = 300,
     max_burst_gap_seconds: int = 30,
     use_adaptive_segmentation: bool = True,
-    limit_messages: int | None = None,
+    sample_chats: bool = False,
     coherence_model_name: str = "sentence-transformers/all-mpnet-base-v2",  # NEW: Pass model name
 ) -> tuple[list[dict], list[dict]]:
     """Extract response groups with FULL context metadata.
@@ -179,29 +179,61 @@ def get_response_groups_with_full_context(
     cursor = conn.cursor()
 
     # Get messages with FULL context info
-    query = """
-        SELECT
-            m.ROWID,
-            m.text,
-            m.is_from_me,
-            m.date,
-            m.handle_id,
-            cmj.chat_id,
-            c.chat_identifier,
-            (SELECT COUNT(*) FROM chat_handle_join WHERE chat_id = c.ROWID) as participant_count
-        FROM message m
-        JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
-        JOIN chat c ON cmj.chat_id = c.ROWID
-        WHERE m.text IS NOT NULL
-          AND m.text != ''
-          AND length(m.text) > 0
-        ORDER BY cmj.chat_id, m.date
-    """
-
-    # Add LIMIT if specified
-    if limit_messages:
-        query += f" LIMIT {limit_messages}"
-        logger.info("Limiting to %d messages for sampling", limit_messages)
+    # IMPORTANT: If sampling, we sample CHATS (not messages) to preserve chronological order
+    if sample_chats:
+        # Sample chats, then get all messages from those chats in chronological order
+        # This preserves the temporal structure needed for pair extraction
+        query = """
+            WITH sampled_chats AS (
+                SELECT DISTINCT chat_id
+                FROM (
+                    SELECT cmj.chat_id, COUNT(*) as msg_count
+                    FROM message m
+                    JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
+                    WHERE m.text IS NOT NULL AND m.text != '' AND length(m.text) > 0
+                    GROUP BY cmj.chat_id
+                    HAVING msg_count >= 10
+                    ORDER BY RANDOM()
+                    LIMIT 100
+                )
+            )
+            SELECT
+                m.ROWID,
+                m.text,
+                m.is_from_me,
+                m.date,
+                m.handle_id,
+                cmj.chat_id,
+                c.chat_identifier,
+                (SELECT COUNT(*) FROM chat_handle_join WHERE chat_id = c.ROWID) as participant_count
+            FROM message m
+            JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
+            JOIN chat c ON cmj.chat_id = c.ROWID
+            JOIN sampled_chats sc ON cmj.chat_id = sc.chat_id
+            WHERE m.text IS NOT NULL AND m.text != '' AND length(m.text) > 0
+            ORDER BY cmj.chat_id, m.date
+        """
+        logger.info("Sampling 100 random chats with ≥10 messages (preserving chronological order)")
+    else:
+        # Full dataset - get all messages in chronological order
+        query = """
+            SELECT
+                m.ROWID,
+                m.text,
+                m.is_from_me,
+                m.date,
+                m.handle_id,
+                cmj.chat_id,
+                c.chat_identifier,
+                (SELECT COUNT(*) FROM chat_handle_join WHERE chat_id = c.ROWID) as participant_count
+            FROM message m
+            JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
+            JOIN chat c ON cmj.chat_id = c.ROWID
+            WHERE m.text IS NOT NULL
+              AND m.text != ''
+              AND length(m.text) > 0
+            ORDER BY cmj.chat_id, m.date
+        """
 
     cursor.execute(query)
 
@@ -429,7 +461,9 @@ def generate_embeddings_with_context_features(
         Tuple of (text_embeddings, context_features, model)
     """
 
-    cache_key = f"{model_name}_production_v2"
+    # Sanitize model name for filesystem (replace slashes and special chars)
+    safe_model_name = model_name.replace("/", "_").replace(":", "_")
+    cache_key = f"{safe_model_name}_production_v2"
     embeddings_file = CACHE_DIR / f"embeddings_{cache_key}.pkl"
     features_file = CACHE_DIR / f"features_{cache_key}.pkl"
     pairs_file = CACHE_DIR / f"pairs_{cache_key}.pkl"
@@ -507,7 +541,8 @@ def generate_embeddings_with_context_features(
 def stratified_clustering(
     response_groups: list[dict],
     text_embeddings: np.ndarray,
-    context_features: np.ndarray
+    context_features: np.ndarray,
+    min_strata_size: int = 5
 ) -> list[dict]:
     """Cluster SEPARATELY by context strata.
 
@@ -516,8 +551,13 @@ def stratified_clustering(
 
     logger.info("Performing stratified clustering by context...")
 
-    # Stratify by context
-    strata = stratify_by_context(response_groups, min_samples_per_strata=5)
+    # Stratify by context with configurable threshold
+    # For small datasets, automatically reduce threshold
+    adaptive_threshold = min(min_strata_size, max(2, len(response_groups) // 20))
+    logger.info("Using adaptive strata threshold: %d (requested: %d, total pairs: %d)",
+                adaptive_threshold, min_strata_size, len(response_groups))
+
+    strata = stratify_by_context(response_groups, min_samples_per_strata=adaptive_threshold)
 
     logger.info("Created %d context strata", len(strata))
 
@@ -689,39 +729,54 @@ def main():
     )
     parser.add_argument(
         "--sample",
+        action="store_true",
+        help="Sample 100 random chats (for testing). Default: mine all chats"
+    )
+    parser.add_argument(
+        "--min-strata-size",
         type=int,
-        default=None,
-        help="Sample first N messages (for testing). Default: mine all messages"
+        default=5,
+        help="Minimum samples per context stratum (default: 5)"
+    )
+    parser.add_argument(
+        "--no-deprecation",
+        action="store_true",
+        help="Disable pattern deprecation (useful for testing/historical data)"
     )
 
     args = parser.parse_args()
 
     db_path = Path.home() / "Library" / "Messages" / "chat.db"
 
-    # Show message count
+    # Show chat/message counts
     import sqlite3
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM message WHERE text IS NOT NULL AND text != ''")
     total_messages = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(DISTINCT chat_id) FROM chat_message_join")
+    total_chats = cursor.fetchone()[0]
     conn.close()
 
-    logger.info("Total messages in database: %d", total_messages)
+    logger.info("Database: %d messages across %d chats", total_messages, total_chats)
     if args.sample:
-        logger.info("Sampling first %d messages (%.1f%%)", args.sample, 100 * args.sample / total_messages)
+        logger.info("Mode: SAMPLING (100 random chats)")
     else:
-        logger.info("Mining ALL messages (no sampling)")
+        logger.info("Mode: FULL MINING (all chats)")
 
     # Extract with full context (use same model for coherence as main embeddings)
     response_groups, all_messages = get_response_groups_with_full_context(
         db_path,
-        limit_messages=args.sample,
+        sample_chats=args.sample,
         coherence_model_name=args.model  # Pass same model for consistency
     )
+    logger.info("→ After extraction: %d response pairs, %d total messages",
+                len(response_groups), len(all_messages))
 
     # Mine negative patterns
     logger.info("Mining negative patterns...")
     negative_patterns = mine_negative_patterns(all_messages)
+    logger.info("→ Found %d negative patterns (apology sequences)", len(negative_patterns))
 
     # Generate embeddings with context as features
     logger.info("Using embedding model: %s", args.model)
@@ -732,19 +787,32 @@ def main():
     )
 
     # Stratified clustering
-    patterns = stratified_clustering(response_groups, text_embeddings, context_features)
+    patterns = stratified_clustering(
+        response_groups,
+        text_embeddings,
+        context_features,
+        min_strata_size=args.min_strata_size
+    )
+    logger.info("→ After clustering: %d patterns extracted", len(patterns))
 
     # Add sender distribution
     patterns = add_sender_distribution(patterns, response_groups)
+    logger.info("→ After adding sender distribution: %d patterns", len(patterns))
 
     # Calculate sender diversity
     patterns = calculate_sender_diversity(patterns)
 
     # Filter by sender diversity
+    patterns_before_diversity = len(patterns)
     patterns = filter_by_sender_diversity(patterns, min_senders=args.min_senders)
+    logger.info("→ After sender diversity filter (min %d senders): %d patterns (removed %d)",
+                args.min_senders, len(patterns), patterns_before_diversity - len(patterns))
 
     # Filter negative patterns
+    patterns_before_negative = len(patterns)
     patterns = filter_negative_patterns(patterns, negative_patterns)
+    logger.info("→ After negative pattern filter: %d patterns (removed %d)",
+                len(patterns), patterns_before_negative - len(patterns))
 
     # Add negative flags
     patterns = add_negative_flags(patterns)
@@ -756,9 +824,17 @@ def main():
 
     # Sort by adaptive weight
     patterns.sort(key=lambda x: x["adaptive_weight"], reverse=True)
+    logger.info("→ After adaptive weight calculation: %d patterns sorted by relevance", len(patterns))
 
-    # Deprecate outdated patterns
-    patterns = deprecate_outdated_patterns(patterns, current_time_ns)
+    # Deprecate outdated patterns (unless disabled)
+    if not args.no_deprecation:
+        patterns_before_deprecation = len(patterns)
+        patterns = deprecate_outdated_patterns(patterns, current_time_ns)
+        deprecated_count = patterns_before_deprecation - len([p for p in patterns if not p.get("deprecated", False)])
+        logger.info("→ After deprecation check: %d patterns (marked %d as deprecated)",
+                    len(patterns), deprecated_count)
+    else:
+        logger.info("→ Deprecation disabled (keeping all %d patterns)", len(patterns))
 
     # Analyze context distribution
     context_dist = analyze_context_distribution(response_groups)
@@ -791,10 +867,34 @@ def main():
             }
         }, f, indent=2)
 
-    logger.info("\n✓ Production templates saved to: %s", output_file)
-    logger.info("  Total patterns: %d", len(patterns))
-    logger.info("  Avg senders per pattern: %.1f",
-                np.mean([p["num_senders"] for p in patterns]))
+    logger.info("\n" + "="*70)
+    logger.info("✓ Production templates saved to: %s", output_file)
+    logger.info("="*70)
+    logger.info("SUMMARY:")
+    logger.info("  Response pairs extracted: %d", len(response_groups))
+    logger.info("  Total patterns mined: %d", len(patterns))
+    if patterns:
+        logger.info("  Avg senders per pattern: %.1f", np.mean([p["num_senders"] for p in patterns]))
+        logger.info("  Avg frequency per pattern: %.1f", np.mean([p["frequency"] for p in patterns]))
+
+        # Show context distribution
+        context_strata_count = len(set(p.get("context_stratum", "unknown") for p in patterns))
+        logger.info("  Patterns across %d context strata", context_strata_count)
+
+        # Show top 5 patterns
+        logger.info("\n  Top 5 patterns by adaptive weight:")
+        for i, p in enumerate(patterns[:5], 1):
+            logger.info("    %d. [%.3f] %s → %s",
+                       i, p["adaptive_weight"],
+                       p["representative_incoming"][:40],
+                       p["representative_response"][:40])
+    else:
+        logger.warning("  WARNING: No patterns extracted!")
+        logger.info("  Possible causes:")
+        logger.info("    - Not enough response pairs (need at least %d per stratum)", args.min_strata_size)
+        logger.info("    - Sender diversity filter too strict (need %d+ senders)", args.min_senders)
+        logger.info("    - Try: --sample to test on subset, --min-strata-size 2, --min-senders 1")
+    logger.info("="*70)
 
 
 if __name__ == "__main__":

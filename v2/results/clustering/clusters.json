@@ -1,0 +1,968 @@
+{
+  "n_contacts": 137,
+  "n_clusters": 6,
+  "clusters": {
+    "cluster_0": {
+      "count": 18,
+      "members": [
+        "Fantasy Ball Chat",
+        "Ishani Desai",
+        "Yash Tanna",
+        "Kishan Brambhatt",
+        "chris padgett",
+        "Ethan Huang",
+        "Rishiraj Taylor",
+        "Brian Honea, Nate Ultimate",
+        "Utsav Malik",
+        "joshua pritchett",
+        "Ethan Huang, Vansh Jain",
+        "Manav",
+        "Noe",
+        "Anirudh",
+        "Ashutosh Kulkarni",
+        "Nand Patel",
+        "Kishan Brambhatt, Rishiraj Taylor",
+        "Jay Mistry"
+      ],
+      "style_description": "no punctuation, uses abbreviations",
+      "avg_msg_len": 28.933643224871293,
+      "no_punct_rate": 0.9487367635613249,
+      "lol_rate": 0.020620532813515273,
+      "abbrev_rate": 0.13855418460681618,
+      "short_response_rate": 0.17821076908796207,
+      "topic_words": [
+        "like",
+        "but",
+        "just",
+        "have",
+        "what",
+        "they",
+        "yea",
+        "was",
+        "been",
+        "get"
+      ]
+    },
+    "cluster_1": {
+      "count": 16,
+      "members": [
+        "Soham Shah",
+        "Dad",
+        "Mom, Dad",
+        "Josh Smith",
+        "Waheed Hanifzada",
+        "+15104050684",
+        "Nilesh Tanna",
+        "julian",
+        "Puneet Freibott",
+        "jeremy allen",
+        "Vinit Patel",
+        "Mason S",
+        "vivek",
+        "Haris",
+        "Sahni, Jasdeep",
+        "Thasen Neighbor"
+      ],
+      "style_description": "no punctuation, uses abbreviations",
+      "avg_msg_len": 38.15175005673201,
+      "no_punct_rate": 0.8499730474968059,
+      "lol_rate": 0.013487345987345987,
+      "abbrev_rate": 0.13767844438210697,
+      "short_response_rate": 0.14091647831450826,
+      "topic_words": [
+        "just",
+        "can",
+        "will",
+        "have",
+        "not",
+        "there",
+        "but",
+        "was",
+        "did",
+        "like"
+      ]
+    },
+    "cluster_2": {
+      "count": 13,
+      "members": [
+        "The Ochos",
+        "Mihir Shah, Dad",
+        "Rutu and Younger but For Real ",
+        "family1",
+        "Mom",
+        "Mihir Shah, Mom",
+        "Mariela Costello",
+        "family",
+        "Aditya Raghunathan",
+        "Mihir Shah, Disha, Naisha +2",
+        "Rinkesh Patel",
+        "Nita Aunty",
+        "Rahil Shah"
+      ],
+      "style_description": "longer messages, no punctuation, uses abbreviations",
+      "avg_msg_len": 45.326868374654566,
+      "no_punct_rate": 0.8605291173564121,
+      "lol_rate": 0.0,
+      "abbrev_rate": 0.07328857598589925,
+      "short_response_rate": 0.20939608564802725,
+      "topic_words": [
+        "can",
+        "have",
+        "just",
+        "will",
+        "yes",
+        "they",
+        "this",
+        "home",
+        "then",
+        "come"
+      ]
+    },
+    "cluster_3": {
+      "count": 27,
+      "members": [
+        "Rutu",
+        "Danalila\u2728",
+        "Shaily",
+        "hari",
+        "Pranav Pradhan",
+        "Vansh Jain",
+        "Emily",
+        "alina",
+        "+18179466140",
+        "Shivani Gandhi",
+        "isha jha",
+        "Kirti Shekhawat",
+        "Maya Leone",
+        "Kimiya Ganjooi",
+        "Sheethal",
+        "Asian Tim",
+        "Myrthe Bellers",
+        "Gautam Sapre",
+        "Atharv",
+        "Afaf Nabeeha",
+        "Rajdeep",
+        "Prachi",
+        "Shreya",
+        "Sharanya",
+        "subhash",
+        "Nikhil",
+        "Vincent Ju"
+      ],
+      "style_description": "no punctuation, uses abbreviations",
+      "avg_msg_len": 25.571858413710263,
+      "no_punct_rate": 0.9222305228478068,
+      "lol_rate": 0.04159032899773642,
+      "abbrev_rate": 0.18655759359463064,
+      "short_response_rate": 0.2050804287841325,
+      "topic_words": [
+        "just",
+        "but",
+        "like",
+        "are",
+        "got",
+        "was",
+        "this",
+        "lol",
+        "it\u2019s",
+        "now"
+      ]
+    },
+    "cluster_4": {
+      "count": 33,
+      "members": [
+        "Mateo",
+        "Faith",
+        "Sangati Shah",
+        "Shannon",
+        "Abhinav Selvaraj",
+        "Brian Honea",
+        "Mansi",
+        "Shivam Misra",
+        "Shanay Randeria",
+        "Shivam",
+        "Sriharsha Guduguntla",
+        "Mihir",
+        "Tejas Polkham",
+        "Rohith Dara",
+        "Disha",
+        "+14155909247",
+        "Deevy Bhimani",
+        "Mihir Shah, Rohith Dara",
+        "Cinthya",
+        "+14084643141",
+        "Jomari Mayo",
+        "Brenden",
+        "Jaskaran Singh",
+        "luizalfonsoastorgaarambula@yahoo.com",
+        "Radhika Shah",
+        "5 SHAHS",
+        "vishakh",
+        "Het Patel",
+        "Tyler Hustad",
+        "Aditya Gopalan",
+        "Ryan Lam",
+        "Jason Hustad",
+        "Mihir Shah, Soham Shah, shahkrusha@icloud.com"
+      ],
+      "style_description": "no punctuation, uses abbreviations",
+      "avg_msg_len": 31.104831527100707,
+      "no_punct_rate": 0.9149494218612068,
+      "lol_rate": 0.029322320694695474,
+      "abbrev_rate": 0.20345685765383187,
+      "short_response_rate": 0.16190825318396443,
+      "topic_words": [
+        "like",
+        "but",
+        "just",
+        "have",
+        "was",
+        "they",
+        "how",
+        "are",
+        "can",
+        "what"
+      ]
+    },
+    "cluster_5": {
+      "count": 30,
+      "members": [
+        "Mihir Shah, Soham Shah, Sangati Shah +1",
+        "Mihir Shah",
+        "Rachit Pareek",
+        "Tejas\u2019s Snapchat Story",
+        "Tejas Polkham, Shanay Randeria",
+        "Abhinav Selvaraj, Shanay Randeria, Tejas Polkham",
+        "Mihir Shah, Tejas Polkham, Shanay Randeria",
+        "Mihir Shah, Shivam Misra",
+        "Soham Shah, Mihir Shah, Krusha Shah +1",
+        "Aarohi",
+        "rupa kaki",
+        "Mihir Shah, Yash Tanna, Shanay Randeria",
+        "Mihir Shah, Yash Tanna, Disha +2",
+        "quj",
+        "Hetav",
+        "Soham Shah, Krusha Shah",
+        "Danalila\u2728, Siddarth Pandian",
+        "Gujews",
+        "Mihir Shah, Yash Tanna",
+        "Abhinav Selvaraj, Mihir Shah, Shanay Randeria",
+        "5 Shahs",
+        "Rithvik Sai",
+        "Gaurav",
+        "Rutu and younger Balbat",
+        "bhari",
+        "Thomas Avery",
+        "KK",
+        "Ankita Kini",
+        "The Ochos 2",
+        "Rohith Dara, Rachit Pareek"
+      ],
+      "style_description": "no punctuation, uses abbreviations",
+      "avg_msg_len": 24.043521644426693,
+      "no_punct_rate": 0.9300130894026819,
+      "lol_rate": 0.023032872965621506,
+      "abbrev_rate": 0.16658463859251108,
+      "short_response_rate": 0.19069044852725434,
+      "topic_words": [
+        "just",
+        "not",
+        "like",
+        "get",
+        "can",
+        "was",
+        "have",
+        "yea",
+        "this",
+        "good"
+      ]
+    }
+  },
+  "contacts": [
+    {
+      "name": "Mihir Shah, Soham Shah, Sangati Shah +1",
+      "cluster": 5,
+      "n_messages": 459
+    },
+    {
+      "name": "Mihir Shah",
+      "cluster": 5,
+      "n_messages": 483
+    },
+    {
+      "name": "Rachit Pareek",
+      "cluster": 5,
+      "n_messages": 490
+    },
+    {
+      "name": "Mateo",
+      "cluster": 4,
+      "n_messages": 276
+    },
+    {
+      "name": "Faith",
+      "cluster": 4,
+      "n_messages": 491
+    },
+    {
+      "name": "Sangati Shah",
+      "cluster": 4,
+      "n_messages": 468
+    },
+    {
+      "name": "Shannon",
+      "cluster": 4,
+      "n_messages": 95
+    },
+    {
+      "name": "The Ochos",
+      "cluster": 2,
+      "n_messages": 365
+    },
+    {
+      "name": "Soham Shah",
+      "cluster": 1,
+      "n_messages": 476
+    },
+    {
+      "name": "Rutu",
+      "cluster": 3,
+      "n_messages": 81
+    },
+    {
+      "name": "Tejas\u2019s Snapchat Story",
+      "cluster": 5,
+      "n_messages": 398
+    },
+    {
+      "name": "Dad",
+      "cluster": 1,
+      "n_messages": 448
+    },
+    {
+      "name": "Danalila\u2728",
+      "cluster": 3,
+      "n_messages": 468
+    },
+    {
+      "name": "Mihir Shah, Dad",
+      "cluster": 2,
+      "n_messages": 138
+    },
+    {
+      "name": "Fantasy Ball Chat",
+      "cluster": 0,
+      "n_messages": 447
+    },
+    {
+      "name": "Ishani Desai",
+      "cluster": 0,
+      "n_messages": 467
+    },
+    {
+      "name": "Yash Tanna",
+      "cluster": 0,
+      "n_messages": 482
+    },
+    {
+      "name": "Shaily",
+      "cluster": 3,
+      "n_messages": 486
+    },
+    {
+      "name": "Abhinav Selvaraj",
+      "cluster": 4,
+      "n_messages": 349
+    },
+    {
+      "name": "Brian Honea",
+      "cluster": 4,
+      "n_messages": 472
+    },
+    {
+      "name": "Kishan Brambhatt",
+      "cluster": 0,
+      "n_messages": 476
+    },
+    {
+      "name": "Mansi",
+      "cluster": 4,
+      "n_messages": 69
+    },
+    {
+      "name": "Tejas Polkham, Shanay Randeria",
+      "cluster": 5,
+      "n_messages": 308
+    },
+    {
+      "name": "Rutu and Younger but For Real ",
+      "cluster": 2,
+      "n_messages": 98
+    },
+    {
+      "name": "Shivam Misra",
+      "cluster": 4,
+      "n_messages": 482
+    },
+    {
+      "name": "Shanay Randeria",
+      "cluster": 4,
+      "n_messages": 462
+    },
+    {
+      "name": "Shivam",
+      "cluster": 4,
+      "n_messages": 76
+    },
+    {
+      "name": "Sriharsha Guduguntla",
+      "cluster": 4,
+      "n_messages": 190
+    },
+    {
+      "name": "Mihir",
+      "cluster": 4,
+      "n_messages": 487
+    },
+    {
+      "name": "Abhinav Selvaraj, Shanay Randeria, Tejas Polkham",
+      "cluster": 5,
+      "n_messages": 44
+    },
+    {
+      "name": "Mihir Shah, Tejas Polkham, Shanay Randeria",
+      "cluster": 5,
+      "n_messages": 108
+    },
+    {
+      "name": "Mihir Shah, Shivam Misra",
+      "cluster": 5,
+      "n_messages": 50
+    },
+    {
+      "name": "family1",
+      "cluster": 2,
+      "n_messages": 436
+    },
+    {
+      "name": "Soham Shah, Mihir Shah, Krusha Shah +1",
+      "cluster": 5,
+      "n_messages": 131
+    },
+    {
+      "name": "Tejas Polkham",
+      "cluster": 4,
+      "n_messages": 475
+    },
+    {
+      "name": "Rohith Dara",
+      "cluster": 4,
+      "n_messages": 477
+    },
+    {
+      "name": "Aarohi",
+      "cluster": 5,
+      "n_messages": 60
+    },
+    {
+      "name": "rupa kaki",
+      "cluster": 5,
+      "n_messages": 43
+    },
+    {
+      "name": "Mom",
+      "cluster": 2,
+      "n_messages": 454
+    },
+    {
+      "name": "Mihir Shah, Mom",
+      "cluster": 2,
+      "n_messages": 229
+    },
+    {
+      "name": "Disha",
+      "cluster": 4,
+      "n_messages": 41
+    },
+    {
+      "name": "chris padgett",
+      "cluster": 0,
+      "n_messages": 473
+    },
+    {
+      "name": "Mariela Costello",
+      "cluster": 2,
+      "n_messages": 157
+    },
+    {
+      "name": "Mom, Dad",
+      "cluster": 1,
+      "n_messages": 457
+    },
+    {
+      "name": "+14155909247",
+      "cluster": 4,
+      "n_messages": 31
+    },
+    {
+      "name": "Deevy Bhimani",
+      "cluster": 4,
+      "n_messages": 458
+    },
+    {
+      "name": "family",
+      "cluster": 2,
+      "n_messages": 438
+    },
+    {
+      "name": "Mihir Shah, Rohith Dara",
+      "cluster": 4,
+      "n_messages": 108
+    },
+    {
+      "name": "Cinthya",
+      "cluster": 4,
+      "n_messages": 47
+    },
+    {
+      "name": "+14084643141",
+      "cluster": 4,
+      "n_messages": 149
+    },
+    {
+      "name": "Jomari Mayo",
+      "cluster": 4,
+      "n_messages": 323
+    },
+    {
+      "name": "Brenden",
+      "cluster": 4,
+      "n_messages": 99
+    },
+    {
+      "name": "Josh Smith",
+      "cluster": 1,
+      "n_messages": 381
+    },
+    {
+      "name": "Mihir Shah, Yash Tanna, Shanay Randeria",
+      "cluster": 5,
+      "n_messages": 111
+    },
+    {
+      "name": "Jaskaran Singh",
+      "cluster": 4,
+      "n_messages": 33
+    },
+    {
+      "name": "Aditya Raghunathan",
+      "cluster": 2,
+      "n_messages": 35
+    },
+    {
+      "name": "Ethan Huang",
+      "cluster": 0,
+      "n_messages": 470
+    },
+    {
+      "name": "Mihir Shah, Yash Tanna, Disha +2",
+      "cluster": 5,
+      "n_messages": 64
+    },
+    {
+      "name": "quj",
+      "cluster": 5,
+      "n_messages": 443
+    },
+    {
+      "name": "Rishiraj Taylor",
+      "cluster": 0,
+      "n_messages": 480
+    },
+    {
+      "name": "luizalfonsoastorgaarambula@yahoo.com",
+      "cluster": 4,
+      "n_messages": 94
+    },
+    {
+      "name": "Brian Honea, Nate Ultimate",
+      "cluster": 0,
+      "n_messages": 498
+    },
+    {
+      "name": "hari",
+      "cluster": 3,
+      "n_messages": 383
+    },
+    {
+      "name": "Hetav",
+      "cluster": 5,
+      "n_messages": 28
+    },
+    {
+      "name": "Radhika Shah",
+      "cluster": 4,
+      "n_messages": 229
+    },
+    {
+      "name": "Utsav Malik",
+      "cluster": 0,
+      "n_messages": 471
+    },
+    {
+      "name": "Mihir Shah, Disha, Naisha +2",
+      "cluster": 2,
+      "n_messages": 36
+    },
+    {
+      "name": "Soham Shah, Krusha Shah",
+      "cluster": 5,
+      "n_messages": 110
+    },
+    {
+      "name": "Pranav Pradhan",
+      "cluster": 3,
+      "n_messages": 479
+    },
+    {
+      "name": "joshua pritchett",
+      "cluster": 0,
+      "n_messages": 51
+    },
+    {
+      "name": "Danalila\u2728, Siddarth Pandian",
+      "cluster": 5,
+      "n_messages": 328
+    },
+    {
+      "name": "Waheed Hanifzada",
+      "cluster": 1,
+      "n_messages": 31
+    },
+    {
+      "name": "5 SHAHS",
+      "cluster": 4,
+      "n_messages": 145
+    },
+    {
+      "name": "Gujews",
+      "cluster": 5,
+      "n_messages": 478
+    },
+    {
+      "name": "Ethan Huang, Vansh Jain",
+      "cluster": 0,
+      "n_messages": 57
+    },
+    {
+      "name": "Mihir Shah, Yash Tanna",
+      "cluster": 5,
+      "n_messages": 433
+    },
+    {
+      "name": "Vansh Jain",
+      "cluster": 3,
+      "n_messages": 482
+    },
+    {
+      "name": "+15104050684",
+      "cluster": 1,
+      "n_messages": 25
+    },
+    {
+      "name": "Abhinav Selvaraj, Mihir Shah, Shanay Randeria",
+      "cluster": 5,
+      "n_messages": 58
+    },
+    {
+      "name": "5 Shahs",
+      "cluster": 5,
+      "n_messages": 438
+    },
+    {
+      "name": "Nilesh Tanna",
+      "cluster": 1,
+      "n_messages": 160
+    },
+    {
+      "name": "vishakh",
+      "cluster": 4,
+      "n_messages": 108
+    },
+    {
+      "name": "Rithvik Sai",
+      "cluster": 5,
+      "n_messages": 66
+    },
+    {
+      "name": "Manav",
+      "cluster": 0,
+      "n_messages": 379
+    },
+    {
+      "name": "Gaurav",
+      "cluster": 5,
+      "n_messages": 247
+    },
+    {
+      "name": "Emily",
+      "cluster": 3,
+      "n_messages": 481
+    },
+    {
+      "name": "julian",
+      "cluster": 1,
+      "n_messages": 48
+    },
+    {
+      "name": "Rutu and younger Balbat",
+      "cluster": 5,
+      "n_messages": 79
+    },
+    {
+      "name": "Noe",
+      "cluster": 0,
+      "n_messages": 312
+    },
+    {
+      "name": "alina",
+      "cluster": 3,
+      "n_messages": 493
+    },
+    {
+      "name": "+18179466140",
+      "cluster": 3,
+      "n_messages": 462
+    },
+    {
+      "name": "Shivani Gandhi",
+      "cluster": 3,
+      "n_messages": 473
+    },
+    {
+      "name": "isha jha",
+      "cluster": 3,
+      "n_messages": 117
+    },
+    {
+      "name": "Puneet Freibott",
+      "cluster": 1,
+      "n_messages": 122
+    },
+    {
+      "name": "bhari",
+      "cluster": 5,
+      "n_messages": 108
+    },
+    {
+      "name": "Kirti Shekhawat",
+      "cluster": 3,
+      "n_messages": 304
+    },
+    {
+      "name": "Rinkesh Patel",
+      "cluster": 2,
+      "n_messages": 31
+    },
+    {
+      "name": "Nita Aunty",
+      "cluster": 2,
+      "n_messages": 68
+    },
+    {
+      "name": "Het Patel",
+      "cluster": 4,
+      "n_messages": 488
+    },
+    {
+      "name": "Maya Leone",
+      "cluster": 3,
+      "n_messages": 479
+    },
+    {
+      "name": "Rahil Shah",
+      "cluster": 2,
+      "n_messages": 66
+    },
+    {
+      "name": "Kimiya Ganjooi",
+      "cluster": 3,
+      "n_messages": 482
+    },
+    {
+      "name": "Sheethal",
+      "cluster": 3,
+      "n_messages": 221
+    },
+    {
+      "name": "Asian Tim",
+      "cluster": 3,
+      "n_messages": 467
+    },
+    {
+      "name": "jeremy allen",
+      "cluster": 1,
+      "n_messages": 81
+    },
+    {
+      "name": "Myrthe Bellers",
+      "cluster": 3,
+      "n_messages": 38
+    },
+    {
+      "name": "Anirudh",
+      "cluster": 0,
+      "n_messages": 404
+    },
+    {
+      "name": "Gautam Sapre",
+      "cluster": 3,
+      "n_messages": 137
+    },
+    {
+      "name": "Tyler Hustad",
+      "cluster": 4,
+      "n_messages": 60
+    },
+    {
+      "name": "Atharv",
+      "cluster": 3,
+      "n_messages": 389
+    },
+    {
+      "name": "Vinit Patel",
+      "cluster": 1,
+      "n_messages": 59
+    },
+    {
+      "name": "Afaf Nabeeha",
+      "cluster": 3,
+      "n_messages": 75
+    },
+    {
+      "name": "Rajdeep",
+      "cluster": 3,
+      "n_messages": 274
+    },
+    {
+      "name": "Aditya Gopalan",
+      "cluster": 4,
+      "n_messages": 52
+    },
+    {
+      "name": "Prachi",
+      "cluster": 3,
+      "n_messages": 462
+    },
+    {
+      "name": "Ryan Lam",
+      "cluster": 4,
+      "n_messages": 131
+    },
+    {
+      "name": "Thomas Avery",
+      "cluster": 5,
+      "n_messages": 66
+    },
+    {
+      "name": "Ashutosh Kulkarni",
+      "cluster": 0,
+      "n_messages": 356
+    },
+    {
+      "name": "Nand Patel",
+      "cluster": 0,
+      "n_messages": 112
+    },
+    {
+      "name": "Shreya",
+      "cluster": 3,
+      "n_messages": 462
+    },
+    {
+      "name": "Mason S",
+      "cluster": 1,
+      "n_messages": 450
+    },
+    {
+      "name": "Sharanya",
+      "cluster": 3,
+      "n_messages": 472
+    },
+    {
+      "name": "subhash",
+      "cluster": 3,
+      "n_messages": 323
+    },
+    {
+      "name": "KK",
+      "cluster": 5,
+      "n_messages": 31
+    },
+    {
+      "name": "vivek",
+      "cluster": 1,
+      "n_messages": 50
+    },
+    {
+      "name": "Haris",
+      "cluster": 1,
+      "n_messages": 21
+    },
+    {
+      "name": "Jason Hustad",
+      "cluster": 4,
+      "n_messages": 72
+    },
+    {
+      "name": "Ankita Kini",
+      "cluster": 5,
+      "n_messages": 461
+    },
+    {
+      "name": "Sahni, Jasdeep",
+      "cluster": 1,
+      "n_messages": 78
+    },
+    {
+      "name": "Thasen Neighbor",
+      "cluster": 1,
+      "n_messages": 50
+    },
+    {
+      "name": "Kishan Brambhatt, Rishiraj Taylor",
+      "cluster": 0,
+      "n_messages": 477
+    },
+    {
+      "name": "The Ochos 2",
+      "cluster": 5,
+      "n_messages": 367
+    },
+    {
+      "name": "Jay Mistry",
+      "cluster": 0,
+      "n_messages": 450
+    },
+    {
+      "name": "Nikhil",
+      "cluster": 3,
+      "n_messages": 478
+    },
+    {
+      "name": "Mihir Shah, Soham Shah, shahkrusha@icloud.com",
+      "cluster": 4,
+      "n_messages": 186
+    },
+    {
+      "name": "Rohith Dara, Rachit Pareek",
+      "cluster": 5,
+      "n_messages": 66
+    },
+    {
+      "name": "Vincent Ju",
+      "cluster": 3,
+      "n_messages": 57
+    }
+  ]
+}

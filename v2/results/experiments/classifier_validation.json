@@ -1,0 +1,497 @@
+{
+  "n_samples": 70,
+  "accuracy": 0.44285714285714284,
+  "auto_mode": true,
+  "results": [
+    {
+      "response": "Eh it be like that",
+      "classifier": "reaction",
+      "confidence": 0.3288819193840027,
+      "human": "acknowledge",
+      "correct": false
+    },
+    {
+      "response": "Yeah just class projects",
+      "classifier": "acknowledge",
+      "confidence": 0.27120494842529297,
+      "human": "accept",
+      "correct": false
+    },
+    {
+      "response": "Bet I just texted him actually",
+      "classifier": "accept",
+      "confidence": 0.35095682740211487,
+      "human": "accept",
+      "correct": true
+    },
+    {
+      "response": "Aight yeah study dude that's way more important",
+      "classifier": "acknowledge",
+      "confidence": 0.3875456154346466,
+      "human": "accept",
+      "correct": false
+    },
+    {
+      "response": "Ur good should I come to the same parking lot as last time?",
+      "classifier": "info",
+      "confidence": 0.28526484966278076,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "Yes way",
+      "classifier": "reaction",
+      "confidence": 0.7890644073486328,
+      "human": "accept",
+      "correct": false
+    },
+    {
+      "response": "Thanks mom",
+      "classifier": "reaction",
+      "confidence": 0.38107094168663025,
+      "human": "acknowledge",
+      "correct": false
+    },
+    {
+      "response": "My dad is like just go to the dealer",
+      "classifier": "reaction",
+      "confidence": 0.18474584817886353,
+      "human": "acknowledge",
+      "correct": false
+    },
+    {
+      "response": "be busy kishbob",
+      "classifier": "decline",
+      "confidence": 0.4862706661224365,
+      "human": "decline",
+      "correct": true
+    },
+    {
+      "response": "https://maps.app.goo.gl/jg11NAiRCxBAi3S87?g_st=ipc",
+      "classifier": "info",
+      "confidence": 0.3939110040664673,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "Would it not be the same as how you do ur and fr there?",
+      "classifier": "reaction",
+      "confidence": 0.383764386177063,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "just let nand know ur gonna come",
+      "classifier": "info",
+      "confidence": 0.45174604654312134,
+      "human": "decline",
+      "correct": false
+    },
+    {
+      "response": "Can't at the library finishing essay",
+      "classifier": "decline",
+      "confidence": 0.32781368494033813,
+      "human": "decline",
+      "correct": true
+    },
+    {
+      "response": "What\u2019s the sit for gifts",
+      "classifier": "info",
+      "confidence": 0.18905575573444366,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "go work there",
+      "classifier": "info",
+      "confidence": 0.41699981689453125,
+      "human": "acknowledge",
+      "correct": false
+    },
+    {
+      "response": "Ok",
+      "classifier": "acknowledge",
+      "confidence": 1.0,
+      "human": "acknowledge",
+      "correct": true
+    },
+    {
+      "response": "Bet just lmk where u are tmrw",
+      "classifier": "accept",
+      "confidence": 0.4374634623527527,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "Worst case we get nothing",
+      "classifier": "question",
+      "confidence": 0.295199990272522,
+      "human": "decline",
+      "correct": false
+    },
+    {
+      "response": "Ok",
+      "classifier": "acknowledge",
+      "confidence": 1.0,
+      "human": "acknowledge",
+      "correct": true
+    },
+    {
+      "response": "What was left behind?",
+      "classifier": "question",
+      "confidence": 0.37648704648017883,
+      "human": "question",
+      "correct": true
+    },
+    {
+      "response": "Lol do something",
+      "classifier": "reaction",
+      "confidence": 0.5909450054168701,
+      "human": "reaction",
+      "correct": true
+    },
+    {
+      "response": "Omg ur coming out",
+      "classifier": "reaction",
+      "confidence": 0.47046059370040894,
+      "human": "reaction",
+      "correct": true
+    },
+    {
+      "response": "Rishi I pickin u up?",
+      "classifier": "acknowledge",
+      "confidence": 0.32463622093200684,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "Wdym by difficulty?",
+      "classifier": "decline",
+      "confidence": 0.19737571477890015,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "Yeah I am still got 2 years left",
+      "classifier": "reaction",
+      "confidence": 0.31765711307525635,
+      "human": "accept",
+      "correct": false
+    },
+    {
+      "response": "bet im timing u",
+      "classifier": "accept",
+      "confidence": 0.4718637466430664,
+      "human": "accept",
+      "correct": true
+    },
+    {
+      "response": "bet thanks bro",
+      "classifier": "accept",
+      "confidence": 0.6364290714263916,
+      "human": "accept",
+      "correct": true
+    },
+    {
+      "response": "No like he says I cud give em to him tmrw cuz no rush",
+      "classifier": "decline",
+      "confidence": 0.30629003047943115,
+      "human": "decline",
+      "correct": true
+    },
+    {
+      "response": "\u2026 why are u scared",
+      "classifier": "question",
+      "confidence": 0.4278566837310791,
+      "human": "question",
+      "correct": true
+    },
+    {
+      "response": "i can pick up if needed",
+      "classifier": "accept",
+      "confidence": 0.44200387597084045,
+      "human": "acknowledge",
+      "correct": false
+    },
+    {
+      "response": "I\u2019m not",
+      "classifier": "info",
+      "confidence": 0.44254088401794434,
+      "human": "decline",
+      "correct": false
+    },
+    {
+      "response": "LOL",
+      "classifier": "reaction",
+      "confidence": 0.9999999403953552,
+      "human": "reaction",
+      "correct": true
+    },
+    {
+      "response": "see like if he just accepted hes always late its just be annoying",
+      "classifier": "info",
+      "confidence": 0.3013243079185486,
+      "human": "decline",
+      "correct": false
+    },
+    {
+      "response": "Yeah sure that's should work with me",
+      "classifier": "accept",
+      "confidence": 0.4942658841609955,
+      "human": "accept",
+      "correct": true
+    },
+    {
+      "response": "No ik him",
+      "classifier": "decline",
+      "confidence": 0.4163987636566162,
+      "human": "decline",
+      "correct": true
+    },
+    {
+      "response": "Also idk exactly how but my messages and stuff came back",
+      "classifier": "decline",
+      "confidence": 0.31088072061538696,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "When is that",
+      "classifier": "question",
+      "confidence": 0.802055835723877,
+      "human": "question",
+      "correct": true
+    },
+    {
+      "response": "just the last one which was at ur apt",
+      "classifier": "question",
+      "confidence": 0.308636873960495,
+      "human": "info",
+      "correct": false
+    },
+    {
+      "response": "I think so yes",
+      "classifier": "accept",
+      "confidence": 0.6002838015556335,
+      "human": "accept",
+      "correct": true
+    },
+    {
+      "response": "When u coming back",
+      "classifier": "question",
+      "confidence": 0.6048534512519836,
+      "human": "question",
+      "correct": true
+    },
+    {
+      "response": "Sent to Soham and kaka",
+      "classifier": "info",
+      "confidence": 0.3513270318508148,
+      "human": "acknowledge",
+      "correct": false
+    },
+    {
+      "response": "How much are they making you work rn?",
+      "classifier": "reaction",
+      "confidence": 0.17277494072914124,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "ok im chillin on gas so ill just head over",
+      "classifier": "acknowledge",
+      "confidence": 0.4046393632888794,
+      "human": "acknowledge",
+      "correct": true
+    },
+    {
+      "response": "Oh I didn\u2019t know that, you have an apartment by campus though right",
+      "classifier": "info",
+      "confidence": 0.24947506189346313,
+      "human": "decline",
+      "correct": false
+    },
+    {
+      "response": "Damn \ud83e\udd75",
+      "classifier": "reaction",
+      "confidence": 0.7953422665596008,
+      "human": "reaction",
+      "correct": true
+    },
+    {
+      "response": "Ultimate frisbee",
+      "classifier": "reaction",
+      "confidence": 0.3699226379394531,
+      "human": "reaction",
+      "correct": true
+    },
+    {
+      "response": "I\u2019m prolly gonna start hiring in a week or two",
+      "classifier": "info",
+      "confidence": 0.29736703634262085,
+      "human": "acknowledge",
+      "correct": false
+    },
+    {
+      "response": "also lol gerson was takin an exam the same time as us yday",
+      "classifier": "decline",
+      "confidence": 0.24015092849731445,
+      "human": "reaction",
+      "correct": false
+    },
+    {
+      "response": "Tbh no matter what u do",
+      "classifier": "reaction",
+      "confidence": 0.3358641266822815,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "Not sure yet",
+      "classifier": "question",
+      "confidence": 0.47560152411460876,
+      "human": "decline",
+      "correct": false
+    },
+    {
+      "response": "did she find em?",
+      "classifier": "accept",
+      "confidence": 0.247097447514534,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "Oh ok",
+      "classifier": "acknowledge",
+      "confidence": 0.6654450297355652,
+      "human": "acknowledge",
+      "correct": true
+    },
+    {
+      "response": "just wrap the toes?",
+      "classifier": "question",
+      "confidence": 0.2849276065826416,
+      "human": "question",
+      "correct": true
+    },
+    {
+      "response": "Aight",
+      "classifier": "acknowledge",
+      "confidence": 0.9999999403953552,
+      "human": "acknowledge",
+      "correct": true
+    },
+    {
+      "response": "Yesssir",
+      "classifier": "accept",
+      "confidence": 0.5103055238723755,
+      "human": "accept",
+      "correct": true
+    },
+    {
+      "response": "U wudnt actively be selling something bad lol",
+      "classifier": "reaction",
+      "confidence": 0.29340583086013794,
+      "human": "reaction",
+      "correct": true
+    },
+    {
+      "response": "Yeah cause my dad made too much",
+      "classifier": "reaction",
+      "confidence": 0.29699763655662537,
+      "human": "accept",
+      "correct": false
+    },
+    {
+      "response": "Yes",
+      "classifier": "accept",
+      "confidence": 0.9999999403953552,
+      "human": "accept",
+      "correct": true
+    },
+    {
+      "response": "Dw fam Cooper got it all",
+      "classifier": "acknowledge",
+      "confidence": 0.2700573801994324,
+      "human": "acknowledge",
+      "correct": true
+    },
+    {
+      "response": "Ethnic studies what a grind",
+      "classifier": "reaction",
+      "confidence": 0.13779136538505554,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "we're goin to centex tier 2 now",
+      "classifier": "decline",
+      "confidence": 0.30180761218070984,
+      "human": "decline",
+      "correct": true
+    },
+    {
+      "response": "Oh ok makes sense that sounds like you'll be learning a lot",
+      "classifier": "acknowledge",
+      "confidence": 0.27844664454460144,
+      "human": "info",
+      "correct": false
+    },
+    {
+      "response": "they know im next door right",
+      "classifier": "question",
+      "confidence": 0.2603328824043274,
+      "human": "decline",
+      "correct": false
+    },
+    {
+      "response": "That is the plan fr but apparently u sue after ur better",
+      "classifier": "question",
+      "confidence": 0.36428073048591614,
+      "human": "accept",
+      "correct": false
+    },
+    {
+      "response": "ok confirmed we driving",
+      "classifier": "acknowledge",
+      "confidence": 0.3334425389766693,
+      "human": "acknowledge",
+      "correct": true
+    },
+    {
+      "response": "He has to catch like a couple balls at least",
+      "classifier": "reaction",
+      "confidence": 0.2178226113319397,
+      "human": "info",
+      "correct": false
+    },
+    {
+      "response": "U were tryna do np right",
+      "classifier": "acknowledge",
+      "confidence": 0.42201554775238037,
+      "human": "acknowledge",
+      "correct": true
+    },
+    {
+      "response": "except this time i trust no one",
+      "classifier": "info",
+      "confidence": 0.2636374533176422,
+      "human": "decline",
+      "correct": false
+    },
+    {
+      "response": "Oh what the fuck",
+      "classifier": "reaction",
+      "confidence": 0.3966156542301178,
+      "human": "question",
+      "correct": false
+    },
+    {
+      "response": "Do I just tell background check not moving forward",
+      "classifier": "info",
+      "confidence": 0.2381451576948166,
+      "human": "decline",
+      "correct": false
+    }
+  ]
+}

@@ -88,8 +88,45 @@ make clean-all          # Clean + remove .venv
 
 These are checkpoints that must be followed at every stage of development.
 
+**Four Core Principles (inspired by Karpathy's LLM coding observations):**
+
+1. **Think Before Coding** - Don't assume, ASK. Present options with tradeoffs.
+2. **Simplicity First** - Minimum code. No speculation. No overengineering.
+3. **Surgical Changes** - Touch ONLY what's needed. No drive-by refactoring.
+4. **Goal-Driven** - Define verifiable success criteria. Loop until verified.
+
+---
+
+### Core Principles (Detailed)
+
+**Think Before Coding** - Don't assume, don't hide confusion, surface tradeoffs:
+- State assumptions explicitly - if uncertain, ASK rather than guess
+- Present multiple approaches when ambiguity exists (with pros/cons)
+- Push back constructively if a simpler solution exists
+- Stop and clarify when confused - don't code through uncertainty
+
+**Simplicity First** - Minimum code that solves the problem:
+- No features beyond what was requested
+- No abstractions for single-use code
+- No speculative "flexibility" or error handling for impossible scenarios
+- If 200 lines could be 50, rewrite it
+- Test: Would a senior engineer call this overcomplicated? If yes, simplify.
+
+**Surgical Changes** - Touch only what you must:
+- Don't "improve" adjacent code, comments, or formatting
+- Don't refactor things that aren't broken
+- Match existing style even if you'd do it differently
+- Remove only imports/variables/functions YOUR changes orphaned
+- Test: Every changed line should trace directly to the user's request
+
+**Goal-Driven** - Clear success criteria enable autonomous work:
+- Transform vague → verifiable: "Add validation" → "Tests pass for empty/null/invalid/injection"
+- For multi-step: State plan with verification at each step
+- Loop until criteria met (don't say "should work" without verifying)
+
 ### Shell Command Guidelines
 
+- **Always use `uv run`** for Python commands (e.g., `uv run python -m jarvis.setup`, `uv run pytest`). Never use raw `python` or `.venv/bin/python`.
 - **Always use `rm -f` or `rm -rf`** when removing files/directories to avoid interactive prompts that can hang
 - Use absolute paths when possible to avoid confusion about current directory
 
@@ -97,14 +134,28 @@ These are checkpoints that must be followed at every stage of development.
 
 **Pre-Task Checklist** - Do these BEFORE writing any code:
 
-1. Run `make health` to understand current project state
-2. Run `git status` to confirm clean working directory
-3. If on `main`, create a feature branch first:
+1. **Think First** - If requirements are unclear, ask clarifying questions NOW:
+   - What are the success criteria? (specific, verifiable)
+   - Are there multiple valid approaches? Which is simplest?
+   - What assumptions am I making?
+   - Can I present options with tradeoffs instead of choosing silently?
+
+2. **State your plan for multi-step tasks** (goal-driven execution):
+   ```
+   Plan:
+   1. [Step] → verify: [specific check]
+   2. [Step] → verify: [specific check]
+   3. [Step] → verify: [specific check]
+   ```
+
+3. Run `make health` to understand current project state
+4. Run `git status` to confirm clean working directory
+5. If on `main`, create a feature branch first:
    ```bash
    git checkout -b feature/descriptive-name
    ```
-4. Read relevant existing code before writing new code
-5. Understand the existing patterns before adding new ones
+6. Read relevant existing code before writing new code
+7. Understand the existing patterns before adding new ones
 
 ### Test Execution Rules (MANDATORY)
 
@@ -126,28 +177,48 @@ cat test_results.txt         # Get actual error messages
 
 ### Before Saying "Done" (Self-Verification)
 
-**Before reporting that a task is complete:**
+**Goal-Driven Completion** - Verify against success criteria, not just "it works":
+
+Transform vague criteria into verifiable goals:
+- ❌ "Added validation" → ✅ "Tests pass for: empty input, null, invalid format, SQL injection"
+- ❌ "Fixed the bug" → ✅ "Test reproduces bug (fails), fix applied, test now passes"
+- ❌ "Refactored X" → ✅ "All tests passed before, refactored, all tests still pass"
+
+**Before reporting completion:**
 
 1. Run `make verify` (not just tests - full verification including lint and typecheck)
 2. Read `test_results.txt` and confirm all tests pass
-3. If you wrote new code, confirm it has test coverage
-4. If you modified existing code, confirm existing tests still pass
-5. Run `git diff` and review your own changes for obvious issues
-6. Only then report completion with **specific evidence**:
+3. Verify against the SPECIFIC success criteria defined at task start
+4. If you wrote new code, confirm it has test coverage
+5. If you modified existing code, confirm existing tests still pass
+6. Run `git diff` and review for surgical changes:
+   - Do all changes trace to the user's request?
+   - Any drive-by refactoring to remove?
+   - Any debug code or comments to clean up?
+7. Only then report completion with **specific evidence**:
    - "All 47 tests pass"
    - "Lint clean, no type errors"
    - NOT "tests should pass now"
 
 ### When Tests Fail or Errors Occur
 
-**STOP - don't immediately try to fix.** Follow this process:
+**STOP - don't immediately try to fix.** Think first, code second:
 
 1. Read the **FULL** error from `test_results.txt`
-2. Identify the **ROOT CAUSE**, not just the symptom
-3. If unclear, run `make test-fast` to isolate first failure
-4. Fix **ONE** issue at a time
-5. Re-run tests after each fix
-6. Never say "tests should pass now" without actually running them
+2. **Surface confusion** - If you don't understand the error, say so and ask
+3. Identify the **ROOT CAUSE**, not just the symptom:
+   - Is this a wrong assumption I made?
+   - Did I overcomplicate something?
+   - Did I change code I shouldn't have touched?
+4. If unclear, run `make test-fast` to isolate first failure
+5. Fix **ONE** issue at a time (surgical changes only)
+6. Re-run tests after each fix
+7. Never say "tests should pass now" without actually running them
+
+**Common failure patterns:**
+- ❌ Made assumption about API behavior → ✅ Should have checked docs/code first
+- ❌ Added "flexibility" that broke existing behavior → ✅ Should have kept it simple
+- ❌ Refactored adjacent code "while I was there" → ✅ Should have made surgical changes only
 
 ### Before Handing Off to Another Agent or Human
 
@@ -167,12 +238,19 @@ Before creating a PR, review your own diff:
 git diff main..HEAD
 ```
 
-Checklist:
+**Surgical Changes Checklist:**
+- [ ] Every changed line traces to the user's request (no drive-by refactoring)
+- [ ] No formatting/style changes to code you didn't modify
+- [ ] No "improvements" to adjacent functions or comments
+- [ ] Removed only imports/variables/functions YOUR changes orphaned
 - [ ] Are there any debug prints or commented code to remove?
 - [ ] Are there any hardcoded values that should be config?
+
+**Quality Checklist:**
 - [ ] Did you add/update tests for your changes?
 - [ ] Did you update any relevant documentation?
 - [ ] Does the code match the project's existing patterns?
+- [ ] Is this the simplest solution? (no overengineering)
 
 ---
 

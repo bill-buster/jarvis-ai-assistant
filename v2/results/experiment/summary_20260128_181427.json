@@ -1,0 +1,81 @@
+{
+  "timestamp": "20260128_181427",
+  "duration_minutes": 1.0217068592707317,
+  "total_tests": 38,
+  "errors": 0,
+  "tests_per_minute": 37.19266407501995,
+  "wins_by_model": {
+    "lfm2.5-1.2b": 12,
+    "lfm2-2.6b-exp": 14,
+    "qwen3-0.6b": 12
+  },
+  "win_rates": {
+    "lfm2.5-1.2b": 31.57894736842105,
+    "lfm2-2.6b-exp": 36.84210526315789,
+    "qwen3-0.6b": 31.57894736842105
+  },
+  "avg_scores": {
+    "qwen3-0.6b": 0.5592105263157895,
+    "lfm2.5-1.2b": 0.5671052631578948,
+    "lfm2-2.6b-exp": 0.5776315789473685
+  },
+  "avg_times": {
+    "qwen3-0.6b": 321.86680718472127,
+    "lfm2.5-1.2b": 373.96169963635896,
+    "lfm2-2.6b-exp": 916.7241297270123
+  },
+  "wins_by_relationship": {
+    "family": {
+      "lfm2.5-1.2b": 5,
+      "lfm2-2.6b-exp": 3,
+      "qwen3-0.6b": 2
+    },
+    "casual_friend": {
+      "lfm2-2.6b-exp": 5,
+      "qwen3-0.6b": 2,
+      "lfm2.5-1.2b": 4
+    },
+    "work": {
+      "qwen3-0.6b": 8,
+      "lfm2-2.6b-exp": 4,
+      "lfm2.5-1.2b": 2
+    },
+    "romantic": {
+      "lfm2.5-1.2b": 1,
+      "lfm2-2.6b-exp": 1
+    },
+    "close_friend": {
+      "lfm2-2.6b-exp": 1
+    }
+  },
+  "wins_by_intent": {
+    "statement": {
+      "lfm2.5-1.2b": 8,
+      "lfm2-2.6b-exp": 7,
+      "qwen3-0.6b": 7
+    },
+    "greeting": {
+      "lfm2-2.6b-exp": 2,
+      "lfm2.5-1.2b": 1
+    },
+    "logistics": {
+      "qwen3-0.6b": 1,
+      "lfm2.5-1.2b": 1
+    },
+    "yes_no_question": {
+      "lfm2-2.6b-exp": 1
+    },
+    "sharing": {
+      "qwen3-0.6b": 2
+    },
+    "thanks": {
+      "lfm2.5-1.2b": 2,
+      "qwen3-0.6b": 1
+    },
+    "open_question": {
+      "lfm2-2.6b-exp": 4,
+      "qwen3-0.6b": 1,
+      "lfm2.5-1.2b": 0
+    }
+  }
+}

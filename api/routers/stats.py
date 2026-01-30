@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -218,7 +218,8 @@ EMOJI_PATTERN = re.compile(
 
 def _get_time_range_start(time_range: TimeRangeEnum) -> datetime | None:
     """Get the start datetime for a given time range."""
-    now = datetime.now()
+    # Use timezone-aware datetime to match message dates
+    now = datetime.now(timezone.utc)
     if time_range == TimeRangeEnum.WEEK:
         return now - timedelta(days=7)
     elif time_range == TimeRangeEnum.MONTH:

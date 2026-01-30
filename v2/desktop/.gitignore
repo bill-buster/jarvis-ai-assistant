@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+.svelte-kit/
+build/
+
+# Tauri build
+src-tauri/target/
+src-tauri/gen/
+
+# Lock files (optional - can include if you want reproducible builds)
+# pnpm-lock.yaml
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

@@ -1,0 +1,2299 @@
+{
+  "n_contacts": 60,
+  "by_relationship": {
+    "group_social": [
+      {
+        "name": "Mihir Shah, Soham Shah, Sangati Shah +1",
+        "confidence": 0.3333333333333333,
+        "topics": [
+          "pop",
+          "credit",
+          "work",
+          "day",
+          "don",
+          "time",
+          "games"
+        ]
+      },
+      {
+        "name": "Tejas Polkham, Shanay Randeria",
+        "confidence": 0.34,
+        "topics": [
+          "down",
+          "back",
+          "home",
+          "coming",
+          "actually",
+          "games",
+          "tho"
+        ]
+      },
+      {
+        "name": "Rutu and Younger but For Real ",
+        "confidence": 0.2962962962962963,
+        "topics": [
+          "down",
+          "free",
+          "brunch",
+          "south",
+          "bay",
+          "happy",
+          "merry"
+        ]
+      },
+      {
+        "name": "Abhinav Selvaraj, Shanay Randeria, Tejas Polkham",
+        "confidence": 0.5,
+        "topics": [
+          "eat",
+          "oakland",
+          "shanay",
+          "down",
+          "tired",
+          "sleep",
+          "shower"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Shivam Misra",
+        "confidence": 0.4146341463414634,
+        "topics": [
+          "shivam",
+          "week",
+          "idk",
+          "mihir",
+          "coming",
+          "rachit",
+          "next"
+        ]
+      },
+      {
+        "name": "Soham Shah, Mihir Shah, Krusha Shah +1",
+        "confidence": 0.288135593220339,
+        "topics": [
+          "india",
+          "wait",
+          "bruh",
+          "mhm",
+          "jan",
+          "coming",
+          "money"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Rohith Dara",
+        "confidence": 0.3620689655172414,
+        "topics": [
+          "move",
+          "end",
+          "week",
+          "down",
+          "work",
+          "looking",
+          "idk"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Yash Tanna, Shanay Randeria",
+        "confidence": 0.3333333333333333,
+        "topics": [
+          "shanay",
+          "wknd",
+          "down",
+          "next",
+          "work",
+          "tmrw",
+          "maybe"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Yash Tanna, Disha +2",
+        "confidence": 0.5102040816326531,
+        "topics": [
+          "dosa",
+          "place",
+          "sliver",
+          "thai",
+          "pizza",
+          "eat",
+          "korean"
+        ]
+      }
+    ],
+    "family": [
+      {
+        "name": "Mihir Shah",
+        "confidence": 0.8148148148148148,
+        "topics": [
+          "eat",
+          "idk",
+          "anything",
+          "sliver",
+          "off",
+          "tmrw",
+          "pick"
+        ]
+      },
+      {
+        "name": "Rachit Pareek",
+        "confidence": 0.4,
+        "topics": [
+          "time",
+          "today",
+          "imma",
+          "right",
+          "bruh",
+          "literally",
+          "goin"
+        ]
+      },
+      {
+        "name": "Soham Shah",
+        "confidence": 0.4,
+        "topics": [
+          "day",
+          "makes",
+          "sense",
+          "back",
+          "week",
+          "last",
+          "don"
+        ]
+      },
+      {
+        "name": "Dad",
+        "confidence": 0.38596491228070173,
+        "topics": [
+          "https",
+          "check",
+          "home",
+          "email",
+          "anything",
+          "com",
+          "don"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Dad",
+        "confidence": 0.3333333333333333,
+        "topics": [
+          "back",
+          "mihir",
+          "starting",
+          "time",
+          "bart",
+          "pick",
+          "home"
+        ]
+      },
+      {
+        "name": "Shaily",
+        "confidence": 0.33962264150943394,
+        "topics": [
+          "swadhyay",
+          "cause",
+          "don",
+          "idk",
+          "only",
+          "didn",
+          "isn"
+        ]
+      },
+      {
+        "name": "Mansi",
+        "confidence": 0.2903225806451613,
+        "topics": [
+          "interview",
+          "don",
+          "naisha",
+          "after",
+          "bit",
+          "him",
+          "disha"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Tejas Polkham, Shanay Randeria",
+        "confidence": 0.38,
+        "topics": [
+          "after",
+          "coming",
+          "down",
+          "moved",
+          "sliver",
+          "back",
+          "quit"
+        ]
+      },
+      {
+        "name": "family1",
+        "confidence": 0.34782608695652173,
+        "topics": [
+          "hayward",
+          "south",
+          "eta",
+          "mihir",
+          "way",
+          "jwalin",
+          "frozen"
+        ]
+      },
+      {
+        "name": "Tejas Polkham",
+        "confidence": 0.35294117647058826,
+        "topics": [
+          "nah",
+          "next",
+          "game",
+          "idk",
+          "tho",
+          "time",
+          "sure"
+        ]
+      },
+      {
+        "name": "Rohith Dara",
+        "confidence": 0.3,
+        "topics": [
+          "bet",
+          "yash",
+          "down",
+          "pizza",
+          "still",
+          "parents",
+          "meet"
+        ]
+      },
+      {
+        "name": "Aarohi",
+        "confidence": 0.2647058823529412,
+        "topics": [
+          "wyd",
+          "valid",
+          "thursday",
+          "veg",
+          "right",
+          "wait",
+          "noodles"
+        ]
+      },
+      {
+        "name": "rupa kaki",
+        "confidence": 0.5,
+        "topics": [
+          "time",
+          "mihir",
+          "dessert",
+          "jsk",
+          "board",
+          "games",
+          "home"
+        ]
+      },
+      {
+        "name": "Mom",
+        "confidence": 0.5714285714285714,
+        "topics": [
+          "costco",
+          "oatmeal",
+          "call",
+          "don",
+          "corn",
+          "frozen",
+          "milk"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Mom",
+        "confidence": 0.4074074074074074,
+        "topics": [
+          "mihir",
+          "anything",
+          "don",
+          "new",
+          "pro",
+          "which",
+          "back"
+        ]
+      },
+      {
+        "name": "Mom, Dad",
+        "confidence": 0.3492063492063492,
+        "topics": [
+          "car",
+          "fine",
+          "insurance",
+          "information",
+          "call",
+          "look",
+          "license"
+        ]
+      },
+      {
+        "name": "family",
+        "confidence": 0.3404255319148936,
+        "topics": [
+          "vegan",
+          "food",
+          "home",
+          "dinner",
+          "day",
+          "seattle",
+          "lake"
+        ]
+      },
+      {
+        "name": "Ethan Huang",
+        "confidence": 0.34615384615384615,
+        "topics": [
+          "back",
+          "ill",
+          "around",
+          "down",
+          "bitch",
+          "place",
+          "brothers"
+        ]
+      }
+    ],
+    "professional": [
+      {
+        "name": "Mateo",
+        "confidence": 0.4909090909090909,
+        "topics": [
+          "cooper",
+          "engineers",
+          "told",
+          "work",
+          "even",
+          "your",
+          "dude"
+        ]
+      },
+      {
+        "name": "Faith",
+        "confidence": 0.42857142857142855,
+        "topics": [
+          "ill",
+          "cuz",
+          "mean",
+          "say",
+          "thats",
+          "sick",
+          "another"
+        ]
+      },
+      {
+        "name": "Sangati Shah",
+        "confidence": 0.3181818181818182,
+        "topics": [
+          "actually",
+          "party",
+          "apply",
+          "don",
+          "math",
+          "https",
+          "friends"
+        ]
+      },
+      {
+        "name": "Shannon",
+        "confidence": 0.45454545454545453,
+        "topics": [
+          "call",
+          "last",
+          "sorry",
+          "him",
+          "else",
+          "idk",
+          "operators"
+        ]
+      },
+      {
+        "name": "Yash Tanna",
+        "confidence": 0.35714285714285715,
+        "topics": [
+          "game",
+          "fuck",
+          "fucking",
+          "dude",
+          "insane",
+          "damn",
+          "today"
+        ]
+      },
+      {
+        "name": "Abhinav Selvaraj",
+        "confidence": 0.28125,
+        "topics": [
+          "bro",
+          "work",
+          "idk",
+          "tmrw",
+          "big",
+          "guy",
+          "man"
+        ]
+      },
+      {
+        "name": "Brian Honea",
+        "confidence": 0.35,
+        "topics": [
+          "interview",
+          "week",
+          "well",
+          "tho",
+          "alright",
+          "nice",
+          "home"
+        ]
+      },
+      {
+        "name": "Shivam Misra",
+        "confidence": 0.3,
+        "topics": [
+          "claude",
+          "use",
+          "easy",
+          "time",
+          "shud",
+          "mihir",
+          "maybe"
+        ]
+      },
+      {
+        "name": "Shanay Randeria",
+        "confidence": 0.4666666666666667,
+        "topics": [
+          "him",
+          "your",
+          "don",
+          "kennan",
+          "linkedin",
+          "dude",
+          "much"
+        ]
+      },
+      {
+        "name": "Shivam",
+        "confidence": 0.5,
+        "topics": [
+          "https",
+          "com",
+          "bro",
+          "your",
+          "over",
+          "bet",
+          "applying"
+        ]
+      },
+      {
+        "name": "Sriharsha Guduguntla",
+        "confidence": 0.34615384615384615,
+        "topics": [
+          "call",
+          "better",
+          "back",
+          "home",
+          "tmrw",
+          "your",
+          "still"
+        ]
+      },
+      {
+        "name": "Disha",
+        "confidence": 0.6666666666666666,
+        "topics": [
+          "today",
+          "start",
+          "friend",
+          "job",
+          "teach",
+          "sangeet",
+          "again"
+        ]
+      },
+      {
+        "name": "Mariela Costello",
+        "confidence": 0.631578947368421,
+        "topics": [
+          "jwalin",
+          "telehealth",
+          "appointment",
+          "session",
+          "today",
+          "work",
+          "video"
+        ]
+      },
+      {
+        "name": "Deevy Bhimani",
+        "confidence": 0.2830188679245283,
+        "topics": [
+          "roblox",
+          "nice",
+          "doing",
+          "well",
+          "cool",
+          "working",
+          "work"
+        ]
+      },
+      {
+        "name": "Cinthya",
+        "confidence": 0.3333333333333333,
+        "topics": [
+          "call",
+          "free",
+          "send",
+          "reese",
+          "forward",
+          "communication",
+          "shud"
+        ]
+      },
+      {
+        "name": "Jomari Mayo",
+        "confidence": 0.3,
+        "topics": [
+          "cooper",
+          "even",
+          "around",
+          "told",
+          "ask",
+          "move",
+          "wrong"
+        ]
+      },
+      {
+        "name": "Brenden",
+        "confidence": 0.5172413793103449,
+        "topics": [
+          "suits",
+          "long",
+          "week",
+          "robot",
+          "lmao",
+          "call",
+          "sure"
+        ]
+      },
+      {
+        "name": "Josh Smith",
+        "confidence": 0.3333333333333333,
+        "topics": [
+          "time",
+          "data",
+          "demo",
+          "robot",
+          "cuz",
+          "doing",
+          "machine"
+        ]
+      },
+      {
+        "name": "Aditya Raghunathan",
+        "confidence": 0.5555555555555556,
+        "topics": [
+          "people",
+          "nda",
+          "cooper",
+          "coming",
+          "wednesday",
+          "hey",
+          "work"
+        ]
+      },
+      {
+        "name": "Rishiraj Taylor",
+        "confidence": 0.32432432432432434,
+        "topics": [
+          "shit",
+          "mane",
+          "loll",
+          "fuck",
+          "tho",
+          "remote",
+          "bro"
+        ]
+      },
+      {
+        "name": "luizalfonsoastorgaarambula@yahoo.com",
+        "confidence": 0.34615384615384615,
+        "topics": [
+          "homie",
+          "interview",
+          "number",
+          "prolly",
+          "things",
+          "doin",
+          "bro"
+        ]
+      }
+    ],
+    "romantic": [
+      {
+        "name": "The Ochos",
+        "confidence": 0.35714285714285715,
+        "topics": [
+          "loved",
+          "image",
+          "happy",
+          "merry",
+          "life",
+          "year",
+          "christmas"
+        ]
+      },
+      {
+        "name": "Tejas\u2019s Snapchat Story",
+        "confidence": 0.2830188679245283,
+        "topics": [
+          "down",
+          "maybe",
+          "new",
+          "even",
+          "image",
+          "shit",
+          "shanay"
+        ]
+      },
+      {
+        "name": "hari",
+        "confidence": 0.2857142857142857,
+        "topics": [
+          "ram",
+          "therapy",
+          "sister",
+          "uber",
+          "bad",
+          "wrong",
+          "nap"
+        ]
+      }
+    ],
+    "close_friend": [
+      {
+        "name": "Rutu",
+        "confidence": 0.42105263157894735,
+        "topics": [
+          "back",
+          "didnt",
+          "studying",
+          "med",
+          "texas",
+          "proud",
+          "idk"
+        ]
+      },
+      {
+        "name": "Fantasy Ball Chat",
+        "confidence": 0.3,
+        "topics": [
+          "game",
+          "week",
+          "don",
+          "lock",
+          "last",
+          "points",
+          "made"
+        ]
+      },
+      {
+        "name": "Kishan Brambhatt",
+        "confidence": 0.3157894736842105,
+        "topics": [
+          "pay",
+          "hart",
+          "reacted",
+          "kat",
+          "monk",
+          "took",
+          "bane"
+        ]
+      },
+      {
+        "name": "chris padgett",
+        "confidence": 0.34285714285714286,
+        "topics": [
+          "team",
+          "him",
+          "hurt",
+          "harden",
+          "bro",
+          "trae",
+          "fuck"
+        ]
+      },
+      {
+        "name": "quj",
+        "confidence": 0.24242424242424243,
+        "topics": [
+          "happy",
+          "new",
+          "year",
+          "https",
+          "yall",
+          "app",
+          "fellas"
+        ]
+      }
+    ],
+    "casual_friend": [
+      {
+        "name": "Danalila\u2728",
+        "confidence": 0.29411764705882354,
+        "topics": [
+          "dallas",
+          "idk",
+          "sleep",
+          "night",
+          "never",
+          "don",
+          "guess"
+        ]
+      },
+      {
+        "name": "Ishani Desai",
+        "confidence": 0.2926829268292683,
+        "topics": [
+          "game",
+          "fucking",
+          "back",
+          "tho",
+          "lets",
+          "chicago",
+          "arav"
+        ]
+      },
+      {
+        "name": "Mihir",
+        "confidence": 0.2857142857142857,
+        "topics": [
+          "tmrw",
+          "bro",
+          "toes",
+          "your",
+          "hang",
+          "back",
+          "fremont"
+        ]
+      },
+      {
+        "name": "Brian Honea, Nate Ultimate",
+        "confidence": 0.32142857142857145,
+        "topics": [
+          "game",
+          "geno",
+          "fuck",
+          "damn",
+          "back",
+          "put",
+          "arch"
+        ]
+      }
+    ]
+  },
+  "contacts": [
+    {
+      "name": "Mihir Shah, Soham Shah, Sangati Shah +1",
+      "relationship": "group_social",
+      "rel_confidence": 0.3333333333333333,
+      "rel_signals": {
+        "family": 0.22807017543859648,
+        "romantic": 0.08771929824561403,
+        "close_friend": 0.10526315789473684,
+        "professional": 0.15789473684210525,
+        "casual_friend": 0.07017543859649122,
+        "group_social": 0.3333333333333333
+      },
+      "topics": [
+        "pop",
+        "credit",
+        "work",
+        "day",
+        "don",
+        "time",
+        "games"
+      ],
+      "avg_msg_len": 25.9875,
+      "casual_score": 1.0875000000000001,
+      "is_group": true
+    },
+    {
+      "name": "Mihir Shah",
+      "relationship": "family",
+      "rel_confidence": 0.8148148148148148,
+      "rel_signals": {
+        "family": 0.8148148148148148,
+        "romantic": 0.0,
+        "close_friend": 0.0,
+        "professional": 0.0,
+        "casual_friend": 0.07407407407407407,
+        "group_social": 0.07407407407407407
+      },
+      "topics": [
+        "eat",
+        "idk",
+        "anything",
+        "sliver",
+        "off",
+        "tmrw",
+        "pick"
+      ],
+      "avg_msg_len": 17.7875,
+      "casual_score": 1.25,
+      "is_group": false
+    },
+    {
+      "name": "Rachit Pareek",
+      "relationship": "family",
+      "rel_confidence": 0.4,
+      "rel_signals": {
+        "family": 0.4,
+        "romantic": 0.0,
+        "close_friend": 0.13333333333333333,
+        "professional": 0.26666666666666666,
+        "casual_friend": 0.13333333333333333,
+        "group_social": 0.044444444444444446
+      },
+      "topics": [
+        "time",
+        "today",
+        "imma",
+        "right",
+        "bruh",
+        "literally",
+        "goin"
+      ],
+      "avg_msg_len": 28.625,
+      "casual_score": 1.1875,
+      "is_group": false
+    },
+    {
+      "name": "Mateo",
+      "relationship": "professional",
+      "rel_confidence": 0.4909090909090909,
+      "rel_signals": {
+        "family": 0.05454545454545454,
+        "romantic": 0.18181818181818182,
+        "close_friend": 0.10909090909090909,
+        "professional": 0.4909090909090909,
+        "casual_friend": 0.03636363636363636,
+        "group_social": 0.10909090909090909
+      },
+      "topics": [
+        "cooper",
+        "engineers",
+        "told",
+        "work",
+        "even",
+        "your",
+        "dude"
+      ],
+      "avg_msg_len": 137.325,
+      "casual_score": 1.125,
+      "is_group": false
+    },
+    {
+      "name": "Faith",
+      "relationship": "professional",
+      "rel_confidence": 0.42857142857142855,
+      "rel_signals": {
+        "family": 0.12244897959183673,
+        "romantic": 0.10204081632653061,
+        "close_friend": 0.20408163265306123,
+        "professional": 0.42857142857142855,
+        "casual_friend": 0.08163265306122448,
+        "group_social": 0.04081632653061224
+      },
+      "topics": [
+        "ill",
+        "cuz",
+        "mean",
+        "say",
+        "thats",
+        "sick",
+        "another"
+      ],
+      "avg_msg_len": 30.862499999999997,
+      "casual_score": 1.275,
+      "is_group": false
+    },
+    {
+      "name": "Sangati Shah",
+      "relationship": "professional",
+      "rel_confidence": 0.3181818181818182,
+      "rel_signals": {
+        "family": 0.19696969696969696,
+        "romantic": 0.07575757575757576,
+        "close_friend": 0.12121212121212122,
+        "professional": 0.3181818181818182,
+        "casual_friend": 0.18181818181818182,
+        "group_social": 0.09090909090909091
+      },
+      "topics": [
+        "actually",
+        "party",
+        "apply",
+        "don",
+        "math",
+        "https",
+        "friends"
+      ],
+      "avg_msg_len": 29.6875,
+      "casual_score": 1.1375,
+      "is_group": false
+    },
+    {
+      "name": "Shannon",
+      "relationship": "professional",
+      "rel_confidence": 0.45454545454545453,
+      "rel_signals": {
+        "family": 0.2727272727272727,
+        "romantic": 0.0,
+        "close_friend": 0.18181818181818182,
+        "professional": 0.45454545454545453,
+        "casual_friend": 0.0,
+        "group_social": 0.06060606060606061
+      },
+      "topics": [
+        "call",
+        "last",
+        "sorry",
+        "him",
+        "else",
+        "idk",
+        "operators"
+      ],
+      "avg_msg_len": 27.94736842105263,
+      "casual_score": 1.0350877192982455,
+      "is_group": false
+    },
+    {
+      "name": "The Ochos",
+      "relationship": "romantic",
+      "rel_confidence": 0.35714285714285715,
+      "rel_signals": {
+        "family": 0.16071428571428573,
+        "romantic": 0.35714285714285715,
+        "close_friend": 0.14285714285714285,
+        "professional": 0.21428571428571427,
+        "casual_friend": 0.03571428571428571,
+        "group_social": 0.07142857142857142
+      },
+      "topics": [
+        "loved",
+        "image",
+        "happy",
+        "merry",
+        "life",
+        "year",
+        "christmas"
+      ],
+      "avg_msg_len": 51.2280701754386,
+      "casual_score": 1.1403508771929824,
+      "is_group": false
+    },
+    {
+      "name": "Soham Shah",
+      "relationship": "family",
+      "rel_confidence": 0.4,
+      "rel_signals": {
+        "family": 0.4,
+        "romantic": 0.0,
+        "close_friend": 0.18181818181818182,
+        "professional": 0.21818181818181817,
+        "casual_friend": 0.10909090909090909,
+        "group_social": 0.07272727272727272
+      },
+      "topics": [
+        "day",
+        "makes",
+        "sense",
+        "back",
+        "week",
+        "last",
+        "don"
+      ],
+      "avg_msg_len": 29.25,
+      "casual_score": 1.0875,
+      "is_group": false
+    },
+    {
+      "name": "Rutu",
+      "relationship": "close_friend",
+      "rel_confidence": 0.42105263157894735,
+      "rel_signals": {
+        "family": 0.3157894736842105,
+        "romantic": 0.0,
+        "close_friend": 0.42105263157894735,
+        "professional": 0.0,
+        "casual_friend": 0.0,
+        "group_social": 0.21052631578947367
+      },
+      "topics": [
+        "back",
+        "didnt",
+        "studying",
+        "med",
+        "texas",
+        "proud",
+        "idk"
+      ],
+      "avg_msg_len": 23.26,
+      "casual_score": 1.32,
+      "is_group": false
+    },
+    {
+      "name": "Tejas\u2019s Snapchat Story",
+      "relationship": "romantic",
+      "rel_confidence": 0.2830188679245283,
+      "rel_signals": {
+        "family": 0.16981132075471697,
+        "romantic": 0.2830188679245283,
+        "close_friend": 0.1509433962264151,
+        "professional": 0.22641509433962265,
+        "casual_friend": 0.07547169811320754,
+        "group_social": 0.07547169811320754
+      },
+      "topics": [
+        "down",
+        "maybe",
+        "new",
+        "even",
+        "image",
+        "shit",
+        "shanay"
+      ],
+      "avg_msg_len": 26.304347826086953,
+      "casual_score": 1.0434782608695652,
+      "is_group": false
+    },
+    {
+      "name": "Dad",
+      "relationship": "family",
+      "rel_confidence": 0.38596491228070173,
+      "rel_signals": {
+        "family": 0.38596491228070173,
+        "romantic": 0.17543859649122806,
+        "close_friend": 0.03508771929824561,
+        "professional": 0.3157894736842105,
+        "casual_friend": 0.0,
+        "group_social": 0.07017543859649122
+      },
+      "topics": [
+        "https",
+        "check",
+        "home",
+        "email",
+        "anything",
+        "com",
+        "don"
+      ],
+      "avg_msg_len": 35.5625,
+      "casual_score": 0.9875,
+      "is_group": false
+    },
+    {
+      "name": "Danalila\u2728",
+      "relationship": "casual_friend",
+      "rel_confidence": 0.29411764705882354,
+      "rel_signals": {
+        "family": 0.08823529411764706,
+        "romantic": 0.14705882352941177,
+        "close_friend": 0.11764705882352941,
+        "professional": 0.2647058823529412,
+        "casual_friend": 0.29411764705882354,
+        "group_social": 0.058823529411764705
+      },
+      "topics": [
+        "dallas",
+        "idk",
+        "sleep",
+        "night",
+        "never",
+        "don",
+        "guess"
+      ],
+      "avg_msg_len": 17.3875,
+      "casual_score": 1.2875,
+      "is_group": false
+    },
+    {
+      "name": "Mihir Shah, Dad",
+      "relationship": "family",
+      "rel_confidence": 0.3333333333333333,
+      "rel_signals": {
+        "family": 0.3333333333333333,
+        "romantic": 0.0,
+        "close_friend": 0.07017543859649122,
+        "professional": 0.21052631578947367,
+        "casual_friend": 0.07017543859649122,
+        "group_social": 0.2982456140350877
+      },
+      "topics": [
+        "back",
+        "mihir",
+        "starting",
+        "time",
+        "bart",
+        "pick",
+        "home"
+      ],
+      "avg_msg_len": 25.70212765957447,
+      "casual_score": 1.0,
+      "is_group": true
+    },
+    {
+      "name": "Fantasy Ball Chat",
+      "relationship": "close_friend",
+      "rel_confidence": 0.3,
+      "rel_signals": {
+        "family": 0.0,
+        "romantic": 0.0,
+        "close_friend": 0.3,
+        "professional": 0.225,
+        "casual_friend": 0.3,
+        "group_social": 0.15
+      },
+      "topics": [
+        "game",
+        "week",
+        "don",
+        "lock",
+        "last",
+        "points",
+        "made"
+      ],
+      "avg_msg_len": 36.40677966101695,
+      "casual_score": 1.11864406779661,
+      "is_group": false
+    },
+    {
+      "name": "Ishani Desai",
+      "relationship": "casual_friend",
+      "rel_confidence": 0.2926829268292683,
+      "rel_signals": {
+        "family": 0.21951219512195122,
+        "romantic": 0.0,
+        "close_friend": 0.14634146341463414,
+        "professional": 0.21951219512195122,
+        "casual_friend": 0.2926829268292683,
+        "group_social": 0.0975609756097561
+      },
+      "topics": [
+        "game",
+        "fucking",
+        "back",
+        "tho",
+        "lets",
+        "chicago",
+        "arav"
+      ],
+      "avg_msg_len": 24.55,
+      "casual_score": 1.05,
+      "is_group": false
+    },
+    {
+      "name": "Yash Tanna",
+      "relationship": "professional",
+      "rel_confidence": 0.35714285714285715,
+      "rel_signals": {
+        "family": 0.0,
+        "romantic": 0.0,
+        "close_friend": 0.2857142857142857,
+        "professional": 0.35714285714285715,
+        "casual_friend": 0.2857142857142857,
+        "group_social": 0.047619047619047616
+      },
+      "topics": [
+        "game",
+        "fuck",
+        "fucking",
+        "dude",
+        "insane",
+        "damn",
+        "today"
+      ],
+      "avg_msg_len": 23.225,
+      "casual_score": 1.025,
+      "is_group": false
+    },
+    {
+      "name": "Shaily",
+      "relationship": "family",
+      "rel_confidence": 0.33962264150943394,
+      "rel_signals": {
+        "family": 0.33962264150943394,
+        "romantic": 0.09433962264150944,
+        "close_friend": 0.1509433962264151,
+        "professional": 0.05660377358490566,
+        "casual_friend": 0.22641509433962265,
+        "group_social": 0.11320754716981132
+      },
+      "topics": [
+        "swadhyay",
+        "cause",
+        "don",
+        "idk",
+        "only",
+        "didn",
+        "isn"
+      ],
+      "avg_msg_len": 30.65,
+      "casual_score": 1.1125,
+      "is_group": false
+    },
+    {
+      "name": "Abhinav Selvaraj",
+      "relationship": "professional",
+      "rel_confidence": 0.28125,
+      "rel_signals": {
+        "family": 0.234375,
+        "romantic": 0.0,
+        "close_friend": 0.1875,
+        "professional": 0.28125,
+        "casual_friend": 0.1875,
+        "group_social": 0.09375
+      },
+      "topics": [
+        "bro",
+        "work",
+        "idk",
+        "tmrw",
+        "big",
+        "guy",
+        "man"
+      ],
+      "avg_msg_len": 27.750000000000004,
+      "casual_score": 1.2625,
+      "is_group": false
+    },
+    {
+      "name": "Brian Honea",
+      "relationship": "professional",
+      "rel_confidence": 0.35,
+      "rel_signals": {
+        "family": 0.25,
+        "romantic": 0.08333333333333333,
+        "close_friend": 0.13333333333333333,
+        "professional": 0.35,
+        "casual_friend": 0.13333333333333333,
+        "group_social": 0.03333333333333333
+      },
+      "topics": [
+        "interview",
+        "week",
+        "well",
+        "tho",
+        "alright",
+        "nice",
+        "home"
+      ],
+      "avg_msg_len": 27.712500000000002,
+      "casual_score": 1.0,
+      "is_group": false
+    },
+    {
+      "name": "Kishan Brambhatt",
+      "relationship": "close_friend",
+      "rel_confidence": 0.3157894736842105,
+      "rel_signals": {
+        "family": 0.15789473684210525,
+        "romantic": 0.0,
+        "close_friend": 0.3157894736842105,
+        "professional": 0.23684210526315788,
+        "casual_friend": 0.21052631578947367,
+        "group_social": 0.05263157894736842
+      },
+      "topics": [
+        "pay",
+        "hart",
+        "reacted",
+        "kat",
+        "monk",
+        "took",
+        "bane"
+      ],
+      "avg_msg_len": 25.675000000000004,
+      "casual_score": 1.25,
+      "is_group": false
+    },
+    {
+      "name": "Mansi",
+      "relationship": "family",
+      "rel_confidence": 0.2903225806451613,
+      "rel_signals": {
+        "family": 0.2903225806451613,
+        "romantic": 0.0,
+        "close_friend": 0.06451612903225806,
+        "professional": 0.2903225806451613,
+        "casual_friend": 0.12903225806451613,
+        "group_social": 0.1935483870967742
+      },
+      "topics": [
+        "interview",
+        "don",
+        "naisha",
+        "after",
+        "bit",
+        "him",
+        "disha"
+      ],
+      "avg_msg_len": 36.86486486486486,
+      "casual_score": 1.2432432432432432,
+      "is_group": false
+    },
+    {
+      "name": "Tejas Polkham, Shanay Randeria",
+      "relationship": "group_social",
+      "rel_confidence": 0.34,
+      "rel_signals": {
+        "family": 0.18,
+        "romantic": 0.1,
+        "close_friend": 0.12,
+        "professional": 0.12,
+        "casual_friend": 0.12,
+        "group_social": 0.34
+      },
+      "topics": [
+        "down",
+        "back",
+        "home",
+        "coming",
+        "actually",
+        "games",
+        "tho"
+      ],
+      "avg_msg_len": 21.1625,
+      "casual_score": 1.15,
+      "is_group": true
+    },
+    {
+      "name": "Rutu and Younger but For Real ",
+      "relationship": "group_social",
+      "rel_confidence": 0.2962962962962963,
+      "rel_signals": {
+        "family": 0.2222222222222222,
+        "romantic": 0.18518518518518517,
+        "close_friend": 0.14814814814814814,
+        "professional": 0.1111111111111111,
+        "casual_friend": 0.0,
+        "group_social": 0.2962962962962963
+      },
+      "topics": [
+        "down",
+        "free",
+        "brunch",
+        "south",
+        "bay",
+        "happy",
+        "merry"
+      ],
+      "avg_msg_len": 27.066666666666666,
+      "casual_score": 1.0,
+      "is_group": false
+    },
+    {
+      "name": "Shivam Misra",
+      "relationship": "professional",
+      "rel_confidence": 0.3,
+      "rel_signals": {
+        "family": 0.15,
+        "romantic": 0.0,
+        "close_friend": 0.2,
+        "professional": 0.3,
+        "casual_friend": 0.2,
+        "group_social": 0.1
+      },
+      "topics": [
+        "claude",
+        "use",
+        "easy",
+        "time",
+        "shud",
+        "mihir",
+        "maybe"
+      ],
+      "avg_msg_len": 18.8125,
+      "casual_score": 1.175,
+      "is_group": false
+    },
+    {
+      "name": "Shanay Randeria",
+      "relationship": "professional",
+      "rel_confidence": 0.4666666666666667,
+      "rel_signals": {
+        "family": 0.06666666666666667,
+        "romantic": 0.2222222222222222,
+        "close_friend": 0.13333333333333333,
+        "professional": 0.4666666666666667,
+        "casual_friend": 0.0,
+        "group_social": 0.08888888888888889
+      },
+      "topics": [
+        "him",
+        "your",
+        "don",
+        "kennan",
+        "linkedin",
+        "dude",
+        "much"
+      ],
+      "avg_msg_len": 25.5,
+      "casual_score": 1.1125,
+      "is_group": false
+    },
+    {
+      "name": "Shivam",
+      "relationship": "professional",
+      "rel_confidence": 0.5,
+      "rel_signals": {
+        "family": 0.0,
+        "romantic": 0.0,
+        "close_friend": 0.13333333333333333,
+        "professional": 0.5,
+        "casual_friend": 0.26666666666666666,
+        "group_social": 0.06666666666666667
+      },
+      "topics": [
+        "https",
+        "com",
+        "bro",
+        "your",
+        "over",
+        "bet",
+        "applying"
+      ],
+      "avg_msg_len": 31.88888888888889,
+      "casual_score": 1.0,
+      "is_group": false
+    },
+    {
+      "name": "Sriharsha Guduguntla",
+      "relationship": "professional",
+      "rel_confidence": 0.34615384615384615,
+      "rel_signals": {
+        "family": 0.11538461538461539,
+        "romantic": 0.09615384615384616,
+        "close_friend": 0.15384615384615385,
+        "professional": 0.34615384615384615,
+        "casual_friend": 0.15384615384615385,
+        "group_social": 0.11538461538461539
+      },
+      "topics": [
+        "call",
+        "better",
+        "back",
+        "home",
+        "tmrw",
+        "your",
+        "still"
+      ],
+      "avg_msg_len": 44.1125,
+      "casual_score": 1.0375,
+      "is_group": false
+    },
+    {
+      "name": "Mihir",
+      "relationship": "casual_friend",
+      "rel_confidence": 0.2857142857142857,
+      "rel_signals": {
+        "family": 0.17142857142857143,
+        "romantic": 0.0,
+        "close_friend": 0.17142857142857143,
+        "professional": 0.17142857142857143,
+        "casual_friend": 0.2857142857142857,
+        "group_social": 0.17142857142857143
+      },
+      "topics": [
+        "tmrw",
+        "bro",
+        "toes",
+        "your",
+        "hang",
+        "back",
+        "fremont"
+      ],
+      "avg_msg_len": 27.5125,
+      "casual_score": 1.1375,
+      "is_group": false
+    },
+    {
+      "name": "Abhinav Selvaraj, Shanay Randeria, Tejas Polkham",
+      "relationship": "group_social",
+      "rel_confidence": 0.5,
+      "rel_signals": {
+        "family": 0.17647058823529413,
+        "romantic": 0.0,
+        "close_friend": 0.17647058823529413,
+        "professional": 0.0,
+        "casual_friend": 0.11764705882352941,
+        "group_social": 0.5
+      },
+      "topics": [
+        "eat",
+        "oakland",
+        "shanay",
+        "down",
+        "tired",
+        "sleep",
+        "shower"
+      ],
+      "avg_msg_len": 22.7,
+      "casual_score": 1.15,
+      "is_group": true
+    },
+    {
+      "name": "Mihir Shah, Tejas Polkham, Shanay Randeria",
+      "relationship": "family",
+      "rel_confidence": 0.38,
+      "rel_signals": {
+        "family": 0.38,
+        "romantic": 0.0,
+        "close_friend": 0.04,
+        "professional": 0.18,
+        "casual_friend": 0.0,
+        "group_social": 0.38
+      },
+      "topics": [
+        "after",
+        "coming",
+        "down",
+        "moved",
+        "sliver",
+        "back",
+        "quit"
+      ],
+      "avg_msg_len": 16.757575757575758,
+      "casual_score": 1.121212121212121,
+      "is_group": true
+    },
+    {
+      "name": "Mihir Shah, Shivam Misra",
+      "relationship": "group_social",
+      "rel_confidence": 0.4146341463414634,
+      "rel_signals": {
+        "family": 0.3170731707317073,
+        "romantic": 0.12195121951219512,
+        "close_friend": 0.04878048780487805,
+        "professional": 0.07317073170731707,
+        "casual_friend": 0.0,
+        "group_social": 0.4146341463414634
+      },
+      "topics": [
+        "shivam",
+        "week",
+        "idk",
+        "mihir",
+        "coming",
+        "rachit",
+        "next"
+      ],
+      "avg_msg_len": 25.33333333333333,
+      "casual_score": 1.1428571428571428,
+      "is_group": true
+    },
+    {
+      "name": "family1",
+      "relationship": "family",
+      "rel_confidence": 0.34782608695652173,
+      "rel_signals": {
+        "family": 0.34782608695652173,
+        "romantic": 0.10869565217391304,
+        "close_friend": 0.08695652173913043,
+        "professional": 0.13043478260869565,
+        "casual_friend": 0.2608695652173913,
+        "group_social": 0.043478260869565216
+      },
+      "topics": [
+        "hayward",
+        "south",
+        "eta",
+        "mihir",
+        "way",
+        "jwalin",
+        "frozen"
+      ],
+      "avg_msg_len": 27.87234042553191,
+      "casual_score": 0.7659574468085106,
+      "is_group": false
+    },
+    {
+      "name": "Soham Shah, Mihir Shah, Krusha Shah +1",
+      "relationship": "group_social",
+      "rel_confidence": 0.288135593220339,
+      "rel_signals": {
+        "family": 0.2711864406779661,
+        "romantic": 0.1694915254237288,
+        "close_friend": 0.06779661016949153,
+        "professional": 0.15254237288135594,
+        "casual_friend": 0.03389830508474576,
+        "group_social": 0.288135593220339
+      },
+      "topics": [
+        "india",
+        "wait",
+        "bruh",
+        "mhm",
+        "jan",
+        "coming",
+        "money"
+      ],
+      "avg_msg_len": 32.861111111111114,
+      "casual_score": 1.0,
+      "is_group": true
+    },
+    {
+      "name": "Tejas Polkham",
+      "relationship": "family",
+      "rel_confidence": 0.35294117647058826,
+      "rel_signals": {
+        "family": 0.35294117647058826,
+        "romantic": 0.0,
+        "close_friend": 0.11764705882352941,
+        "professional": 0.08823529411764706,
+        "casual_friend": 0.23529411764705882,
+        "group_social": 0.17647058823529413
+      },
+      "topics": [
+        "nah",
+        "next",
+        "game",
+        "idk",
+        "tho",
+        "time",
+        "sure"
+      ],
+      "avg_msg_len": 22.0125,
+      "casual_score": 1.125,
+      "is_group": false
+    },
+    {
+      "name": "Rohith Dara",
+      "relationship": "family",
+      "rel_confidence": 0.3,
+      "rel_signals": {
+        "family": 0.3,
+        "romantic": 0.0,
+        "close_friend": 0.13333333333333333,
+        "professional": 0.2,
+        "casual_friend": 0.13333333333333333,
+        "group_social": 0.2
+      },
+      "topics": [
+        "bet",
+        "yash",
+        "down",
+        "pizza",
+        "still",
+        "parents",
+        "meet"
+      ],
+      "avg_msg_len": 22.1375,
+      "casual_score": 1.2249999999999999,
+      "is_group": false
+    },
+    {
+      "name": "Aarohi",
+      "relationship": "family",
+      "rel_confidence": 0.2647058823529412,
+      "rel_signals": {
+        "family": 0.2647058823529412,
+        "romantic": 0.14705882352941177,
+        "close_friend": 0.11764705882352941,
+        "professional": 0.2647058823529412,
+        "casual_friend": 0.11764705882352941,
+        "group_social": 0.058823529411764705
+      },
+      "topics": [
+        "wyd",
+        "valid",
+        "thursday",
+        "veg",
+        "right",
+        "wait",
+        "noodles"
+      ],
+      "avg_msg_len": 19.972972972972972,
+      "casual_score": 1.135135135135135,
+      "is_group": false
+    },
+    {
+      "name": "rupa kaki",
+      "relationship": "family",
+      "rel_confidence": 0.5,
+      "rel_signals": {
+        "family": 0.5,
+        "romantic": 0.20833333333333334,
+        "close_friend": 0.0,
+        "professional": 0.0,
+        "casual_friend": 0.08333333333333333,
+        "group_social": 0.16666666666666666
+      },
+      "topics": [
+        "time",
+        "mihir",
+        "dessert",
+        "jsk",
+        "board",
+        "games",
+        "home"
+      ],
+      "avg_msg_len": 24.166666666666668,
+      "casual_score": 0.9583333333333334,
+      "is_group": false
+    },
+    {
+      "name": "Mom",
+      "relationship": "family",
+      "rel_confidence": 0.5714285714285714,
+      "rel_signals": {
+        "family": 0.5714285714285714,
+        "romantic": 0.0,
+        "close_friend": 0.0,
+        "professional": 0.32142857142857145,
+        "casual_friend": 0.0,
+        "group_social": 0.07142857142857142
+      },
+      "topics": [
+        "costco",
+        "oatmeal",
+        "call",
+        "don",
+        "corn",
+        "frozen",
+        "milk"
+      ],
+      "avg_msg_len": 18.3375,
+      "casual_score": 0.9,
+      "is_group": false
+    },
+    {
+      "name": "Mihir Shah, Mom",
+      "relationship": "family",
+      "rel_confidence": 0.4074074074074074,
+      "rel_signals": {
+        "family": 0.4074074074074074,
+        "romantic": 0.0,
+        "close_friend": 0.07407407407407407,
+        "professional": 0.1111111111111111,
+        "casual_friend": 0.037037037037037035,
+        "group_social": 0.35185185185185186
+      },
+      "topics": [
+        "mihir",
+        "anything",
+        "don",
+        "new",
+        "pro",
+        "which",
+        "back"
+      ],
+      "avg_msg_len": 22.3875,
+      "casual_score": 0.8999999999999999,
+      "is_group": true
+    },
+    {
+      "name": "Disha",
+      "relationship": "professional",
+      "rel_confidence": 0.6666666666666666,
+      "rel_signals": {
+        "family": 0.0,
+        "romantic": 0.0,
+        "close_friend": 0.07407407407407407,
+        "professional": 0.6666666666666666,
+        "casual_friend": 0.07407407407407407,
+        "group_social": 0.14814814814814814
+      },
+      "topics": [
+        "today",
+        "start",
+        "friend",
+        "job",
+        "teach",
+        "sangeet",
+        "again"
+      ],
+      "avg_msg_len": 30.772727272727273,
+      "casual_score": 1.2727272727272727,
+      "is_group": false
+    },
+    {
+      "name": "chris padgett",
+      "relationship": "close_friend",
+      "rel_confidence": 0.34285714285714286,
+      "rel_signals": {
+        "family": 0.17142857142857143,
+        "romantic": 0.0,
+        "close_friend": 0.34285714285714286,
+        "professional": 0.0,
+        "casual_friend": 0.34285714285714286,
+        "group_social": 0.11428571428571428
+      },
+      "topics": [
+        "team",
+        "him",
+        "hurt",
+        "harden",
+        "bro",
+        "trae",
+        "fuck"
+      ],
+      "avg_msg_len": 21.55,
+      "casual_score": 1.1,
+      "is_group": false
+    },
+    {
+      "name": "Mariela Costello",
+      "relationship": "professional",
+      "rel_confidence": 0.631578947368421,
+      "rel_signals": {
+        "family": 0.15789473684210525,
+        "romantic": 0.13157894736842105,
+        "close_friend": 0.0,
+        "professional": 0.631578947368421,
+        "casual_friend": 0.0,
+        "group_social": 0.05263157894736842
+      },
+      "topics": [
+        "jwalin",
+        "telehealth",
+        "appointment",
+        "session",
+        "today",
+        "work",
+        "video"
+      ],
+      "avg_msg_len": 27.175,
+      "casual_score": 0.8,
+      "is_group": false
+    },
+    {
+      "name": "Mom, Dad",
+      "relationship": "family",
+      "rel_confidence": 0.3492063492063492,
+      "rel_signals": {
+        "family": 0.3492063492063492,
+        "romantic": 0.07936507936507936,
+        "close_friend": 0.031746031746031744,
+        "professional": 0.19047619047619047,
+        "casual_friend": 0.031746031746031744,
+        "group_social": 0.30158730158730157
+      },
+      "topics": [
+        "car",
+        "fine",
+        "insurance",
+        "information",
+        "call",
+        "look",
+        "license"
+      ],
+      "avg_msg_len": 30.7375,
+      "casual_score": 0.9625,
+      "is_group": true
+    },
+    {
+      "name": "Deevy Bhimani",
+      "relationship": "professional",
+      "rel_confidence": 0.2830188679245283,
+      "rel_signals": {
+        "family": 0.16981132075471697,
+        "romantic": 0.0,
+        "close_friend": 0.18867924528301888,
+        "professional": 0.2830188679245283,
+        "casual_friend": 0.18867924528301888,
+        "group_social": 0.1509433962264151
+      },
+      "topics": [
+        "roblox",
+        "nice",
+        "doing",
+        "well",
+        "cool",
+        "working",
+        "work"
+      ],
+      "avg_msg_len": 49.4875,
+      "casual_score": 0.825,
+      "is_group": false
+    },
+    {
+      "name": "family",
+      "relationship": "family",
+      "rel_confidence": 0.3404255319148936,
+      "rel_signals": {
+        "family": 0.3404255319148936,
+        "romantic": 0.10638297872340426,
+        "close_friend": 0.0425531914893617,
+        "professional": 0.3191489361702128,
+        "casual_friend": 0.1276595744680851,
+        "group_social": 0.0425531914893617
+      },
+      "topics": [
+        "vegan",
+        "food",
+        "home",
+        "dinner",
+        "day",
+        "seattle",
+        "lake"
+      ],
+      "avg_msg_len": 66.975,
+      "casual_score": 0.9500000000000001,
+      "is_group": false
+    },
+    {
+      "name": "Mihir Shah, Rohith Dara",
+      "relationship": "group_social",
+      "rel_confidence": 0.3620689655172414,
+      "rel_signals": {
+        "family": 0.22413793103448276,
+        "romantic": 0.0,
+        "close_friend": 0.10344827586206896,
+        "professional": 0.25862068965517243,
+        "casual_friend": 0.034482758620689655,
+        "group_social": 0.3620689655172414
+      },
+      "topics": [
+        "move",
+        "end",
+        "week",
+        "down",
+        "work",
+        "looking",
+        "idk"
+      ],
+      "avg_msg_len": 37.36585365853659,
+      "casual_score": 1.1951219512195124,
+      "is_group": true
+    },
+    {
+      "name": "Cinthya",
+      "relationship": "professional",
+      "rel_confidence": 0.3333333333333333,
+      "rel_signals": {
+        "family": 0.08333333333333333,
+        "romantic": 0.2777777777777778,
+        "close_friend": 0.1111111111111111,
+        "professional": 0.3333333333333333,
+        "casual_friend": 0.05555555555555555,
+        "group_social": 0.1111111111111111
+      },
+      "topics": [
+        "call",
+        "free",
+        "send",
+        "reese",
+        "forward",
+        "communication",
+        "shud"
+      ],
+      "avg_msg_len": 42.25,
+      "casual_score": 1.1428571428571428,
+      "is_group": false
+    },
+    {
+      "name": "Jomari Mayo",
+      "relationship": "professional",
+      "rel_confidence": 0.3,
+      "rel_signals": {
+        "family": 0.15,
+        "romantic": 0.125,
+        "close_friend": 0.2,
+        "professional": 0.3,
+        "casual_friend": 0.1,
+        "group_social": 0.1
+      },
+      "topics": [
+        "cooper",
+        "even",
+        "around",
+        "told",
+        "ask",
+        "move",
+        "wrong"
+      ],
+      "avg_msg_len": 28.175,
+      "casual_score": 1.2,
+      "is_group": false
+    },
+    {
+      "name": "Brenden",
+      "relationship": "professional",
+      "rel_confidence": 0.5172413793103449,
+      "rel_signals": {
+        "family": 0.10344827586206896,
+        "romantic": 0.0,
+        "close_friend": 0.13793103448275862,
+        "professional": 0.5172413793103449,
+        "casual_friend": 0.0,
+        "group_social": 0.20689655172413793
+      },
+      "topics": [
+        "suits",
+        "long",
+        "week",
+        "robot",
+        "lmao",
+        "call",
+        "sure"
+      ],
+      "avg_msg_len": 24.895833333333332,
+      "casual_score": 1.1458333333333335,
+      "is_group": false
+    },
+    {
+      "name": "Josh Smith",
+      "relationship": "professional",
+      "rel_confidence": 0.3333333333333333,
+      "rel_signals": {
+        "family": 0.1111111111111111,
+        "romantic": 0.0,
+        "close_friend": 0.2222222222222222,
+        "professional": 0.3333333333333333,
+        "casual_friend": 0.07407407407407407,
+        "group_social": 0.2222222222222222
+      },
+      "topics": [
+        "time",
+        "data",
+        "demo",
+        "robot",
+        "cuz",
+        "doing",
+        "machine"
+      ],
+      "avg_msg_len": 38.55,
+      "casual_score": 1.125,
+      "is_group": false
+    },
+    {
+      "name": "Mihir Shah, Yash Tanna, Shanay Randeria",
+      "relationship": "group_social",
+      "rel_confidence": 0.3333333333333333,
+      "rel_signals": {
+        "family": 0.17543859649122806,
+        "romantic": 0.08771929824561403,
+        "close_friend": 0.21052631578947367,
+        "professional": 0.10526315789473684,
+        "casual_friend": 0.07017543859649122,
+        "group_social": 0.3333333333333333
+      },
+      "topics": [
+        "shanay",
+        "wknd",
+        "down",
+        "next",
+        "work",
+        "tmrw",
+        "maybe"
+      ],
+      "avg_msg_len": 19.186046511627907,
+      "casual_score": 1.0,
+      "is_group": true
+    },
+    {
+      "name": "Aditya Raghunathan",
+      "relationship": "professional",
+      "rel_confidence": 0.5555555555555556,
+      "rel_signals": {
+        "family": 0.0,
+        "romantic": 0.18518518518518517,
+        "close_friend": 0.07407407407407407,
+        "professional": 0.5555555555555556,
+        "casual_friend": 0.0,
+        "group_social": 0.14814814814814814
+      },
+      "topics": [
+        "people",
+        "nda",
+        "cooper",
+        "coming",
+        "wednesday",
+        "hey",
+        "work"
+      ],
+      "avg_msg_len": 38.73684210526316,
+      "casual_score": 0.8947368421052632,
+      "is_group": false
+    },
+    {
+      "name": "Ethan Huang",
+      "relationship": "family",
+      "rel_confidence": 0.34615384615384615,
+      "rel_signals": {
+        "family": 0.34615384615384615,
+        "romantic": 0.0,
+        "close_friend": 0.15384615384615385,
+        "professional": 0.23076923076923078,
+        "casual_friend": 0.15384615384615385,
+        "group_social": 0.07692307692307693
+      },
+      "topics": [
+        "back",
+        "ill",
+        "around",
+        "down",
+        "bitch",
+        "place",
+        "brothers"
+      ],
+      "avg_msg_len": 20.8,
+      "casual_score": 1.175,
+      "is_group": false
+    },
+    {
+      "name": "Mihir Shah, Yash Tanna, Disha +2",
+      "relationship": "group_social",
+      "rel_confidence": 0.5102040816326531,
+      "rel_signals": {
+        "family": 0.3877551020408163,
+        "romantic": 0.0,
+        "close_friend": 0.08163265306122448,
+        "professional": 0.0,
+        "casual_friend": 0.0,
+        "group_social": 0.5102040816326531
+      },
+      "topics": [
+        "dosa",
+        "place",
+        "sliver",
+        "thai",
+        "pizza",
+        "eat",
+        "korean"
+      ],
+      "avg_msg_len": 14.8125,
+      "casual_score": 0.875,
+      "is_group": true
+    },
+    {
+      "name": "quj",
+      "relationship": "close_friend",
+      "rel_confidence": 0.24242424242424243,
+      "rel_signals": {
+        "family": 0.18181818181818182,
+        "romantic": 0.15151515151515152,
+        "close_friend": 0.24242424242424243,
+        "professional": 0.09090909090909091,
+        "casual_friend": 0.12121212121212122,
+        "group_social": 0.18181818181818182
+      },
+      "topics": [
+        "happy",
+        "new",
+        "year",
+        "https",
+        "yall",
+        "app",
+        "fellas"
+      ],
+      "avg_msg_len": 26.67741935483871,
+      "casual_score": 1.032258064516129,
+      "is_group": false
+    },
+    {
+      "name": "Rishiraj Taylor",
+      "relationship": "professional",
+      "rel_confidence": 0.32432432432432434,
+      "rel_signals": {
+        "family": 0.16216216216216217,
+        "romantic": 0.0,
+        "close_friend": 0.21621621621621623,
+        "professional": 0.32432432432432434,
+        "casual_friend": 0.21621621621621623,
+        "group_social": 0.05405405405405406
+      },
+      "topics": [
+        "shit",
+        "mane",
+        "loll",
+        "fuck",
+        "tho",
+        "remote",
+        "bro"
+      ],
+      "avg_msg_len": 24.55,
+      "casual_score": 1.1500000000000001,
+      "is_group": false
+    },
+    {
+      "name": "luizalfonsoastorgaarambula@yahoo.com",
+      "relationship": "professional",
+      "rel_confidence": 0.34615384615384615,
+      "rel_signals": {
+        "family": 0.23076923076923078,
+        "romantic": 0.09615384615384616,
+        "close_friend": 0.19230769230769232,
+        "professional": 0.34615384615384615,
+        "casual_friend": 0.07692307692307693,
+        "group_social": 0.038461538461538464
+      },
+      "topics": [
+        "homie",
+        "interview",
+        "number",
+        "prolly",
+        "things",
+        "doin",
+        "bro"
+      ],
+      "avg_msg_len": 27.263157894736846,
+      "casual_score": 1.2456140350877192,
+      "is_group": false
+    },
+    {
+      "name": "Brian Honea, Nate Ultimate",
+      "relationship": "casual_friend",
+      "rel_confidence": 0.32142857142857145,
+      "rel_signals": {
+        "family": 0.0,
+        "romantic": 0.08928571428571429,
+        "close_friend": 0.10714285714285714,
+        "professional": 0.16071428571428573,
+        "casual_friend": 0.32142857142857145,
+        "group_social": 0.30357142857142855
+      },
+      "topics": [
+        "game",
+        "geno",
+        "fuck",
+        "damn",
+        "back",
+        "put",
+        "arch"
+      ],
+      "avg_msg_len": 22.7875,
+      "casual_score": 1.0499999999999998,
+      "is_group": true
+    },
+    {
+      "name": "hari",
+      "relationship": "romantic",
+      "rel_confidence": 0.2857142857142857,
+      "rel_signals": {
+        "family": 0.17142857142857143,
+        "romantic": 0.2857142857142857,
+        "close_friend": 0.22857142857142856,
+        "professional": 0.17142857142857143,
+        "casual_friend": 0.0,
+        "group_social": 0.11428571428571428
+      },
+      "topics": [
+        "ram",
+        "therapy",
+        "sister",
+        "uber",
+        "bad",
+        "wrong",
+        "nap"
+      ],
+      "avg_msg_len": 16.2,
+      "casual_score": 1.2750000000000001,
+      "is_group": false
+    }
+  ]
+}

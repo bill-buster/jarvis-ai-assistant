@@ -180,7 +180,7 @@ class ChatDBReader:
                 logger.debug(f"Detected chat.db schema version: {self._schema_version}")
             except PermissionError as e:
                 raise imessage_permission_denied(db_path_str) from e
-            except sqlite3.OperationalError as e:
+            except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
                 if "unable to open database" in str(e).lower():
                     raise imessage_permission_denied(db_path_str) from e
                 raise iMessageQueryError(
@@ -251,6 +251,10 @@ class ChatDBReader:
         Returns:
             List of Attachment objects
         """
+        # Guard against None or invalid message_id
+        if message_id is None or not isinstance(message_id, int):
+            return []
+
         conn = self._get_connection()
         cursor = conn.cursor()
 
@@ -259,8 +263,16 @@ class ChatDBReader:
         try:
             cursor.execute(query, (message_id,))
             rows = cursor.fetchall()
-            return parse_attachments([dict(row) for row in rows])
-        except sqlite3.OperationalError as e:
+            # Convert rows to dicts, handling potential malformed rows
+            row_dicts = []
+            for row in rows:
+                try:
+                    row_dicts.append(dict(row))
+                except (IndexError, TypeError):
+                    # Skip malformed rows
+                    continue
+            return parse_attachments(row_dicts)
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.debug(f"Error fetching attachments for message {message_id}: {e}")
             return []
 
@@ -273,6 +285,10 @@ class ChatDBReader:
         Returns:
             List of Reaction objects
         """
+        # Guard against None or invalid guid
+        if not message_guid or not isinstance(message_guid, str):
+            return []
+
         conn = self._get_connection()
         cursor = conn.cursor()
 
@@ -289,7 +305,7 @@ class ChatDBReader:
                     reaction.sender_name = self._resolve_contact_name(reaction.sender)
 
             return reactions
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.debug(f"Error fetching reactions for message {message_guid}: {e}")
             return []
 
@@ -320,7 +336,7 @@ class ChatDBReader:
                 self._guid_to_rowid_cache.set(guid, rowid)
                 return rowid
             return None
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.debug(f"Error fetching message by GUID {guid}: {e}")
             return None
 
@@ -354,7 +370,8 @@ class ChatDBReader:
     def _load_contacts_cache(self) -> None:
         """Load contacts from AddressBook database into cache.
 
-        This attempts to read from the macOS AddressBook SQLite databases.
+        This attempts to read from ALL macOS AddressBook SQLite databases
+        (iCloud, Google, On My Mac, etc.) in the Sources directory.
         If unavailable (no Full Disk Access or different OS), cache remains empty.
         """
         self._contacts_cache = {}
@@ -365,12 +382,16 @@ class ChatDBReader:
             return
 
         try:
-            # Find the first AddressBook source database
+            # Load from ALL AddressBook source databases (iCloud, Google, etc.)
+            loaded_count = 0
             for source_dir in ADDRESSBOOK_DB_PATH.iterdir():
+                if not source_dir.is_dir():
+                    continue
                 ab_db = source_dir / "AddressBook-v22.abcddb"
                 if ab_db.exists():
                     self._load_contacts_from_db(ab_db)
-                    return
+                    loaded_count += 1
+            logger.debug(f"Loaded contacts from {loaded_count} AddressBook sources")
         except PermissionError:
             logger.debug("Permission denied accessing AddressBook directory")
         except OSError as e:
@@ -415,7 +436,7 @@ class ChatDBReader:
                         name = self._format_name(row["first_name"], row["last_name"])
                         if identifier and name:
                             cache[identifier] = name
-                except sqlite3.OperationalError:
+                except (sqlite3.OperationalError, sqlite3.InterfaceError):
                     pass  # Table structure may differ
 
                 # Load email addresses with names
@@ -434,7 +455,7 @@ class ChatDBReader:
                         name = self._format_name(row["first_name"], row["last_name"])
                         if identifier and name:
                             cache[identifier.lower()] = name
-                except sqlite3.OperationalError:
+                except (sqlite3.OperationalError, sqlite3.InterfaceError):
                     pass  # Table structure may differ
 
                 logger.debug(f"Loaded {len(cache)} contacts from AddressBook")
@@ -505,7 +526,7 @@ class ChatDBReader:
                 "Grant Full Disk Access to Terminal/IDE in System Settings."
             )
             return False
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             if "unable to open database" in str(e).lower():
                 logger.warning(f"Cannot open {self.db_path}. Ensure Full Disk Access is granted.")
             else:
@@ -549,7 +570,7 @@ class ChatDBReader:
             cursor.fetchone()
         except PermissionError as e:
             raise imessage_permission_denied(db_path_str) from e
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             if "unable to open database" in str(e).lower():
                 raise imessage_permission_denied(db_path_str) from e
             else:
@@ -622,7 +643,7 @@ class ChatDBReader:
         try:
             cursor.execute(query, params)
             rows = cursor.fetchall()
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.warning(f"Query error in get_conversations: {e}")
             return []
 
@@ -693,6 +714,11 @@ class ChatDBReader:
         Returns:
             List of Message objects, sorted by date (newest first)
         """
+        # Validate chat_id
+        if not chat_id or not isinstance(chat_id, str):
+            logger.debug(f"Invalid chat_id: {chat_id}")
+            return []
+
         conn = self._get_connection()
         cursor = conn.cursor()
 
@@ -711,7 +737,7 @@ class ChatDBReader:
         try:
             cursor.execute(query, params)
             rows = cursor.fetchall()
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             # If query fails due to missing columns, use minimal fallback query
             error_str = str(e).lower()
             if "no such column" in error_str:
@@ -752,7 +778,7 @@ class ChatDBReader:
 
                     cursor.execute(fallback_query, params)
                     rows = cursor.fetchall()
-                except sqlite3.OperationalError as e2:
+                except (sqlite3.OperationalError, sqlite3.InterfaceError) as e2:
                     logger.warning(f"Query error after column fallback: {e2}")
                     return []
             else:
@@ -833,7 +859,7 @@ class ChatDBReader:
         try:
             cursor.execute(sql, params)
             rows = cursor.fetchall()
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.warning(f"Query error in search: {e}")
             return []
 
@@ -872,7 +898,7 @@ class ChatDBReader:
         try:
             cursor.execute(query, (chat_id, around_message_id, total_limit))
             rows = cursor.fetchall()
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             # If query fails due to missing columns, create a minimal fallback query
             logger.debug(f"Context query failed ({e}), trying fallback")
             fallback_query = query
@@ -900,7 +926,7 @@ class ChatDBReader:
             try:
                 cursor.execute(fallback_query, (chat_id, around_message_id, total_limit))
                 rows = cursor.fetchall()
-            except sqlite3.OperationalError as e2:
+            except (sqlite3.OperationalError, sqlite3.InterfaceError) as e2:
                 logger.warning(f"Query error in get_conversation_context: {e2}")
                 return []
 
@@ -923,9 +949,14 @@ class ChatDBReader:
         """
         messages = []
         for row in rows:
-            msg = self._row_to_message(row, chat_id)
-            if msg:
-                messages.append(msg)
+            try:
+                msg = self._row_to_message(row, chat_id)
+                if msg:
+                    messages.append(msg)
+            except (IndexError, KeyError, TypeError) as e:
+                # Skip malformed rows
+                logger.debug(f"Skipping malformed row: {e}")
+                continue
         return messages
 
     def _row_to_message(self, row: sqlite3.Row, chat_id: str) -> Message | None:
@@ -1080,6 +1111,10 @@ class ChatDBReader:
         Returns:
             List of Reaction objects
         """
+        # Guard against None or invalid message_id
+        if message_id is None or not isinstance(message_id, int):
+            return []
+
         conn = self._get_connection()
         cursor = conn.cursor()
 
@@ -1092,7 +1127,7 @@ class ChatDBReader:
 
             message_guid = row["guid"]
             return self._get_reactions_for_message(message_guid)
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.debug(f"Error fetching GUID for message {message_id}: {e}")
             return []
 
@@ -1141,7 +1176,7 @@ class ChatDBReader:
         try:
             cursor.execute(query, params)
             rows = cursor.fetchall()
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.warning(f"Query error in get_attachments: {e}")
             return []
 
@@ -1189,7 +1224,7 @@ class ChatDBReader:
         try:
             cursor.execute(query, (chat_id,))
             rows = cursor.fetchall()
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.warning(f"Query error in get_attachment_stats: {e}")
             return {
                 "total_count": 0,
@@ -1242,7 +1277,7 @@ class ChatDBReader:
         try:
             cursor.execute(query, (limit,))
             rows = cursor.fetchall()
-        except sqlite3.OperationalError as e:
+        except (sqlite3.OperationalError, sqlite3.InterfaceError) as e:
             logger.warning(f"Query error in get_storage_by_conversation: {e}")
             return []
 

@@ -76,10 +76,15 @@ _generator: MLXGenerator | None = None
 _generator_lock = threading.Lock()
 
 
-def get_generator() -> MLXGenerator:
+def get_generator(skip_templates: bool = True) -> MLXGenerator:
     """Get or create singleton generator instance.
 
     Thread-safe using double-check locking pattern.
+
+    Args:
+        skip_templates: If True (default), skip template matching to save memory.
+                       Templates are disabled by default because they load a
+                       separate model that consumes memory needed for the LLM.
 
     Returns:
         The shared MLXGenerator instance
@@ -89,7 +94,7 @@ def get_generator() -> MLXGenerator:
         with _generator_lock:
             # Double-check after acquiring lock
             if _generator is None:
-                _generator = MLXGenerator()
+                _generator = MLXGenerator(skip_templates=skip_templates)
     return _generator
 
 

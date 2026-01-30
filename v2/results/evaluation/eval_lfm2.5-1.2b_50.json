@@ -1,0 +1,463 @@
+{
+  "model": "lfm2.5-1.2b",
+  "n_samples": 50,
+  "smart_wins": 40,
+  "baseline_wins": 9,
+  "ties": 1,
+  "avg_baseline_semantic_sim": 0.5154694598913193,
+  "avg_smart_semantic_sim": 0.546394704580307,
+  "avg_baseline_style": 0.612,
+  "avg_smart_style": 0.6229999999999999,
+  "samples": [
+    {
+      "id": 1,
+      "contact": "Faith",
+      "gold": "Haha",
+      "baseline": "So basically, he\u2019s been publishing tons of books, but they don\u2019t have a whistleblower policy\u2014either online or in person. I guess that\u2019s a big deal, right? And honestly",
+      "smart": "U cool what you're saying lol",
+      "baseline_sim": 0.40432795882225037,
+      "smart_sim": 0.6939318776130676
+    },
+    {
+      "id": 2,
+      "contact": "Mihir Shah",
+      "gold": "Would u ever go to heirloom",
+      "baseline": "So, we\u2019re talking about a bungalow with a $100 gift card. They said if we book, they\u2019ll probably give it to us. But you\u2019re thinking about reserving a spot",
+      "smart": "u okay let's move forward",
+      "baseline_sim": 0.5787826776504517,
+      "smart_sim": 0.5401475429534912
+    },
+    {
+      "id": 3,
+      "contact": "Mihir Shah, Dad",
+      "gold": "I tried couldn\u2019t find",
+      "baseline": "Hey, Mihir! Just wanted to check in. You okay?",
+      "smart": "U okay just let me know what you need i\u2019m here for you u ur call me",
+      "baseline_sim": 0.504427433013916,
+      "smart_sim": 0.5455878376960754
+    },
+    {
+      "id": 4,
+      "contact": "Rachit Pareek",
+      "gold": "Yea my start date was August 2nd but I went in July 29th",
+      "baseline": "They said about 2 weeks of pay and some agreement.",
+      "smart": "U okay let's break it down",
+      "baseline_sim": 0.5263680219650269,
+      "smart_sim": 0.42753008008003235
+    },
+    {
+      "id": 5,
+      "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+      "gold": "Uhh azul sheriff of Nottingham cascadia",
+      "baseline": "They said the game\u2019s over, we\u2019re heading home.",
+      "smart": "U yeah ur vibe is cool",
+      "baseline_sim": 0.42026564478874207,
+      "smart_sim": 0.5039417743682861
+    },
+    {
+      "id": 6,
+      "contact": "Ishani Desai",
+      "gold": "Ok I\u2019ll get it tmrw morning then otw to brunch",
+      "baseline": "Sounds like you're trying to be flexible, but it's clear you're a bit stressed. Let me know if you need help with anything else!",
+      "smart": "U okay let's get this sorted out",
+      "baseline_sim": 0.5464738607406616,
+      "smart_sim": 0.6551502346992493
+    },
+    {
+      "id": 7,
+      "contact": "Rutu",
+      "gold": "lol ok",
+      "baseline": "Hey, so what\u2019s up? Just hanging out. \ud83d\ude0e",
+      "smart": "U okay? let\u2019s go! uwu",
+      "baseline_sim": 0.6732749342918396,
+      "smart_sim": 0.6465646028518677
+    },
+    {
+      "id": 8,
+      "contact": "Danalila\u2728",
+      "gold": "I\u2019ll take anything lol",
+      "baseline": "Got it! Here\u2019s a quick rundown:",
+      "smart": "U okay? Let\u2019s go! uwu",
+      "baseline_sim": 0.5321758389472961,
+      "smart_sim": 0.6326014995574951
+    },
+    {
+      "id": 9,
+      "contact": "Mateo",
+      "gold": "Mateo do you feel seen",
+      "baseline": "Sure! Here's a casual version of your conversation:",
+      "smart": "U cool what just happened lol",
+      "baseline_sim": 0.468927264213562,
+      "smart_sim": 0.5522452592849731
+    },
+    {
+      "id": 10,
+      "contact": "The Ochos",
+      "gold": "But I signed the paperwork w the lawyer and also gonna get one for workers comp, and in process of one for car accident",
+      "baseline": "Yeah, it\u2019s wild how things unfolded. They said they wanted independence, but it feels like they just kept pushing through. It\u2019s crazy how much effort you put in, and then suddenly it",
+      "smart": "U totally get it, it\u2019s like they\u2019re trying to fix a big problem but still feel stuck",
+      "baseline_sim": 0.474448025226593,
+      "smart_sim": 0.43474769592285156
+    },
+    {
+      "id": 11,
+      "contact": "Soham Shah",
+      "gold": "Yea fr",
+      "baseline": "Yeah, it really does. Reading the problem well is key, but once you get it, it\u2019s like magic. And seeing other solutions? That\u2019s a bonus. Python makes it all easier,",
+      "smart": "U yeah it\u2019s cool how it works that way",
+      "baseline_sim": 0.512433648109436,
+      "smart_sim": 0.5948060750961304
+    },
+    {
+      "id": 12,
+      "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+      "gold": "Yes we will be there by then easily",
+      "baseline": "So, basically: take the 4:20 train and leave around 4pm. Arrive by 3pm to grab the subway. Also, plastic bottles are fine if they\u2019re factory",
+      "smart": "u yeah ok",
+      "baseline_sim": 0.5853443741798401,
+      "smart_sim": 0.5920556783676147
+    },
+    {
+      "id": 13,
+      "contact": "Mateo",
+      "gold": "Dont crash out like me!",
+      "baseline": "Sounds like you're winding down. Hope you're all set for the day! Goodnight, Jwalin!",
+      "smart": "U okay?",
+      "baseline_sim": 0.6302486658096313,
+      "smart_sim": 0.6212042570114136
+    },
+    {
+      "id": 14,
+      "contact": "Ashutosh Kulkarni",
+      "gold": "How was your flight back home",
+      "baseline": "So, you\u2019re free tonight but your cousin\u2019s family is coming in and leaving for their honeymoon on Wednesday. You\u2019re not sure if you can hang out then.",
+      "smart": "U yeah it\u2019s been a whirlwind",
+      "baseline_sim": 0.5215549468994141,
+      "smart_sim": 0.5491937398910522
+    },
+    {
+      "id": 15,
+      "contact": "Soham Shah",
+      "gold": "951 bestor street San Jose",
+      "baseline": "So you got into the final round for a sales engineer role in VR networks, but they said someone with experience is needed. They mentioned you were working on a GCP project and dealing with phone bills",
+      "smart": "U yeah it\u2019s rough finding a place to start u feel solid u ur",
+      "baseline_sim": 0.43355661630630493,
+      "smart_sim": 0.40165114402770996
+    },
+    {
+      "id": 16,
+      "contact": "Yash Tanna",
+      "gold": "Tatum bethune",
+      "baseline": "They said the pictures are wild!",
+      "smart": "U yeah",
+      "baseline_sim": 0.3758862018585205,
+      "smart_sim": 0.422406405210495
+    },
+    {
+      "id": 17,
+      "contact": "Soham Shah",
+      "gold": "Yea I mean the job description did ask for 3-5 years lol",
+      "baseline": "Sure! Here\u2019s a concise version:",
+      "smart": "U yeah it\u2019s tight but we nailed it",
+      "baseline_sim": 0.544697642326355,
+      "smart_sim": 0.43458878993988037
+    },
+    {
+      "id": 18,
+      "contact": "Danalila\u2728, Siddarth Pandian",
+      "gold": "Why u texting and driving se\u00f1or",
+      "baseline": "So, you\u2019re here to move, huh?",
+      "smart": "U yeah u want the truth",
+      "baseline_sim": 0.4720625877380371,
+      "smart_sim": 0.5502455234527588
+    },
+    {
+      "id": 19,
+      "contact": "Mihir Shah, Dad",
+      "gold": "dont with all cosmetics",
+      "baseline": "Sounds like you're planning the trip! Let's keep an eye on the timing. If you want to go to Milpitas, maybe check out Bart first. WTV works better there.",
+      "smart": "U okay let's get this straight u want to know the plan or just check in? me here for clarity u got my back",
+      "baseline_sim": 0.49667274951934814,
+      "smart_sim": 0.45118212699890137
+    },
+    {
+      "id": 20,
+      "contact": "Mihir Shah, Dad",
+      "gold": "Tell when u leave cpk",
+      "baseline": "So, your nose is still clogged, but you're trying to relax. Hopefully, you'll be back soon. Just let me know if you need anything.",
+      "smart": "U sure i can help with that, just let me know what you need next",
+      "baseline_sim": 0.5323070287704468,
+      "smart_sim": 0.4759613275527954
+    },
+    {
+      "id": 21,
+      "contact": "Faith",
+      "gold": "Hahaha",
+      "baseline": "So, you had a situation where someone sent emails, and then they said they just had them send them. They were like, \u201cI just had them send emails,\u201d and then you said they wanted",
+      "smart": "U okay what\u2019s up?",
+      "baseline_sim": 0.483589231967926,
+      "smart_sim": 0.6444700360298157
+    },
+    {
+      "id": 22,
+      "contact": "Ishani Desai",
+      "gold": "What a fuckin game",
+      "baseline": "Alright, so what? They\u2019re all yelling, but you\u2019re just here. \ud83d\ude02",
+      "smart": "U yeah",
+      "baseline_sim": 0.541053056716919,
+      "smart_sim": 0.58167564868927
+    },
+    {
+      "id": 23,
+      "contact": "Faith",
+      "gold": "I will lyk",
+      "baseline": "So, like, I\u2019m saying this: they put the fire extinguishers up after we got the letter. But people had warned them months before. Anyway, it\u2019s not happening. They",
+      "smart": "U okay?",
+      "baseline_sim": 0.37079980969429016,
+      "smart_sim": 0.6091967821121216
+    },
+    {
+      "id": 24,
+      "contact": "Faith",
+      "gold": "They gonna settle and lock it up",
+      "baseline": "So, basically, they were joking around and saying something was weird. They said \"Aint no fuckin way\" when they were being serious, but then they got all confused. I guess",
+      "smart": "U okay?",
+      "baseline_sim": 0.49518388509750366,
+      "smart_sim": 0.514029860496521
+    },
+    {
+      "id": 25,
+      "contact": "Emily",
+      "gold": "Does anjali speak tamil",
+      "baseline": "Sounds like you're joking around! \ud83d\ude04",
+      "smart": "Uooh let\u2019s gooo! uwu what\u2019s next?",
+      "baseline_sim": 0.36664220690727234,
+      "smart_sim": 0.3549990653991699
+    },
+    {
+      "id": 26,
+      "contact": "Mihir Shah",
+      "gold": "good job little",
+      "baseline": "Alright, so you're saying you're testing the AI company and parachute too? Sounds like you're ready to ace that interview. Let's keep it light! \ud83d\ude0e",
+      "smart": "u yeah",
+      "baseline_sim": 0.5223680734634399,
+      "smart_sim": 0.5991096496582031
+    },
+    {
+      "id": 27,
+      "contact": "Rutu",
+      "gold": "Sounds riveting",
+      "baseline": "Thanks for the update! \ud83d\ude04 So, you were studying something cool, but it was a bit confusing. You asked for proof, but it sounded right\u2014so you're all set! Just remember",
+      "smart": "Uw u there lol! Ok can we keep it fun?",
+      "baseline_sim": 0.5675480365753174,
+      "smart_sim": 0.5426203012466431
+    },
+    {
+      "id": 28,
+      "contact": "Soham Shah, Mihir Shah, Krusha Shah +1",
+      "gold": "My dad was like we can take 300k in losses W\u2019s",
+      "baseline": "They said they need a helpful asset, but it\u2019s clear they\u2019re not impressed. Jwalin\u2019s just there, but honestly, I don\u2019t think he\u2019s worth it. They\u2019re just looking",
+      "smart": "u yeah it\u2019s wild what you say u",
+      "baseline_sim": 0.5241590738296509,
+      "smart_sim": 0.4798211455345154
+    },
+    {
+      "id": 29,
+      "contact": "Noe",
+      "gold": "Valid",
+      "baseline": "Hey, just checking in\u2014how\u2019s it going?",
+      "smart": "U okay?",
+      "baseline_sim": 0.6275230050086975,
+      "smart_sim": 0.7148866653442383
+    },
+    {
+      "id": 30,
+      "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+      "gold": "Coming now",
+      "baseline": "Yeah, we\u2019ll be home soon. Just need to finish this thing.",
+      "smart": "U yeah",
+      "baseline_sim": 0.6552760601043701,
+      "smart_sim": 0.5980300903320312
+    },
+    {
+      "id": 31,
+      "contact": "Faith",
+      "gold": "Fr W's",
+      "baseline": "They said they never read it, but maybe they\u2019ll check it out later.",
+      "smart": "U okay?",
+      "baseline_sim": 0.3870617151260376,
+      "smart_sim": 0.5784701704978943
+    },
+    {
+      "id": 32,
+      "contact": "Mihir Shah",
+      "gold": "We have to buy before end of year",
+      "baseline": "So, basically, they\u2019re saying if we book the bungalow, you\u2019ll get a $100 gift card. I guess that\u2019s a nice perk. You\u2019re thinking about it, huh",
+      "smart": "Yeah it could work u",
+      "baseline_sim": 0.5985387563705444,
+      "smart_sim": 0.5286276340484619
+    },
+    {
+      "id": 33,
+      "contact": "Rutu",
+      "gold": "Hiiii",
+      "baseline": "So, you're all catching up\u2014Rutu\u2019s smart, maybe she\u2019s good at chess, and you owe her a ride. You\u2019re back from November 16th to 30th,",
+      "smart": "u okay? lol",
+      "baseline_sim": 0.47396594285964966,
+      "smart_sim": 0.7046730518341064
+    },
+    {
+      "id": 34,
+      "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+      "gold": "board games?",
+      "baseline": "Party party, huh? \ud83d\ude0e",
+      "smart": "Yeah u just want to chat tomorrow?",
+      "baseline_sim": 0.6181772351264954,
+      "smart_sim": 0.46939563751220703
+    },
+    {
+      "id": 35,
+      "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+      "gold": "If u want to come I can get",
+      "baseline": "Yeah, bhen got out of the buffalo.",
+      "smart": "u yeah ok",
+      "baseline_sim": 0.4062204658985138,
+      "smart_sim": 0.7217029929161072
+    },
+    {
+      "id": 36,
+      "contact": "Faith",
+      "gold": "I dont have to work there anymore or deal w the shit so its rlly a win-win",
+      "baseline": "Sounds like you were in a mix of stress and excitement! But hey, if you get a payout, you're welcome. \ud83d\ude04",
+      "smart": "U yeah it\u2019s wild what we\u2019re in for lol",
+      "baseline_sim": 0.6058309078216553,
+      "smart_sim": 0.518812894821167
+    },
+    {
+      "id": 37,
+      "contact": "Mateo",
+      "gold": "Huh",
+      "baseline": "It sounds like you're frustrated with the workflow and feeling overwhelmed. It seems like you're questioning why things are happening this way, wondering about the reasons behind it, and feeling that everyone else knows your",
+      "smart": "U okay let's get this done u",
+      "baseline_sim": 0.49713119864463806,
+      "smart_sim": 0.6144102215766907
+    },
+    {
+      "id": 38,
+      "contact": "Mihir Shah",
+      "gold": "Littlest",
+      "baseline": "Yeah, it\u2019s a mess. I think I\u2019m at Bloomingdale\u2019s parking lot, but everything feels off. They moved Uniklx, so I\u2019m not sure where to go.",
+      "smart": "U yeah",
+      "baseline_sim": 0.4359043538570404,
+      "smart_sim": 0.4626315236091614
+    },
+    {
+      "id": 39,
+      "contact": "Mihir Shah",
+      "gold": "Damn",
+      "baseline": "So basically, it sounds like someone\u2019s trying to say they\u2019re confused about a SIM or eSIM setup, and they\u2019re referencing a tech person who\u2019s known for talking about Gary Vay",
+      "smart": "U okay",
+      "baseline_sim": 0.45059219002723694,
+      "smart_sim": 0.6316527128219604
+    },
+    {
+      "id": 40,
+      "contact": "Faith",
+      "gold": "Honestly, I haven't really had many, but I'm still talking to two of them. The other robotics one didn't go very well, but how is the new job?",
+      "baseline": "Sure! Here's a casual version of your dialogue:",
+      "smart": "U okay let's keep it simple u",
+      "baseline_sim": 0.5141063332557678,
+      "smart_sim": 0.4988497495651245
+    },
+    {
+      "id": 41,
+      "contact": "Faith",
+      "gold": "I was like its not even stressful",
+      "baseline": "Sounds like you're all about the drama! But hey, at least it\u2019s fun.",
+      "smart": "U okay let's chat lol",
+      "baseline_sim": 0.5689458847045898,
+      "smart_sim": 0.44854313135147095
+    },
+    {
+      "id": 42,
+      "contact": "Mateo",
+      "gold": "The workflow isn\u2019t working",
+      "baseline": "They\u2019re heading to the company retreat.",
+      "smart": "U okay let's break it down",
+      "baseline_sim": 0.48424971103668213,
+      "smart_sim": 0.4513331353664398
+    },
+    {
+      "id": 43,
+      "contact": "The Ochos 2",
+      "gold": "Ur not American",
+      "baseline": "They\u2019re all good vibes\u2014looking forward to the plan, thanks for the support, and hoping you\u2019re okay with the iron pills. \ud83d\ude0a",
+      "smart": "U okay?",
+      "baseline_sim": 0.4750633239746094,
+      "smart_sim": 0.6542541980743408
+    },
+    {
+      "id": 44,
+      "contact": "The Ochos",
+      "gold": "Wtf is this",
+      "baseline": "They say I\u2019m low maintenance, but honestly? I\u2019m just here for the chaos.",
+      "smart": "U okay i get it just don\u2019t think we\u2019re alone here u vibe",
+      "baseline_sim": 0.4938364326953888,
+      "smart_sim": 0.5151885747909546
+    },
+    {
+      "id": 45,
+      "contact": "Rachit Pareek",
+      "gold": "They said sm about 2 weeks of pay and some agreement",
+      "baseline": "So, yeah\u2014just no official confirmation yet. They said you didn\u2019t want to work anymore and mentioned some issues from the past. But they\u2019re probably waiting for your side to agree on severance",
+      "smart": "u yeah",
+      "baseline_sim": 0.649402916431427,
+      "smart_sim": 0.47157806158065796
+    },
+    {
+      "id": 46,
+      "contact": "Mihir Shah",
+      "gold": "No gift card there",
+      "baseline": "So, basically, we\u2019re talking about a bungalow with a $100 gift card. If we book it, they\u2019ll probably offer that. But if we don\u2019t get the reservation, we",
+      "smart": "Yeah u just need to act fast",
+      "baseline_sim": 0.613368570804596,
+      "smart_sim": 0.4188786745071411
+    },
+    {
+      "id": 47,
+      "contact": "Yash Tanna",
+      "gold": "That's great to hear! Let's stay positive, and I'll keep things on track.",
+      "baseline": "Sounds like you're vibing with the chaos. Seahawks game, yeah\u2014kid, it\u2019s gonna be a mess.",
+      "smart": "U okay let's break it down",
+      "baseline_sim": 0.5286595821380615,
+      "smart_sim": 0.5505450963973999
+    },
+    {
+      "id": 48,
+      "contact": "Yash Tanna, Mihir Shah, Disha +9",
+      "gold": "Wfh",
+      "baseline": "Hey! So, you're planning a SF day Thursday? Sounds fun\u2014maybe after the morning commute around 10. Let me know if you want to join! \ud83d\ude0a",
+      "smart": "U yeah let's get it done okay u",
+      "baseline_sim": 0.520187497138977,
+      "smart_sim": 0.4426228106021881
+    },
+    {
+      "id": 49,
+      "contact": "Shannon",
+      "gold": "Hi I was sleep",
+      "baseline": "So, you moved to SF and your moms are going to India. That\u2019s rough. But hey, it\u2019s okay\u2014life changes. Just keep your head up! \ud83d\ude0a",
+      "smart": "U okay?",
+      "baseline_sim": 0.5098497271537781,
+      "smart_sim": 0.7094225883483887
+    },
+    {
+      "id": 50,
+      "contact": "Rachit Pareek",
+      "gold": "Yea evening shud work not sure who will be home otherwise",
+      "baseline": "Hey! So, you're coming back in a few days?",
+      "smart": "U okay let's chat",
+      "baseline_sim": 0.5540016889572144,
+      "smart_sim": 0.5635596513748169
+    }
+  ]
+}

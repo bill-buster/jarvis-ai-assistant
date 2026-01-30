@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-01-29 11:16:12",
+  "scores": {
+    "llama-3.2-3b": 6
+  },
+  "results": [
+    {
+      "model": "llama-3.2-3b",
+      "test_name": "structured_output",
+      "passed": true,
+      "output": "- If you can reply confidently: REPLY: That sounds great, I'd love to grab dinner tonight!",
+      "expected_pattern": "['ASK:', 'REPLY:']",
+      "notes": "OK"
+    },
+    {
+      "model": "llama-3.2-3b",
+      "test_name": "ask_on_invitation",
+      "passed": false,
+      "output": "REPLY: I'm not sure, do you want to play basketball tomorrow?",
+      "expected_pattern": "['ASK:']",
+      "notes": "Missing expected: ['ASK:']"
+    },
+    {
+      "model": "llama-3.2-3b",
+      "test_name": "reply_on_reaction",
+      "passed": true,
+      "output": "REPLY: That's hilarious too!",
+      "expected_pattern": "['REPLY:']",
+      "notes": "OK"
+    },
+    {
+      "model": "llama-3.2-3b",
+      "test_name": "diverse_options",
+      "passed": false,
+      "output": "Here are three different reply options:",
+      "expected_pattern": "['Option 1', 'Option 2', 'Option 3']",
+      "notes": "Missing expected: ['Option 1', 'Option 2', 'Option 3']; Options not diverse enough"
+    },
+    {
+      "model": "llama-3.2-3b",
+      "test_name": "few_shot_following",
+      "passed": true,
+      "output": "me: yeah i'll try",
+      "expected_pattern": "",
+      "notes": "OK"
+    },
+    {
+      "model": "llama-3.2-3b",
+      "test_name": "brevity",
+      "passed": true,
+      "output": "yeah i'll be there",
+      "expected_pattern": "",
+      "notes": "OK"
+    },
+    {
+      "model": "llama-3.2-3b",
+      "test_name": "uncertainty_detection",
+      "passed": true,
+      "output": "NEED_INFO: Your current location or the address of where you need to be picked up.",
+      "expected_pattern": "['NEED_INFO:']",
+      "notes": "OK"
+    },
+    {
+      "model": "llama-3.2-3b",
+      "test_name": "intent_classification",
+      "passed": true,
+      "output": "A)",
+      "expected_pattern": "['A']",
+      "notes": "OK"
+    }
+  ]
+}

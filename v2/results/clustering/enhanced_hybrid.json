@@ -1,0 +1,1750 @@
+{
+  "contacts": [
+    {
+      "name": "Mihir Shah, Soham Shah, Sangati Shah +1",
+      "relationship": "group_chat",
+      "confidence": 1.0,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "travel",
+        "social/nightlife"
+      ],
+      "topic_phrases": [
+        "\"fifth avenue club\"",
+        "\"avenue club palo\"",
+        "\"club palo alto\"",
+        "\"makes sense\"",
+        "\"head over\"",
+        "\"united travel\"",
+        "\"travel bank\"",
+        "\"board games\""
+      ]
+    },
+    {
+      "name": "Mihir Shah",
+      "relationship": "family",
+      "confidence": 0.8653846153846154,
+      "themes": [
+        "food/dining",
+        "social/nightlife",
+        "finances",
+        "family matters",
+        "housing"
+      ],
+      "topic_phrases": [
+        "\"taco bell\"",
+        "\"eat little\"",
+        "\"sala thai\"",
+        "\"preferably before\"",
+        "idk",
+        "anything",
+        "sliver",
+        "off"
+      ]
+    },
+    {
+      "name": "Rachit Pareek",
+      "relationship": "family",
+      "confidence": 0.3,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "fitness/health",
+        "finances"
+      ],
+      "topic_phrases": [
+        "\"oil change\"",
+        "time",
+        "today",
+        "imma",
+        "right",
+        "bruh",
+        "literally",
+        "goin"
+      ]
+    },
+    {
+      "name": "Mateo",
+      "relationship": "professional",
+      "confidence": 0.5581395348837209,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "travel",
+        "entertainment"
+      ],
+      "topic_phrases": [
+        "\"managed operators across\"",
+        "\"used personal vehicle\"",
+        "\"change control system\"",
+        "\"please fill your\"",
+        "\"fill your name\"",
+        "\"lead coordinator\"",
+        "\"next friday\"",
+        "\"aditya cooper\""
+      ]
+    },
+    {
+      "name": "Faith",
+      "relationship": "professional",
+      "confidence": 0.34782608695652173,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "social/nightlife",
+        "entertainment"
+      ],
+      "topic_phrases": [
+        "\"another opportunity bye\"",
+        "\"offer letter\"",
+        "\"only weeks\"",
+        "\"start dec\"",
+        "\"sick day\"",
+        "\"light source\"",
+        "\"tomorrow cuz\"",
+        "mean"
+      ]
+    },
+    {
+      "name": "Sangati Shah",
+      "relationship": "family",
+      "confidence": 0.425531914893617,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "social/nightlife",
+        "entertainment"
+      ],
+      "topic_phrases": [
+        "\"party party\"",
+        "\"skill issue\"",
+        "\"kimono sheet\"",
+        "\"https www\"",
+        "\"com job\"",
+        "\"board games\"",
+        "actually",
+        "apply"
+      ]
+    },
+    {
+      "name": "Shannon",
+      "relationship": "professional",
+      "confidence": 0.43243243243243246,
+      "themes": [
+        "food/dining",
+        "work/career",
+        "finances",
+        "family matters",
+        "housing"
+      ],
+      "topic_phrases": [
+        "\"back brendan else\"",
+        "\"happy hour\"",
+        "\"him follow\"",
+        "call",
+        "last",
+        "sorry",
+        "idk",
+        "operators"
+      ]
+    },
+    {
+      "name": "The Ochos",
+      "relationship": "romantic",
+      "confidence": 0.3333333333333333,
+      "themes": [
+        "sports/games",
+        "work/career",
+        "education",
+        "travel",
+        "entertainment"
+      ],
+      "topic_phrases": [
+        "\"happy new year\"",
+        "\"happy thanksgiving guys\"",
+        "\"thanksgiving guys grateful\"",
+        "\"guys grateful life\"",
+        "\"loved image\"",
+        "\"merry christmas\"",
+        "\"car accident\"",
+        "\"hands feet\""
+      ]
+    },
+    {
+      "name": "Soham Shah",
+      "relationship": "family",
+      "confidence": 0.5,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "travel",
+        "entertainment"
+      ],
+      "topic_phrases": [
+        "\"makes sense\"",
+        "\"last year\"",
+        "\"first day\"",
+        "\"board games\"",
+        "\"dadas number\"",
+        "\"back friends\"",
+        "\"way back\"",
+        "\"time space\""
+      ]
+    },
+    {
+      "name": "Rutu",
+      "relationship": "close_friend",
+      "confidence": 0.9375,
+      "themes": [
+        "education",
+        "transportation"
+      ],
+      "topic_phrases": [
+        "\"med school\"",
+        "back",
+        "studying",
+        "texas",
+        "proud",
+        "idk",
+        "smh",
+        "off"
+      ]
+    },
+    {
+      "name": "Tejas\u2019s Snapchat Story",
+      "relationship": "professional",
+      "confidence": 0.2909090909090909,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "travel",
+        "social/nightlife"
+      ],
+      "topic_phrases": [
+        "\"thinking brother maybe\"",
+        "\"brother maybe couple\"",
+        "\"maybe couple others\"",
+        "\"old roblox\"",
+        "\"laughed image\"",
+        "\"escape room\"",
+        "\"https www\"",
+        "down"
+      ]
+    },
+    {
+      "name": "Dad",
+      "relationship": "family",
+      "confidence": 0.5294117647058824,
+      "themes": [
+        "food/dining",
+        "work/career",
+        "travel",
+        "finances",
+        "family matters"
+      ],
+      "topic_phrases": [
+        "\"https pnd leasehackr\"",
+        "\"pnd leasehackr com\"",
+        "\"https maps app\"",
+        "\"maps app goo\"",
+        "\"app goo ipc\"",
+        "\"background check\"",
+        "\"full offer\"",
+        "\"mihir doesn\""
+      ]
+    },
+    {
+      "name": "Danalila\u2728",
+      "relationship": "professional",
+      "confidence": 0.22535211267605634,
+      "themes": [
+        "sports/games",
+        "work/career",
+        "education",
+        "social/nightlife",
+        "relationships"
+      ],
+      "topic_phrases": [
+        "\"took off\"",
+        "\"new life\"",
+        "dallas",
+        "idk",
+        "sleep",
+        "night",
+        "never",
+        "don"
+      ]
+    },
+    {
+      "name": "Mihir Shah, Dad",
+      "relationship": "group_chat",
+      "confidence": 1.0,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "travel",
+        "social/nightlife"
+      ],
+      "topic_phrases": [
+        "\"warm springs\"",
+        "\"mac cheese\"",
+        "back",
+        "mihir",
+        "starting",
+        "time",
+        "bart",
+        "pick"
+      ]
+    },
+    {
+      "name": "Fantasy Ball Chat",
+      "relationship": "close_friend",
+      "confidence": 0.5,
+      "themes": [
+        "sports/games",
+        "finances",
+        "housing"
+      ],
+      "topic_phrases": [
+        "\"last game\"",
+        "\"fantasy points\"",
+        "\"came back\"",
+        "\"made million\"",
+        "\"end week\"",
+        "\"before season\"",
+        "\"choose game\"",
+        "\"don check\""
+      ]
+    },
+    {
+      "name": "Jwalin Shah",
+      "relationship": "family",
+      "confidence": 0.4918032786885246,
+      "themes": [
+        "sports/games",
+        "work/career",
+        "education",
+        "travel",
+        "social/nightlife"
+      ],
+      "topic_phrases": [
+        "\"https www youtube\"",
+        "\"www youtube com\"",
+        "\"youtube com watch\"",
+        "\"https instagram com\"",
+        "\"board game enthusiast\"",
+        "\"steering wheel\"",
+        "\"partner crime\"",
+        "\"auto hold\""
+      ]
+    },
+    {
+      "name": "Ishani Desai",
+      "relationship": "professional",
+      "confidence": 0.32,
+      "themes": [
+        "sports/games",
+        "work/career",
+        "travel",
+        "entertainment",
+        "finances"
+      ],
+      "topic_phrases": [
+        "\"look washed\"",
+        "\"last min\"",
+        "game",
+        "fucking",
+        "back",
+        "tho",
+        "lets",
+        "chicago"
+      ]
+    },
+    {
+      "name": "Yash Tanna",
+      "relationship": "professional",
+      "confidence": 0.42857142857142855,
+      "themes": [
+        "sports/games",
+        "work/career",
+        "travel",
+        "social/nightlife",
+        "finances"
+      ],
+      "topic_phrases": [
+        "\"decent hire him\"",
+        "\"nix legacy game\"",
+        "fuck",
+        "fucking",
+        "dude",
+        "insane",
+        "damn",
+        "today"
+      ]
+    },
+    {
+      "name": "Shaily",
+      "relationship": "close_friend",
+      "confidence": 0.30612244897959184,
+      "themes": [
+        "sports/games",
+        "education",
+        "family matters",
+        "relationships",
+        "transportation"
+      ],
+      "topic_phrases": [
+        "\"shut down\"",
+        "\"makes sense\"",
+        "\"most places\"",
+        "swadhyay",
+        "cause",
+        "don",
+        "idk",
+        "only"
+      ]
+    },
+    {
+      "name": "Abhinav Selvaraj",
+      "relationship": "professional",
+      "confidence": 0.26229508196721313,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "education",
+        "social/nightlife"
+      ],
+      "topic_phrases": [
+        "\"recent grad\"",
+        "\"surprise btw\"",
+        "\"boss man\"",
+        "bro",
+        "work",
+        "idk",
+        "tmrw",
+        "big"
+      ]
+    },
+    {
+      "name": "Brian Honea",
+      "relationship": "professional",
+      "confidence": 0.34782608695652173,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "education",
+        "family matters"
+      ],
+      "topic_phrases": [
+        "\"finish interview process\"",
+        "\"next week\"",
+        "\"week tho\"",
+        "\"final round\"",
+        "\"schedule next\"",
+        "\"heat rash\"",
+        "well",
+        "alright"
+      ]
+    },
+    {
+      "name": "Kishan Brambhatt",
+      "relationship": "family",
+      "confidence": 0.2542372881355932,
+      "themes": [
+        "sports/games",
+        "fitness/health",
+        "finances",
+        "family matters",
+        "transportation"
+      ],
+      "topic_phrases": [
+        "\"mom das expensive\"",
+        "\"das expensive ticket\"",
+        "\"maxey hart\"",
+        "\"donny bane\"",
+        "\"aint paying\"",
+        "\"pay days\"",
+        "\"money venmo\"",
+        "reacted"
+      ]
+    },
+    {
+      "name": "Mansi",
+      "relationship": "family",
+      "confidence": 0.3125,
+      "themes": [
+        "food/dining",
+        "work/career",
+        "transportation",
+        "housing"
+      ],
+      "topic_phrases": [
+        "\"naisha coming\"",
+        "\"after interview\"",
+        "\"lunch chill\"",
+        "\"rip minivan\"",
+        "\"disha naisha\"",
+        "\"golden gate\"",
+        "\"legion honor\"",
+        "don"
+      ]
+    },
+    {
+      "name": "Tejas Polkham, Shanay Randeria",
+      "relationship": "group_chat",
+      "confidence": 1.0,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "social/nightlife",
+        "fitness/health"
+      ],
+      "topic_phrases": [
+        "\"games pizza\"",
+        "\"sangati friends\"",
+        "\"board games\"",
+        "\"big sur\"",
+        "\"down whenever\"",
+        "back",
+        "home",
+        "coming"
+      ]
+    },
+    {
+      "name": "Rutu and Younger but For Real ",
+      "relationship": "professional",
+      "confidence": 0.3225806451612903,
+      "themes": [
+        "food/dining",
+        "work/career",
+        "travel",
+        "social/nightlife",
+        "fitness/health"
+      ],
+      "topic_phrases": [
+        "\"happy new year\"",
+        "\"merry christmas balbat\"",
+        "\"down brunch south\"",
+        "\"brunch south bay\"",
+        "\"free down south\"",
+        "\"breakfast club\"",
+        "\"balbat jrs\"",
+        "\"divyesh coming\""
+      ]
+    },
+    {
+      "name": "Shivam Misra",
+      "relationship": "casual_friend",
+      "confidence": 0.4666666666666667,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "finances",
+        "transportation"
+      ],
+      "topic_phrases": [
+        "\"use claude\"",
+        "\"uber eats\"",
+        "easy",
+        "time",
+        "shud",
+        "mihir",
+        "maybe",
+        "big"
+      ]
+    },
+    {
+      "name": "Shanay Randeria",
+      "relationship": "professional",
+      "confidence": 0.36923076923076925,
+      "themes": [
+        "work/career",
+        "relationships",
+        "housing"
+      ],
+      "topic_phrases": [
+        "\"doesn respond\"",
+        "\"him shit\"",
+        "\"your linkedin\"",
+        "don",
+        "kennan",
+        "dude",
+        "much",
+        "tho"
+      ]
+    },
+    {
+      "name": "Shivam",
+      "relationship": "professional",
+      "confidence": 0.5581395348837209,
+      "themes": [
+        "sports/games",
+        "work/career",
+        "education",
+        "entertainment"
+      ],
+      "topic_phrases": [
+        "\"cdn fbsbx com\"",
+        "\"thanks bro\"",
+        "\"terms applying\"",
+        "\"your resume\"",
+        "\"akers pick\"",
+        "\"send over\"",
+        "\"bet bet\"",
+        "https"
+      ]
+    },
+    {
+      "name": "Sriharsha Guduguntla",
+      "relationship": "professional",
+      "confidence": 0.2857142857142857,
+      "themes": [
+        "sports/games",
+        "work/career",
+        "education",
+        "entertainment",
+        "fitness/health"
+      ],
+      "topic_phrases": [
+        "\"sorry missed your\"",
+        "\"missed your call\"",
+        "\"post concussive symptoms\"",
+        "\"better today comparatively\"",
+        "\"call whenever\"",
+        "\"call tmrw\"",
+        "\"feeling better\"",
+        "\"spinal tap\""
+      ]
+    },
+    {
+      "name": "Mihir",
+      "relationship": "professional",
+      "confidence": 0.32,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "education",
+        "travel"
+      ],
+      "topic_phrases": [
+        "\"your team color\"",
+        "\"fine tho\"",
+        "\"another concussion\"",
+        "\"back fremont\"",
+        "\"stanford med\"",
+        "\"toes themselves\"",
+        "\"foot down\"",
+        "\"tmrw morning\""
+      ]
+    },
+    {
+      "name": "Abhinav Selvaraj, Shanay Randeria, Tejas Polkham",
+      "relationship": "group_chat",
+      "confidence": 1.0,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "housing"
+      ],
+      "topic_phrases": [
+        "\"still oakland\"",
+        "eat",
+        "shanay",
+        "down",
+        "tired",
+        "sleep",
+        "shower",
+        "chewy"
+      ]
+    },
+    {
+      "name": "Mihir Shah, Tejas Polkham, Shanay Randeria",
+      "relationship": "group_chat",
+      "confidence": 1.0,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "education",
+        "fitness/health"
+      ],
+      "topic_phrases": [
+        "\"coming back\"",
+        "\"moved quit\"",
+        "\"picking sangati\"",
+        "\"fine sliver\"",
+        "after",
+        "down",
+        "drive",
+        "miga"
+      ]
+    },
+    {
+      "name": "Mihir Shah, Shivam Misra",
+      "relationship": "group_chat",
+      "confidence": 1.0,
+      "themes": [
+        "food/dining",
+        "work/career",
+        "transportation"
+      ],
+      "topic_phrases": [
+        "\"next week\"",
+        "\"lemme check\"",
+        "shivam",
+        "idk",
+        "mihir",
+        "coming",
+        "rachit",
+        "last"
+      ]
+    },
+    {
+      "name": "family1",
+      "relationship": "family",
+      "confidence": 0.6428571428571429,
+      "themes": [
+        "sports/games",
+        "work/career",
+        "entertainment",
+        "finances",
+        "family matters"
+      ],
+      "topic_phrases": [
+        "\"south hayward\"",
+        "\"hash brown\"",
+        "\"gift card\"",
+        "\"mountain view\"",
+        "\"pick mihir\"",
+        "\"mihir jwalin\"",
+        "\"mom way\"",
+        "eta"
+      ]
+    },
+    {
+      "name": "Soham Shah, Mihir Shah, Krusha Shah +1",
+      "relationship": "group_chat",
+      "confidence": 1.0,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "education",
+        "travel"
+      ],
+      "topic_phrases": [
+        "\"mhm mhm mhm\"",
+        "\"bruh android chat\"",
+        "\"data india\"",
+        "\"omg yayyyyy\"",
+        "\"loved image\"",
+        "\"jan feb\"",
+        "wait",
+        "coming"
+      ]
+    },
+    {
+      "name": "Tejas Polkham",
+      "relationship": "family",
+      "confidence": 0.32608695652173914,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "travel",
+        "entertainment",
+        "family matters"
+      ],
+      "topic_phrases": [
+        "\"mavs game\"",
+        "\"merci merci\"",
+        "nah",
+        "next",
+        "idk",
+        "tho",
+        "time",
+        "sure"
+      ]
+    },
+    {
+      "name": "Rohith Dara",
+      "relationship": "close_friend",
+      "confidence": 0.35714285714285715,
+      "themes": [
+        "food/dining",
+        "work/career",
+        "social/nightlife",
+        "fitness/health",
+        "finances"
+      ],
+      "topic_phrases": [
+        "\"papa john dominos\"",
+        "\"over under\"",
+        "\"shud meet\"",
+        "\"doctor tell\"",
+        "\"bet bet\"",
+        "\"pick pizza\"",
+        "yash",
+        "down"
+      ]
+    },
+    {
+      "name": "Aarohi",
+      "relationship": "family",
+      "confidence": 0.3333333333333333,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "work/career",
+        "entertainment",
+        "family matters"
+      ],
+      "topic_phrases": [
+        "wyd",
+        "valid",
+        "thursday",
+        "veg",
+        "right",
+        "wait",
+        "noodles",
+        "jersey"
+      ]
+    },
+    {
+      "name": "rupa kaki",
+      "relationship": "family",
+      "confidence": 0.8333333333333334,
+      "themes": [
+        "sports/games",
+        "food/dining",
+        "finances",
+        "family matters",
+        "relationships"
+      ],
+      "topic_phrases": [
+        "\"board game\"",
+        "time",
+        "mihir",
+        "dessert",
+        "jsk",
+        "games",
+        "home",
+        "guys"
+      ]
+    },
+    {
+      "name": "Mom",
+      "relationship": "family",
+      "confidence": 0.8653846153846154,
+      "themes": [
+        "food/dining",
+        "finances",
+        "transportation",
+        "housing"
+      ],
+      "topic_phrases": [
+        "\"https maps app\"",
+        "\"maps app goo\"",
+        "\"dining table\"",
+        "\"heating pad\"",
+        "\"frozen pea\"",
+        "\"trader joe\"",
+        "\"anything else\"",
+        "costco"
+      ]
+    }
+  ],
+  "by_relationship": {
+    "group_chat": [
+      {
+        "name": "Mihir Shah, Soham Shah, Sangati Shah +1",
+        "relationship": "group_chat",
+        "confidence": 1.0,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "travel",
+          "social/nightlife"
+        ],
+        "topic_phrases": [
+          "\"fifth avenue club\"",
+          "\"avenue club palo\"",
+          "\"club palo alto\"",
+          "\"makes sense\"",
+          "\"head over\"",
+          "\"united travel\"",
+          "\"travel bank\"",
+          "\"board games\""
+        ]
+      },
+      {
+        "name": "Mihir Shah, Dad",
+        "relationship": "group_chat",
+        "confidence": 1.0,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "travel",
+          "social/nightlife"
+        ],
+        "topic_phrases": [
+          "\"warm springs\"",
+          "\"mac cheese\"",
+          "back",
+          "mihir",
+          "starting",
+          "time",
+          "bart",
+          "pick"
+        ]
+      },
+      {
+        "name": "Tejas Polkham, Shanay Randeria",
+        "relationship": "group_chat",
+        "confidence": 1.0,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "social/nightlife",
+          "fitness/health"
+        ],
+        "topic_phrases": [
+          "\"games pizza\"",
+          "\"sangati friends\"",
+          "\"board games\"",
+          "\"big sur\"",
+          "\"down whenever\"",
+          "back",
+          "home",
+          "coming"
+        ]
+      },
+      {
+        "name": "Abhinav Selvaraj, Shanay Randeria, Tejas Polkham",
+        "relationship": "group_chat",
+        "confidence": 1.0,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "housing"
+        ],
+        "topic_phrases": [
+          "\"still oakland\"",
+          "eat",
+          "shanay",
+          "down",
+          "tired",
+          "sleep",
+          "shower",
+          "chewy"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Tejas Polkham, Shanay Randeria",
+        "relationship": "group_chat",
+        "confidence": 1.0,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "education",
+          "fitness/health"
+        ],
+        "topic_phrases": [
+          "\"coming back\"",
+          "\"moved quit\"",
+          "\"picking sangati\"",
+          "\"fine sliver\"",
+          "after",
+          "down",
+          "drive",
+          "miga"
+        ]
+      },
+      {
+        "name": "Mihir Shah, Shivam Misra",
+        "relationship": "group_chat",
+        "confidence": 1.0,
+        "themes": [
+          "food/dining",
+          "work/career",
+          "transportation"
+        ],
+        "topic_phrases": [
+          "\"next week\"",
+          "\"lemme check\"",
+          "shivam",
+          "idk",
+          "mihir",
+          "coming",
+          "rachit",
+          "last"
+        ]
+      },
+      {
+        "name": "Soham Shah, Mihir Shah, Krusha Shah +1",
+        "relationship": "group_chat",
+        "confidence": 1.0,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "education",
+          "travel"
+        ],
+        "topic_phrases": [
+          "\"mhm mhm mhm\"",
+          "\"bruh android chat\"",
+          "\"data india\"",
+          "\"omg yayyyyy\"",
+          "\"loved image\"",
+          "\"jan feb\"",
+          "wait",
+          "coming"
+        ]
+      }
+    ],
+    "family": [
+      {
+        "name": "Mihir Shah",
+        "relationship": "family",
+        "confidence": 0.8653846153846154,
+        "themes": [
+          "food/dining",
+          "social/nightlife",
+          "finances",
+          "family matters",
+          "housing"
+        ],
+        "topic_phrases": [
+          "\"taco bell\"",
+          "\"eat little\"",
+          "\"sala thai\"",
+          "\"preferably before\"",
+          "idk",
+          "anything",
+          "sliver",
+          "off"
+        ]
+      },
+      {
+        "name": "Rachit Pareek",
+        "relationship": "family",
+        "confidence": 0.3,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "fitness/health",
+          "finances"
+        ],
+        "topic_phrases": [
+          "\"oil change\"",
+          "time",
+          "today",
+          "imma",
+          "right",
+          "bruh",
+          "literally",
+          "goin"
+        ]
+      },
+      {
+        "name": "Sangati Shah",
+        "relationship": "family",
+        "confidence": 0.425531914893617,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "social/nightlife",
+          "entertainment"
+        ],
+        "topic_phrases": [
+          "\"party party\"",
+          "\"skill issue\"",
+          "\"kimono sheet\"",
+          "\"https www\"",
+          "\"com job\"",
+          "\"board games\"",
+          "actually",
+          "apply"
+        ]
+      },
+      {
+        "name": "Soham Shah",
+        "relationship": "family",
+        "confidence": 0.5,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "travel",
+          "entertainment"
+        ],
+        "topic_phrases": [
+          "\"makes sense\"",
+          "\"last year\"",
+          "\"first day\"",
+          "\"board games\"",
+          "\"dadas number\"",
+          "\"back friends\"",
+          "\"way back\"",
+          "\"time space\""
+        ]
+      },
+      {
+        "name": "Dad",
+        "relationship": "family",
+        "confidence": 0.5294117647058824,
+        "themes": [
+          "food/dining",
+          "work/career",
+          "travel",
+          "finances",
+          "family matters"
+        ],
+        "topic_phrases": [
+          "\"https pnd leasehackr\"",
+          "\"pnd leasehackr com\"",
+          "\"https maps app\"",
+          "\"maps app goo\"",
+          "\"app goo ipc\"",
+          "\"background check\"",
+          "\"full offer\"",
+          "\"mihir doesn\""
+        ]
+      },
+      {
+        "name": "Jwalin Shah",
+        "relationship": "family",
+        "confidence": 0.4918032786885246,
+        "themes": [
+          "sports/games",
+          "work/career",
+          "education",
+          "travel",
+          "social/nightlife"
+        ],
+        "topic_phrases": [
+          "\"https www youtube\"",
+          "\"www youtube com\"",
+          "\"youtube com watch\"",
+          "\"https instagram com\"",
+          "\"board game enthusiast\"",
+          "\"steering wheel\"",
+          "\"partner crime\"",
+          "\"auto hold\""
+        ]
+      },
+      {
+        "name": "Kishan Brambhatt",
+        "relationship": "family",
+        "confidence": 0.2542372881355932,
+        "themes": [
+          "sports/games",
+          "fitness/health",
+          "finances",
+          "family matters",
+          "transportation"
+        ],
+        "topic_phrases": [
+          "\"mom das expensive\"",
+          "\"das expensive ticket\"",
+          "\"maxey hart\"",
+          "\"donny bane\"",
+          "\"aint paying\"",
+          "\"pay days\"",
+          "\"money venmo\"",
+          "reacted"
+        ]
+      },
+      {
+        "name": "Mansi",
+        "relationship": "family",
+        "confidence": 0.3125,
+        "themes": [
+          "food/dining",
+          "work/career",
+          "transportation",
+          "housing"
+        ],
+        "topic_phrases": [
+          "\"naisha coming\"",
+          "\"after interview\"",
+          "\"lunch chill\"",
+          "\"rip minivan\"",
+          "\"disha naisha\"",
+          "\"golden gate\"",
+          "\"legion honor\"",
+          "don"
+        ]
+      },
+      {
+        "name": "family1",
+        "relationship": "family",
+        "confidence": 0.6428571428571429,
+        "themes": [
+          "sports/games",
+          "work/career",
+          "entertainment",
+          "finances",
+          "family matters"
+        ],
+        "topic_phrases": [
+          "\"south hayward\"",
+          "\"hash brown\"",
+          "\"gift card\"",
+          "\"mountain view\"",
+          "\"pick mihir\"",
+          "\"mihir jwalin\"",
+          "\"mom way\"",
+          "eta"
+        ]
+      },
+      {
+        "name": "Tejas Polkham",
+        "relationship": "family",
+        "confidence": 0.32608695652173914,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "travel",
+          "entertainment",
+          "family matters"
+        ],
+        "topic_phrases": [
+          "\"mavs game\"",
+          "\"merci merci\"",
+          "nah",
+          "next",
+          "idk",
+          "tho",
+          "time",
+          "sure"
+        ]
+      },
+      {
+        "name": "Aarohi",
+        "relationship": "family",
+        "confidence": 0.3333333333333333,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "entertainment",
+          "family matters"
+        ],
+        "topic_phrases": [
+          "wyd",
+          "valid",
+          "thursday",
+          "veg",
+          "right",
+          "wait",
+          "noodles",
+          "jersey"
+        ]
+      },
+      {
+        "name": "rupa kaki",
+        "relationship": "family",
+        "confidence": 0.8333333333333334,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "finances",
+          "family matters",
+          "relationships"
+        ],
+        "topic_phrases": [
+          "\"board game\"",
+          "time",
+          "mihir",
+          "dessert",
+          "jsk",
+          "games",
+          "home",
+          "guys"
+        ]
+      },
+      {
+        "name": "Mom",
+        "relationship": "family",
+        "confidence": 0.8653846153846154,
+        "themes": [
+          "food/dining",
+          "finances",
+          "transportation",
+          "housing"
+        ],
+        "topic_phrases": [
+          "\"https maps app\"",
+          "\"maps app goo\"",
+          "\"dining table\"",
+          "\"heating pad\"",
+          "\"frozen pea\"",
+          "\"trader joe\"",
+          "\"anything else\"",
+          "costco"
+        ]
+      }
+    ],
+    "professional": [
+      {
+        "name": "Mateo",
+        "relationship": "professional",
+        "confidence": 0.5581395348837209,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "travel",
+          "entertainment"
+        ],
+        "topic_phrases": [
+          "\"managed operators across\"",
+          "\"used personal vehicle\"",
+          "\"change control system\"",
+          "\"please fill your\"",
+          "\"fill your name\"",
+          "\"lead coordinator\"",
+          "\"next friday\"",
+          "\"aditya cooper\""
+        ]
+      },
+      {
+        "name": "Faith",
+        "relationship": "professional",
+        "confidence": 0.34782608695652173,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "social/nightlife",
+          "entertainment"
+        ],
+        "topic_phrases": [
+          "\"another opportunity bye\"",
+          "\"offer letter\"",
+          "\"only weeks\"",
+          "\"start dec\"",
+          "\"sick day\"",
+          "\"light source\"",
+          "\"tomorrow cuz\"",
+          "mean"
+        ]
+      },
+      {
+        "name": "Shannon",
+        "relationship": "professional",
+        "confidence": 0.43243243243243246,
+        "themes": [
+          "food/dining",
+          "work/career",
+          "finances",
+          "family matters",
+          "housing"
+        ],
+        "topic_phrases": [
+          "\"back brendan else\"",
+          "\"happy hour\"",
+          "\"him follow\"",
+          "call",
+          "last",
+          "sorry",
+          "idk",
+          "operators"
+        ]
+      },
+      {
+        "name": "Tejas\u2019s Snapchat Story",
+        "relationship": "professional",
+        "confidence": 0.2909090909090909,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "travel",
+          "social/nightlife"
+        ],
+        "topic_phrases": [
+          "\"thinking brother maybe\"",
+          "\"brother maybe couple\"",
+          "\"maybe couple others\"",
+          "\"old roblox\"",
+          "\"laughed image\"",
+          "\"escape room\"",
+          "\"https www\"",
+          "down"
+        ]
+      },
+      {
+        "name": "Danalila\u2728",
+        "relationship": "professional",
+        "confidence": 0.22535211267605634,
+        "themes": [
+          "sports/games",
+          "work/career",
+          "education",
+          "social/nightlife",
+          "relationships"
+        ],
+        "topic_phrases": [
+          "\"took off\"",
+          "\"new life\"",
+          "dallas",
+          "idk",
+          "sleep",
+          "night",
+          "never",
+          "don"
+        ]
+      },
+      {
+        "name": "Ishani Desai",
+        "relationship": "professional",
+        "confidence": 0.32,
+        "themes": [
+          "sports/games",
+          "work/career",
+          "travel",
+          "entertainment",
+          "finances"
+        ],
+        "topic_phrases": [
+          "\"look washed\"",
+          "\"last min\"",
+          "game",
+          "fucking",
+          "back",
+          "tho",
+          "lets",
+          "chicago"
+        ]
+      },
+      {
+        "name": "Yash Tanna",
+        "relationship": "professional",
+        "confidence": 0.42857142857142855,
+        "themes": [
+          "sports/games",
+          "work/career",
+          "travel",
+          "social/nightlife",
+          "finances"
+        ],
+        "topic_phrases": [
+          "\"decent hire him\"",
+          "\"nix legacy game\"",
+          "fuck",
+          "fucking",
+          "dude",
+          "insane",
+          "damn",
+          "today"
+        ]
+      },
+      {
+        "name": "Abhinav Selvaraj",
+        "relationship": "professional",
+        "confidence": 0.26229508196721313,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "education",
+          "social/nightlife"
+        ],
+        "topic_phrases": [
+          "\"recent grad\"",
+          "\"surprise btw\"",
+          "\"boss man\"",
+          "bro",
+          "work",
+          "idk",
+          "tmrw",
+          "big"
+        ]
+      },
+      {
+        "name": "Brian Honea",
+        "relationship": "professional",
+        "confidence": 0.34782608695652173,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "education",
+          "family matters"
+        ],
+        "topic_phrases": [
+          "\"finish interview process\"",
+          "\"next week\"",
+          "\"week tho\"",
+          "\"final round\"",
+          "\"schedule next\"",
+          "\"heat rash\"",
+          "well",
+          "alright"
+        ]
+      },
+      {
+        "name": "Rutu and Younger but For Real ",
+        "relationship": "professional",
+        "confidence": 0.3225806451612903,
+        "themes": [
+          "food/dining",
+          "work/career",
+          "travel",
+          "social/nightlife",
+          "fitness/health"
+        ],
+        "topic_phrases": [
+          "\"happy new year\"",
+          "\"merry christmas balbat\"",
+          "\"down brunch south\"",
+          "\"brunch south bay\"",
+          "\"free down south\"",
+          "\"breakfast club\"",
+          "\"balbat jrs\"",
+          "\"divyesh coming\""
+        ]
+      },
+      {
+        "name": "Shanay Randeria",
+        "relationship": "professional",
+        "confidence": 0.36923076923076925,
+        "themes": [
+          "work/career",
+          "relationships",
+          "housing"
+        ],
+        "topic_phrases": [
+          "\"doesn respond\"",
+          "\"him shit\"",
+          "\"your linkedin\"",
+          "don",
+          "kennan",
+          "dude",
+          "much",
+          "tho"
+        ]
+      },
+      {
+        "name": "Shivam",
+        "relationship": "professional",
+        "confidence": 0.5581395348837209,
+        "themes": [
+          "sports/games",
+          "work/career",
+          "education",
+          "entertainment"
+        ],
+        "topic_phrases": [
+          "\"cdn fbsbx com\"",
+          "\"thanks bro\"",
+          "\"terms applying\"",
+          "\"your resume\"",
+          "\"akers pick\"",
+          "\"send over\"",
+          "\"bet bet\"",
+          "https"
+        ]
+      },
+      {
+        "name": "Sriharsha Guduguntla",
+        "relationship": "professional",
+        "confidence": 0.2857142857142857,
+        "themes": [
+          "sports/games",
+          "work/career",
+          "education",
+          "entertainment",
+          "fitness/health"
+        ],
+        "topic_phrases": [
+          "\"sorry missed your\"",
+          "\"missed your call\"",
+          "\"post concussive symptoms\"",
+          "\"better today comparatively\"",
+          "\"call whenever\"",
+          "\"call tmrw\"",
+          "\"feeling better\"",
+          "\"spinal tap\""
+        ]
+      },
+      {
+        "name": "Mihir",
+        "relationship": "professional",
+        "confidence": 0.32,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "education",
+          "travel"
+        ],
+        "topic_phrases": [
+          "\"your team color\"",
+          "\"fine tho\"",
+          "\"another concussion\"",
+          "\"back fremont\"",
+          "\"stanford med\"",
+          "\"toes themselves\"",
+          "\"foot down\"",
+          "\"tmrw morning\""
+        ]
+      }
+    ],
+    "romantic": [
+      {
+        "name": "The Ochos",
+        "relationship": "romantic",
+        "confidence": 0.3333333333333333,
+        "themes": [
+          "sports/games",
+          "work/career",
+          "education",
+          "travel",
+          "entertainment"
+        ],
+        "topic_phrases": [
+          "\"happy new year\"",
+          "\"happy thanksgiving guys\"",
+          "\"thanksgiving guys grateful\"",
+          "\"guys grateful life\"",
+          "\"loved image\"",
+          "\"merry christmas\"",
+          "\"car accident\"",
+          "\"hands feet\""
+        ]
+      }
+    ],
+    "close_friend": [
+      {
+        "name": "Rutu",
+        "relationship": "close_friend",
+        "confidence": 0.9375,
+        "themes": [
+          "education",
+          "transportation"
+        ],
+        "topic_phrases": [
+          "\"med school\"",
+          "back",
+          "studying",
+          "texas",
+          "proud",
+          "idk",
+          "smh",
+          "off"
+        ]
+      },
+      {
+        "name": "Fantasy Ball Chat",
+        "relationship": "close_friend",
+        "confidence": 0.5,
+        "themes": [
+          "sports/games",
+          "finances",
+          "housing"
+        ],
+        "topic_phrases": [
+          "\"last game\"",
+          "\"fantasy points\"",
+          "\"came back\"",
+          "\"made million\"",
+          "\"end week\"",
+          "\"before season\"",
+          "\"choose game\"",
+          "\"don check\""
+        ]
+      },
+      {
+        "name": "Shaily",
+        "relationship": "close_friend",
+        "confidence": 0.30612244897959184,
+        "themes": [
+          "sports/games",
+          "education",
+          "family matters",
+          "relationships",
+          "transportation"
+        ],
+        "topic_phrases": [
+          "\"shut down\"",
+          "\"makes sense\"",
+          "\"most places\"",
+          "swadhyay",
+          "cause",
+          "don",
+          "idk",
+          "only"
+        ]
+      },
+      {
+        "name": "Rohith Dara",
+        "relationship": "close_friend",
+        "confidence": 0.35714285714285715,
+        "themes": [
+          "food/dining",
+          "work/career",
+          "social/nightlife",
+          "fitness/health",
+          "finances"
+        ],
+        "topic_phrases": [
+          "\"papa john dominos\"",
+          "\"over under\"",
+          "\"shud meet\"",
+          "\"doctor tell\"",
+          "\"bet bet\"",
+          "\"pick pizza\"",
+          "yash",
+          "down"
+        ]
+      }
+    ],
+    "casual_friend": [
+      {
+        "name": "Shivam Misra",
+        "relationship": "casual_friend",
+        "confidence": 0.4666666666666667,
+        "themes": [
+          "sports/games",
+          "food/dining",
+          "work/career",
+          "finances",
+          "transportation"
+        ],
+        "topic_phrases": [
+          "\"use claude\"",
+          "\"uber eats\"",
+          "easy",
+          "time",
+          "shud",
+          "mihir",
+          "maybe",
+          "big"
+        ]
+      }
+    ]
+  }
+}

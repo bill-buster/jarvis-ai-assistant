@@ -1,0 +1,4406 @@
+{
+  "5 Shahs": {
+    "relationship": "Cousins groupchat + brother",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "5 SHAHS": {
+    "relationship": "Cousins groupchat + brother",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Aarohi": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14082282247"
+    ]
+  },
+  "Abhinav Selvaraj": {
+    "relationship": "really close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15106760922",
+      "+15106566801"
+    ]
+  },
+  "abhinav subhramanyan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19716450183"
+    ]
+  },
+  "Achint Jha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14082066231"
+    ]
+  },
+  "Aditya Raghunathan": {
+    "relationship": "ex coworker/boss",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+17347090853"
+    ]
+  },
+  "Afaf Nabeeha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14126574256"
+    ]
+  },
+  "alina": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693237995"
+    ]
+  },
+  "Andrew Sullivan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12144351074"
+    ]
+  },
+  "Andy Ngyuen": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18326029371"
+    ]
+  },
+  "Anirudh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694031726",
+      "+12146036412"
+    ]
+  },
+  "Ankita Kini": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14087848434"
+    ]
+  },
+  "Anushka (Ishani)": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17735924094"
+    ]
+  },
+  "Aris": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18326003477"
+    ]
+  },
+  "Arpita Gaggar": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15107668110"
+    ]
+  },
+  "ashritha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14089661504"
+    ]
+  },
+  "Ashutosh Kulkarni": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19728326771"
+    ]
+  },
+  "Asian Tim": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15129475085"
+    ]
+  },
+  "Atharv": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14692632870"
+    ]
+  },
+  "Ayush Gaggar": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15107668112"
+    ]
+  },
+  "Blake LAWYER": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18179087653"
+    ]
+  },
+  "Brenden": {
+    "relationship": "ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14125227852"
+    ]
+  },
+  "Brian Honea": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19727466026"
+    ]
+  },
+  "Chintan Shah": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16316629686"
+    ]
+  },
+  "chris padgett": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694744804"
+    ]
+  },
+  "Cinthya": {
+    "relationship": "friend/ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19167518647"
+    ]
+  },
+  "Dad": {
+    "relationship": "dad",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+16503913948",
+      "+14086368368"
+    ]
+  },
+  "Dana Lilly\u2019s \ud83e\udd73": {
+    "relationship": "close friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Danalila\u2728": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12245320003"
+    ]
+  },
+  "darren": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105655210"
+    ]
+  },
+  "David Built": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694286545"
+    ]
+  },
+  "Deevy Bhimani": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14088930717"
+    ]
+  },
+  "dpchat": {
+    "relationship": "friends engagement",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "durga": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15106967170"
+    ]
+  },
+  "Emil (Chess)": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16127354091"
+    ]
+  },
+  "Ethan Huang": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103642345"
+    ]
+  },
+  "Faith": {
+    "relationship": "friend/ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14803477659"
+    ]
+  },
+  "family1": {
+    "relationship": "family group chat",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Fantasy Ball Chat": {
+    "relationship": "fantasy basketball",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Gaurav": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18482480743"
+    ]
+  },
+  "Gautam Sapre": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16173961452"
+    ]
+  },
+  "Gerson": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693450436"
+    ]
+  },
+  "Gujews": {
+    "relationship": "close friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "gujju\u2019s": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Haidee Pang": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15108131722"
+    ]
+  },
+  "Harshini": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19724760734"
+    ]
+  },
+  "Harvest 2024": {
+    "relationship": "tournament group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Het Patel": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14692376428"
+    ]
+  },
+  "Hetav": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105168213"
+    ]
+  },
+  "Hyderabaddies": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Ishan Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15123329049"
+    ]
+  },
+  "Ishani Desai": {
+    "relationship": "best friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15104492787"
+    ]
+  },
+  "Jay Mistry": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12144494317"
+    ]
+  },
+  "jeremy allen": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693187143"
+    ]
+  },
+  "Jignesh Taylor": {
+    "relationship": "family friend/friends dad",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12149864712"
+    ]
+  },
+  "Jomari Mayo": {
+    "relationship": "ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+17073198458"
+    ]
+  },
+  "Josh Smith": {
+    "relationship": "ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19737231368"
+    ]
+  },
+  "Jwalin\u2019s Mini Van": {
+    "relationship": "tournament group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Kalp Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109696903"
+    ]
+  },
+  "Katelyn Lobo": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17135695922"
+    ]
+  },
+  "Kaylee Xayaphanh": {
+    "relationship": "really close friends ex",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12142843235"
+    ]
+  },
+  "Kimiya Ganjooi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103291661"
+    ]
+  },
+  "Kirti Shekhawat": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18474369044"
+    ]
+  },
+  "Kishan Brambhatt": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18478092441"
+    ]
+  },
+  "Kishan USC": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13142879161"
+    ]
+  },
+  "KK": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18326001386"
+    ]
+  },
+  "Krishna Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15106762004"
+    ]
+  },
+  "Krusha Shah": {
+    "relationship": "cousin",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+16309239298"
+    ]
+  },
+  "LA gang + jwalin": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Luiz": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12146075998"
+    ]
+  },
+  "Manav": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14089603959"
+    ]
+  },
+  "Mansi": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14084603962"
+    ]
+  },
+  "Mariela Costello": {
+    "relationship": "therapist",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14082203268"
+    ]
+  },
+  "Marshall Mao": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17245167753"
+    ]
+  },
+  "Mateo": {
+    "relationship": "friend/ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14087867207"
+    ]
+  },
+  "Mavs Gang": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Maya Leone": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18322446292"
+    ]
+  },
+  "Mihir": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15104587112"
+    ]
+  },
+  "Mihir Shah": {
+    "relationship": "brother",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+16509543233"
+    ]
+  },
+  "Mom": {
+    "relationship": "mom",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+14086368367"
+    ]
+  },
+  "moomjean": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Nand Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694563630"
+    ]
+  },
+  "Nate Ultimate": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15125909683"
+    ]
+  },
+  "Nikhil": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14699314797"
+    ]
+  },
+  "Nilesh Tanna": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14082306299"
+    ]
+  },
+  "nilli": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14692699815"
+    ]
+  },
+  "Nirali": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14087507131"
+    ]
+  },
+  "Nita Aunty": {
+    "relationship": "family friend aunty",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15104491468"
+    ]
+  },
+  "Noe": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19564676711"
+    ]
+  },
+  "ojashwi gorkhaly": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695791393"
+    ]
+  },
+  "Prachi": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15109459212"
+    ]
+  },
+  "Pranav Pradhan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15126580405"
+    ]
+  },
+  "Priya Jain": {
+    "relationship": "someone i talked to for a bit romantically",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14083680008"
+    ]
+  },
+  "Puneet Freibott": {
+    "relationship": "old landlord",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18325128598"
+    ]
+  },
+  "quj": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Rachit Pareek": {
+    "relationship": "best friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109329691"
+    ]
+  },
+  "Radhika Shah": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15629643639"
+    ]
+  },
+  "Rajan Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18179053105"
+    ]
+  },
+  "Rajdeep": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15104344288"
+    ]
+  },
+  "Ram": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18324277499"
+    ]
+  },
+  "Ram Nandula": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14085078655"
+    ]
+  },
+  "rishik": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14699755410"
+    ]
+  },
+  "Rishiraj Taylor": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693471312"
+    ]
+  },
+  "Rohith Dara": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109621035"
+    ]
+  },
+  "Ronak": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103860033"
+    ]
+  },
+  "Rose Chen": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103004034"
+    ]
+  },
+  "rupa kaki": {
+    "relationship": "family friend aunty",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14082075354"
+    ]
+  },
+  "Rutu": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14088932422"
+    ]
+  },
+  "Rutu and Younger but For Real ": {
+    "relationship": "family friend kids group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Ryan Lam": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109354634"
+    ]
+  },
+  "Sahni, Jasdeep": {
+    "relationship": "dads old coworker, taught his kid chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14084659099"
+    ]
+  },
+  "Sangati Shah": {
+    "relationship": "cousin",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+17205238579",
+      "+17204963920"
+    ]
+  },
+  "Shaily": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16366757171"
+    ]
+  },
+  "Shanay Randeria": {
+    "relationship": "best friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103382232"
+    ]
+  },
+  "Sharanya": {
+    "relationship": "someone i talked to for a bit",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12147909955"
+    ]
+  },
+  "Shaunak": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13147554451"
+    ]
+  },
+  "Sheethal": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695440403"
+    ]
+  },
+  "Shiv Mulchandani": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14084010380"
+    ]
+  },
+  "Shivam Misra": {
+    "relationship": "best friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105797012"
+    ]
+  },
+  "Shivani Gandhi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13614429486"
+    ]
+  },
+  "SHOTS SHOTS SHOTS ": {
+    "relationship": "friend group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Shreya": {
+    "relationship": "someone i went on a few dates with",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+17178506727"
+    ]
+  },
+  "shreya Hegde": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15104493026"
+    ]
+  },
+  "Shreyansh USC": {
+    "relationship": "friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12134217178"
+    ]
+  },
+  "Siddarth Pandian": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14027699575"
+    ]
+  },
+  "Soham Shah": {
+    "relationship": "cousin",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+17202069207"
+    ]
+  },
+  "Sriharsha Guduguntla": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14088164779"
+    ]
+  },
+  "subhash": {
+    "relationship": "classmate",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18574994545"
+    ]
+  },
+  "Suyash Krishan": {
+    "relationship": "ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+17078884510"
+    ]
+  },
+  "Tejas Polkham": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105090426"
+    ]
+  },
+  "Tejas\u2019s Snapchat Story": {
+    "relationship": "closest friend group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Thasen Neighbor": {
+    "relationship": "old neighbor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+17072174344"
+    ]
+  },
+  "The Ochos": {
+    "relationship": "close friend group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "The Ochos 2": {
+    "relationship": "close friend group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Thomas Avery": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12812109243"
+    ]
+  },
+  "Trisha Thakker": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+17756244122"
+    ]
+  },
+  "Udit Bhat": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15125502576"
+    ]
+  },
+  "UTD hoops": {
+    "relationship": "college friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Utsav Malik": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12149495131"
+    ]
+  },
+  "Vamika Chatlani": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15128083442"
+    ]
+  },
+  "Vansh Jain": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15108610827"
+    ]
+  },
+  "vidi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19726261443"
+    ]
+  },
+  "Vincent Ju": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103209618"
+    ]
+  },
+  "vishakh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12172201479"
+    ]
+  },
+  "vivek": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18473376415"
+    ]
+  },
+  "Vraj Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105799479"
+    ]
+  },
+  "Yagnya Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14086662377"
+    ]
+  },
+  "Yash Tanna": {
+    "relationship": "best friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14089089638"
+    ]
+  },
+  "Zach Tang": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694034480"
+    ]
+  },
+  "2024 Fantasy Football": {
+    "relationship": "fantasy football",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "2025 Fantasy Football": {
+    "relationship": "fantasy football",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "212783992833_mymefs": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "<chat_id>": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": []
+  },
+  "Aadesh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+918490889967"
+    ]
+  },
+  "Aakarsh": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+13463051532"
+    ]
+  },
+  "Aakash": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16824147731"
+    ]
+  },
+  "Aaron Thompson": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19729784805"
+    ]
+  },
+  "Aashman (Shivam's Cousin)": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": []
+  },
+  "Aashman Cousin)": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+918969912906"
+    ]
+  },
+  "Aasish Sumathi Punithavel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14085088018"
+    ]
+  },
+  "Abhinav Kotra": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14088059109"
+    ]
+  },
+  "Abhinav Venk": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14124751085"
+    ]
+  },
+  "Abhishek Shah": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693809749"
+    ]
+  },
+  "Adam": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19253483660"
+    ]
+  },
+  "Adam Wajahat": {
+    "relationship": "classmate",
+    "category": "work",
+    "is_group": false,
+    "phones": [
+      "+14692154209"
+    ]
+  },
+  "Aditi Lavani UTD": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15128659527"
+    ]
+  },
+  "Aditya Gopalan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13039098671"
+    ]
+  },
+  "Agna": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919375510011"
+    ]
+  },
+  "Ajay Solanki": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18143846085"
+    ]
+  },
+  "akshat agarwal": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14699922612"
+    ]
+  },
+  "alex lemma": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18325665361"
+    ]
+  },
+  "Alex Lo": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693533018"
+    ]
+  },
+  "Alexis Lynn": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18054585523"
+    ]
+  },
+  "Ali Barber": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14694647259"
+    ]
+  },
+  "Ally Cavazos": {
+    "relationship": "someone i talked to went on a few dates",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14408362611"
+    ]
+  },
+  "Almeria": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19186181987"
+    ]
+  },
+  "Andrei": {
+    "relationship": "old roommate",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14696689901"
+    ]
+  },
+  "andrew physics": {
+    "relationship": "classmate",
+    "category": "work",
+    "is_group": false,
+    "phones": [
+      "+13105036482"
+    ]
+  },
+  "Angana Masi": {
+    "relationship": "family friend aunty",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919375510011"
+    ]
+  },
+  "Anica Chan": {
+    "relationship": "brothers friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19097609970"
+    ]
+  },
+  "anica chen": {
+    "relationship": "brothers friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19097609970"
+    ]
+  },
+  "Ankit Raj - Pearl At Frankford": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12147187920"
+    ]
+  },
+  "Ankoor": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15108613384"
+    ]
+  },
+  "Anuv": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14087849195"
+    ]
+  },
+  "Arav Desai": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15107664747"
+    ]
+  },
+  "Archana": {
+    "relationship": "family friend aunty",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18324833528"
+    ]
+  },
+  "Arham Sidra Malik": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15105656803"
+    ]
+  },
+  "Arpit": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18324539098"
+    ]
+  },
+  "Arsh": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14088349144"
+    ]
+  },
+  "Arushi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14696234043"
+    ]
+  },
+  "Aryan Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17373142337"
+    ]
+  },
+  "Ashok Chotai": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14089466162",
+      "+14085061969"
+    ]
+  },
+  "Ashutosh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694519190"
+    ]
+  },
+  "Athith Mama": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919484466833"
+    ]
+  },
+  "Ativ Patel": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16507596793"
+    ]
+  },
+  "Atri Choksi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14086279050"
+    ]
+  },
+  "Austin": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19169923041"
+    ]
+  },
+  "Avani": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919869303437"
+    ]
+  },
+  "Ayush": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+13174806114"
+    ]
+  },
+  "Ballbat dance ": {
+    "relationship": "family friends group practiced dance",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Balram": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15404549146"
+    ]
+  },
+  "Ben Ditlevson": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19152270864"
+    ]
+  },
+  "Bethany Kavalakatt": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103873293"
+    ]
+  },
+  "Bharani Uncle": {
+    "relationship": "old chess teacher",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14084461594",
+      "+14083686014"
+    ]
+  },
+  "bhari": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19704266968"
+    ]
+  },
+  "Bharti Tiffin": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15105986529"
+    ]
+  },
+  "Bhavik Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18325246782"
+    ]
+  },
+  "Bhavnagar cousins": {
+    "relationship": "cousins group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Big Sid Speech": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Bill Tang": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17134698088"
+    ]
+  },
+  "Blake Duncan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19722078729"
+    ]
+  },
+  "Board Gamers": {
+    "relationship": "board game group mostly cousins",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Boris": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16692219780"
+    ]
+  },
+  "bowen lu": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18325205802"
+    ]
+  },
+  "Branston Mefferd": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145369412"
+    ]
+  },
+  "Caleb Trotter": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15126739832"
+    ]
+  },
+  "Carlette": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12109484401"
+    ]
+  },
+  "CCHS On Call Emergency": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14695167134"
+    ]
+  },
+  "Chance": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19727571677"
+    ]
+  },
+  "Charlene n Stanley": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15103640297"
+    ]
+  },
+  "Charles Skild": {
+    "relationship": "ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16516005947"
+    ]
+  },
+  "Chintan Parkview Shah": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16572539712"
+    ]
+  },
+  "Chitra Masi": {
+    "relationship": "aunt",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+447312014592",
+      "+447772909260"
+    ]
+  },
+  "Chloe And Michael": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15109188291"
+    ]
+  },
+  "Chris Abdalla": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19725952926"
+    ]
+  },
+  "Chris Padgett": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694744804"
+    ]
+  },
+  "Christian Cortes": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145360459"
+    ]
+  },
+  "chrisy": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19724693995"
+    ]
+  },
+  "Clarice Chang": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16269228806"
+    ]
+  },
+  "cledbg": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Cris Ramirez": {
+    "relationship": "friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18325036515"
+    ]
+  },
+  "Cute Asian Kid": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15108385380"
+    ]
+  },
+  "D&S Wedding": {
+    "relationship": "wedding group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Dada": {
+    "relationship": "grandpa",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "919998980229"
+    ]
+  },
+  "Dallas": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12109543244"
+    ]
+  },
+  "Dallas Gang\ud83e\udd18\ud83c\udffd": {
+    "relationship": "friend group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Danial": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18324886296"
+    ]
+  },
+  "Daniel Vayman": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13147249560"
+    ]
+  },
+  "Darsh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695448288",
+      "+15128176630"
+    ]
+  },
+  "David Chess Team": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": []
+  },
+  "David Private Equity": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14082103306"
+    ]
+  },
+  "David Team": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14694562449"
+    ]
+  },
+  "Deepesh Ushasri": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15109352538"
+    ]
+  },
+  "Deesha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145188223"
+    ]
+  },
+  "Deneilson": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12149600835"
+    ]
+  },
+  "Derek Weber": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14122188423"
+    ]
+  },
+  "Dev Mehta": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919016847979"
+    ]
+  },
+  "Dezheng Zhao": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109935118"
+    ]
+  },
+  "Dheer": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19725051203"
+    ]
+  },
+  "Dhruv Gupta": {
+    "relationship": "ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14125897246"
+    ]
+  },
+  "DHYEY": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+919313103156"
+    ]
+  },
+  "Diana": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145866152"
+    ]
+  },
+  "Dipak Mama": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19086563328",
+      "+14016600387",
+      "+919824258313"
+    ]
+  },
+  "Dipak Mama Shah": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19086563328",
+      "+14016600387",
+      "+919824258313"
+    ]
+  },
+  "Dipak Patel": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+13047305719"
+    ]
+  },
+  "Disha": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14089089651"
+    ]
+  },
+  "Divyesh": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15109355072"
+    ]
+  },
+  "Dolly Mantle": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19723220599"
+    ]
+  },
+  "Dr. Avani Pandya Mahc": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919428876609"
+    ]
+  },
+  "Dr. Kim": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14085245952"
+    ]
+  },
+  "Dr. Mcbride": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14082960511"
+    ]
+  },
+  "Dr. Medina": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16507241756"
+    ]
+  },
+  "Dr. Perez Office Stanford": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16507234000"
+    ]
+  },
+  "Drea Accolade": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18442873865",
+      "84428738655231"
+    ]
+  },
+  "Drishti (austin)": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15129948903"
+    ]
+  },
+  "Eesen Sivapalan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14083931150"
+    ]
+  },
+  "Ellie UREC sup": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19407654207"
+    ]
+  },
+  "Emily": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19175964124"
+    ]
+  },
+  "Eric Cutherell": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18325671366"
+    ]
+  },
+  "Eric Kleckner": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17134372798"
+    ]
+  },
+  "eshquad\ud83e\udd20\ud83d\ude08": {
+    "relationship": "friend group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Ethan Psych": {
+    "relationship": "classmate",
+    "category": "work",
+    "is_group": false,
+    "phones": [
+      "+18188533512"
+    ]
+  },
+  "Evandro Gomez": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14074053171"
+    ]
+  },
+  "family": {
+    "relationship": "family groupchat",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Fantasy": {
+    "relationship": "fantasy chat",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Frisco UTSW": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14696049000"
+    ]
+  },
+  "FVC": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16505931661"
+    ]
+  },
+  "Gabe Lasit": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694221039"
+    ]
+  },
+  "Gatha Joshi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16096054830"
+    ]
+  },
+  "geethika vanishree": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19252047124"
+    ]
+  },
+  "george": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18187388345"
+    ]
+  },
+  "Gillian": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15614804992"
+    ]
+  },
+  "giri": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12146227993"
+    ]
+  },
+  "Girlypops\ud83d\ude18\ud83d\udc96": {
+    "relationship": "friends group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Google": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": []
+  },
+  "goonzz ": {
+    "relationship": "friends group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Gopal Mama": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14089089660"
+    ]
+  },
+  "Gurmeet Saran": {
+    "relationship": "dads old coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16509336687"
+    ]
+  },
+  "Hajra Bahadur": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14085150168"
+    ]
+  },
+  "Hanako": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16503969254"
+    ]
+  },
+  "Hardik Nashville": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17247594943"
+    ]
+  },
+  "hari": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15874361971"
+    ]
+  },
+  "Haris": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18168767231"
+    ]
+  },
+  "Harshil Panchal": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14086592718",
+      "+15103204770"
+    ]
+  },
+  "Hely Goswami": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105792477"
+    ]
+  },
+  "Hemalatha Anantiga": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14087976749"
+    ]
+  },
+  "Hemalatha Lajapathy": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14087976749"
+    ]
+  },
+  "Hersh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14696641766"
+    ]
+  },
+  "Hesham Rabbani": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109310364"
+    ]
+  },
+  "Hetal": {
+    "relationship": "aunt",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+17049414717"
+    ]
+  },
+  "Hetal Uncle": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16027170629"
+    ]
+  },
+  "Hisham": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145543494"
+    ]
+  },
+  "Hoang Nguyen": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695153656"
+    ]
+  },
+  "i love indian food": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Ian & Ryan": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18326071115"
+    ]
+  },
+  "Ifrit Maruf": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695565679"
+    ]
+  },
+  "Irene House Cleaning": {
+    "relationship": "cleaner",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14087242342"
+    ]
+  },
+  "Ish Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12149318212",
+      "+14695581643"
+    ]
+  },
+  "isha jha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103204374"
+    ]
+  },
+  "jacob l": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14437187517"
+    ]
+  },
+  "jacob spillara": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19794802142"
+    ]
+  },
+  "Jai Mistry": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19085100573"
+    ]
+  },
+  "Jai Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18179153381"
+    ]
+  },
+  "Jaldeep Ride From Bhavnagar": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+917016648063"
+    ]
+  },
+  "Jamale": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12146828887"
+    ]
+  },
+  "James Scott": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109217872"
+    ]
+  },
+  "Jaskaran Singh": {
+    "relationship": "ex coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14085090232"
+    ]
+  },
+  "Jason Hustad": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15125740314"
+    ]
+  },
+  "Jay Trivedi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18324365982"
+    ]
+  },
+  "Jaydeep Taxi Sinh": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919712691780"
+    ]
+  },
+  "Jaydev Pandhya": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919327219418"
+    ]
+  },
+  "Jeremy": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16822485668"
+    ]
+  },
+  "Jessie": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14085189540"
+    ]
+  },
+  "Jessie Chess": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14085189540"
+    ]
+  },
+  "Jin Chen": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19034134758"
+    ]
+  },
+  "Jishnu": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14252104709"
+    ]
+  },
+  "jishnu": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14698105753"
+    ]
+  },
+  "JJ": {
+    "relationship": "uncle",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+447872332103"
+    ]
+  },
+  "Joey": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18325201607"
+    ]
+  },
+  "Jorge A": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15129561345"
+    ]
+  },
+  "Josh Kim": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14692471432"
+    ]
+  },
+  "joshua pritchett": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15127919462"
+    ]
+  },
+  "Joshua Smith": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": []
+  },
+  "Joshua Tubongbanua": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145787908"
+    ]
+  },
+  "julian": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17138166260"
+    ]
+  },
+  "Jwalin Shah": {
+    "relationship": "me",
+    "category": "other",
+    "is_group": false,
+    "phones": []
+  },
+  "Kahaan Shah": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12623528628"
+    ]
+  },
+  "Kajal": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17206003791"
+    ]
+  },
+  "Karan Gandhi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15107714975"
+    ]
+  },
+  "Kaushik Pasi": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14158272165"
+    ]
+  },
+  "Keerthana Routhu": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14084800488"
+    ]
+  },
+  "Kevin": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15125747094"
+    ]
+  },
+  "Kevin (deevy)": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12096277456"
+    ]
+  },
+  "Kirav Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15129405204"
+    ]
+  },
+  "Kishan B": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18478092441"
+    ]
+  },
+  "kishan\u2019s bullies": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Kishbob \ud83e\udd73": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Komal Swadia": {
+    "relationship": "aunt",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+919925042864"
+    ]
+  },
+  "Krish": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693802676"
+    ]
+  },
+  "Krish Utd": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+919920601109"
+    ]
+  },
+  "Krishna M": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15108256325"
+    ]
+  },
+  "krishnaa kashmira patkar": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16519836089"
+    ]
+  },
+  "Kshama": {
+    "relationship": "girl i talked to",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919723613637"
+    ]
+  },
+  "Kunj": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19167682726"
+    ]
+  },
+  "kush": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14698370459"
+    ]
+  },
+  "Kush Kinariwala": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18322709600"
+    ]
+  },
+  "Kushal Joshi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17202274635"
+    ]
+  },
+  "Laila": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12142135777"
+    ]
+  },
+  "Lalabhai Rikshawala": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919898125601"
+    ]
+  },
+  "Laura Colorado": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13033308359"
+    ]
+  },
+  "levi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16262304156"
+    ]
+  },
+  "lil sid": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12816823184"
+    ]
+  },
+  "Lillian Charlene/Stanley": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15103640297"
+    ]
+  },
+  "lucas morgan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19402185217"
+    ]
+  },
+  "Manish Modha": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19729994196",
+      "+14698930567"
+    ]
+  },
+  "mario": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18887998357"
+    ]
+  },
+  "Mario Letayf": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18173722643"
+    ]
+  },
+  "Marshall Herndon": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18173439894"
+    ]
+  },
+  "Mason S": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15129978538"
+    ]
+  },
+  "Massimilano Valentina": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18586032374"
+    ]
+  },
+  "Matthew Huynh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105523811"
+    ]
+  },
+  "Mayank": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103291386"
+    ]
+  },
+  "Meet Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15128500999"
+    ]
+  },
+  "Meethre": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693883144"
+    ]
+  },
+  "Meethre Barot": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693883144"
+    ]
+  },
+  "Meethre Bharot": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693883144"
+    ]
+  },
+  "Megan Doan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12817460468"
+    ]
+  },
+  "Mehul Patel (JY)": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16319215545"
+    ]
+  },
+  "Michael": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16825524468"
+    ]
+  },
+  "Michael Lockwood": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17406496661"
+    ]
+  },
+  "Michael Trainer": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15106737726"
+    ]
+  },
+  "Mike": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14084898893"
+    ]
+  },
+  "Milan Mendapara": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+13137825018"
+    ]
+  },
+  "Minnie spies": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Mohamed Tareqs": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14695701844"
+    ]
+  },
+  "Mr. Paldineri": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": []
+  },
+  "Mukul Recruiter": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18185322809"
+    ]
+  },
+  "Mulesh Driver": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919624965002"
+    ]
+  },
+  "Mustafa": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12544212748"
+    ]
+  },
+  "Myrthe Bellers": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105654814"
+    ]
+  },
+  "nahom": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14696187965"
+    ]
+  },
+  "Naisha": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14083935832"
+    ]
+  },
+  "Nalin Shah": {
+    "relationship": "uncle",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+17209374233"
+    ]
+  },
+  "Naman Garg UTD Richardson Street Play": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19728766477"
+    ]
+  },
+  "nand balbat": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+17379001223"
+    ]
+  },
+  "Navadha Modha": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14696846803"
+    ]
+  },
+  "Naveen Thota": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14089133375"
+    ]
+  },
+  "Nayana Bharat": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17708811180"
+    ]
+  },
+  "Naziat Ayushe": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14694385621"
+    ]
+  },
+  "Neesheet Parikh": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14083750389"
+    ]
+  },
+  "Neeti Parikh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15868043961"
+    ]
+  },
+  "Neha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15129989086"
+    ]
+  },
+  "Nick": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17136144106"
+    ]
+  },
+  "Nihal sowmya": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15103998323"
+    ]
+  },
+  "Nikki": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16305494778"
+    ]
+  },
+  "Nikunj": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693608502"
+    ]
+  },
+  "Nilay Mehta": {
+    "relationship": "uncle",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+17042069754"
+    ]
+  },
+  "Nitish UTD": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109364285"
+    ]
+  },
+  "Niyati": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695792347"
+    ]
+  },
+  "Oksana Chess": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15109962498"
+    ]
+  },
+  "Oksana Karra": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15109962498"
+    ]
+  },
+  "om": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694225476"
+    ]
+  },
+  "Omkar Jagdale": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145007324"
+    ]
+  },
+  "PA Boyd": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18176912623"
+    ]
+  },
+  "PA Jack Boyd": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": []
+  },
+  "Paldineri": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15104955765"
+    ]
+  },
+  "Parag Swadia": {
+    "relationship": "uncle",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+919099989657"
+    ]
+  },
+  "Parashar UTD (Richardson)": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14699960969"
+    ]
+  },
+  "Paris Mitton": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13038825220"
+    ]
+  },
+  "Paritosh Gandhi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+919737448889"
+    ]
+  },
+  "Parth": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14088323242"
+    ]
+  },
+  "Parthey Thakkae": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18477549127"
+    ]
+  },
+  "Paul Riddle": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14259749036"
+    ]
+  },
+  "Pavan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14697776570"
+    ]
+  },
+  "Peher": {
+    "relationship": "cousin",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+447516709682"
+    ]
+  },
+  "Phillip": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693454508"
+    ]
+  },
+  "Poojun": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19169348335"
+    ]
+  },
+  "Pranav Varanasi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14697404051"
+    ]
+  },
+  "Pratiksha 2": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+919265288165"
+    ]
+  },
+  "Prayag Purani": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14082104980"
+    ]
+  },
+  "Prisha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17204530239"
+    ]
+  },
+  "Priti Aunty Bhavnagar Upstairs": {
+    "relationship": "family friend aunty",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+918160090958"
+    ]
+  },
+  "Priyal": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14087282600"
+    ]
+  },
+  "Pruthvi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+918140012989"
+    ]
+  },
+  "Pruthvi Pathak": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "09408416085"
+    ]
+  },
+  "Puni Masi": {
+    "relationship": "aunt",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+919825800210"
+    ]
+  },
+  "Purti (Chess Class)": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": []
+  },
+  "Purti Class)": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15404245652"
+    ]
+  },
+  "Pushun Sheth": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14088071089"
+    ]
+  },
+  "Rabi": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12145158551"
+    ]
+  },
+  "Rachit Mom": {
+    "relationship": "rachits mom",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15109217938"
+    ]
+  },
+  "raghav sowjanya": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12097300530"
+    ]
+  },
+  "Rahil Shah": {
+    "relationship": "cousin",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+17328090054"
+    ]
+  },
+  "rahul": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+13309903122"
+    ]
+  },
+  "Rahul Champaneria": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15104748006"
+    ]
+  },
+  "Raj": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+61410272277"
+    ]
+  },
+  "Rajni Shah Mami": {
+    "relationship": "aunt",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+16304978142",
+      "+16307813333"
+    ]
+  },
+  "Rama Pathak": {
+    "relationship": "grandma",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+919998002172"
+    ]
+  },
+  "Raph": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14085950015"
+    ]
+  },
+  "Ria": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+919426601838"
+    ]
+  },
+  "Richa Anshika": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15104588188"
+    ]
+  },
+  "Riddhesh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12149911495"
+    ]
+  },
+  "rijul": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105098796"
+    ]
+  },
+  "Rinkesh Patel": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14085108836",
+      "+17033045466"
+    ]
+  },
+  "Rishiraj": {
+    "relationship": "close friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693471312"
+    ]
+  },
+  "Ritesh Patani": {
+    "relationship": "uncle",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+18137657489",
+      "+14086158242"
+    ]
+  },
+  "Rithvik Sai": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17206306543"
+    ]
+  },
+  "Riti Shah": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145511029"
+    ]
+  },
+  "Roberto": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19726746149"
+    ]
+  },
+  "Rohan M": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12489092806"
+    ]
+  },
+  "Rooftop Pool 8/13 ": {
+    "relationship": "family friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Runi Tanna": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14089089639"
+    ]
+  },
+  "Rupal Shah": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19517043323"
+    ]
+  },
+  "Rutu and younger Balbat": {
+    "relationship": "family friend group",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Ryan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12144039256"
+    ]
+  },
+  "Ryan Neumman": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18176883738"
+    ]
+  },
+  "Ryan Tomek": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19728355765"
+    ]
+  },
+  "Sagar": {
+    "relationship": "uncle",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+15127394417"
+    ]
+  },
+  "Sahil Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15626653280"
+    ]
+  },
+  "Sahil U": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103040622"
+    ]
+  },
+  "sahil(ishani)": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16309233893"
+    ]
+  },
+  "sai satyavani": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16692640213"
+    ]
+  },
+  "Samiksha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13149607467"
+    ]
+  },
+  "Samuel Yao": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15124846509"
+    ]
+  },
+  "Sanjana": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14699193048"
+    ]
+  },
+  "Sanjeev": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14697137399"
+    ]
+  },
+  "Sanvi /Anay Sharma": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15515802248"
+    ]
+  },
+  "Sanyukta Singh Sanvi/Anay": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15515802248"
+    ]
+  },
+  "Sarah": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14025782102"
+    ]
+  },
+  "sarah": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14025782102"
+    ]
+  },
+  "Sarah Reidy": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19725913167"
+    ]
+  },
+  "Sarju": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16305181966"
+    ]
+  },
+  "Sascha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14698311399"
+    ]
+  },
+  "Scott Zin": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15102982399"
+    ]
+  },
+  "Shaival": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15106765441"
+    ]
+  },
+  "Shanay Mom": {
+    "relationship": "shanays mom",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15103966295"
+    ]
+  },
+  "Shanmukhanand Naikwade": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14692744839"
+    ]
+  },
+  "Shannon": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16507769190"
+    ]
+  },
+  "Sharmistha": {
+    "relationship": "abhinavs mom",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15104497319"
+    ]
+  },
+  "Sharon Weiyang": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694016000"
+    ]
+  },
+  "Shashvat Patel": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15108942074",
+      "+15103246922"
+    ]
+  },
+  "Shilpan Bhai": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14087285337"
+    ]
+  },
+  "Shilpanbhai": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14087285337"
+    ]
+  },
+  "shiv + g\u2019s": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Shivam": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12144930328"
+    ]
+  },
+  "shivangi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14088885677"
+    ]
+  },
+  "Shoba": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19166005288",
+      "+15106610693"
+    ]
+  },
+  "Shrey Shah": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19132185360"
+    ]
+  },
+  "Shreyansh Kakadiya USC": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": []
+  },
+  "Shriyan": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14088165773"
+    ]
+  },
+  "shyam": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13476149163"
+    ]
+  },
+  "Shyam Yk": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109459288"
+    ]
+  },
+  "Shyampriya": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13473391957"
+    ]
+  },
+  "simeon": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12145319516"
+    ]
+  },
+  "Smita Chotai": {
+    "relationship": "family friend aunt",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14085044397"
+    ]
+  },
+  "Sneha Gajarla": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12146683704"
+    ]
+  },
+  "Soham Majmudar UTD": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17759906828"
+    ]
+  },
+  "Sowjanya Raghav": {
+    "relationship": "iddk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12097300530"
+    ]
+  },
+  "Sowmya Nihal": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15103998323"
+    ]
+  },
+  "Sreeni Paidi": {
+    "relationship": "dads old coworker",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+19728783355"
+    ]
+  },
+  "Sreyes Venkatesh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103201451"
+    ]
+  },
+  "Sriharsha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14088164779"
+    ]
+  },
+  "Stanford Nueroscience": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+16507236469"
+    ]
+  },
+  "Suraj": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16305495442"
+    ]
+  },
+  "Swapnil Ramani": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+19724088970"
+    ]
+  },
+  "Taco Truck": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15107540959"
+    ]
+  },
+  "Tanvi": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103966428",
+      "+14806166422"
+    ]
+  },
+  "tapaswin uma maheshwar roa": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14089311933"
+    ]
+  },
+  "Tejas": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694038196"
+    ]
+  },
+  "Thach Huynh": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695639841"
+    ]
+  },
+  "thach nguyen": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695639975"
+    ]
+  },
+  "Thiang Yian Wong-Valentina and Massimiliano Figl": {
+    "relationship": "chess",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+18586032374"
+    ]
+  },
+  "Toshaan": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15107665837"
+    ]
+  },
+  "Triveni Gore": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103880416"
+    ]
+  },
+  "Troy": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15125500915"
+    ]
+  },
+  "Tu Vu": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14696888063"
+    ]
+  },
+  "Tushar Thakker": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+17755272878"
+    ]
+  },
+  "Tyler Hustad": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15125740315"
+    ]
+  },
+  "Uma Maheshwar Roa Tapaswin": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14089311933"
+    ]
+  },
+  "Umesh Patel": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14083750090"
+    ]
+  },
+  "Urvashi": {
+    "relationship": "aunt",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+12396990365"
+    ]
+  },
+  "Urvashi Shah": {
+    "relationship": "aunt",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+13034244481"
+    ]
+  },
+  "Utd ppl": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Utsav": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12149495131"
+    ]
+  },
+  "UTSW": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12144286171"
+    ]
+  },
+  "Utsw Concussion Clinic": {
+    "relationship": "doctor",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+12146451777"
+    ]
+  },
+  "Van Truong": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14693284747"
+    ]
+  },
+  "Varsha": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18322264125"
+    ]
+  },
+  "Vatsal": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14152446878"
+    ]
+  },
+  "Veer Mistry": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12144910544"
+    ]
+  },
+  "Verizon": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": []
+  },
+  "Vijay": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17082759472"
+    ]
+  },
+  "Vijendher": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+13528705895"
+    ]
+  },
+  "Vikas": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16144773595"
+    ]
+  },
+  "Vikram Driver": {
+    "relationship": "",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+916353306732"
+    ]
+  },
+  "Vinay": {
+    "relationship": "family friend uncle",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+14082502862",
+      "+912692250804",
+      "+15103975352"
+    ]
+  },
+  "Vinit Patel": {
+    "relationship": "family friend",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+15103580991"
+    ]
+  },
+  "Vishal": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+12243885730"
+    ]
+  },
+  "Vishwas": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15103719266"
+    ]
+  },
+  "Vivek": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15109355070"
+    ]
+  },
+  "Vrinda": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+18482483274"
+    ]
+  },
+  "Waheed Hanifzada": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+15105168051"
+    ]
+  },
+  "Wasif Siddiqui": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14694079894"
+    ]
+  },
+  "William": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+17346086311"
+    ]
+  },
+  "Yash": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+16282589001"
+    ]
+  },
+  "Yash\u2019s #1 Ops": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "Yasir Ahmed": {
+    "relationship": "friend",
+    "category": "friend",
+    "is_group": false,
+    "phones": [
+      "+14695313492"
+    ]
+  },
+  "Yogesh Pathak": {
+    "relationship": "grandpa",
+    "category": "family",
+    "is_group": false,
+    "phones": [
+      "+919998980229"
+    ]
+  },
+  "yogeshmakwana3996": {
+    "relationship": "idk",
+    "category": "other",
+    "is_group": false,
+    "phones": [
+      "+919376566667"
+    ]
+  },
+  "\u2728Garbabes\u2728": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  },
+  "\ud83c\udf82\ud83d\udc9a": {
+    "relationship": "friends",
+    "category": "other",
+    "is_group": true,
+    "phones": []
+  }
+}

@@ -150,7 +150,7 @@ class TestCheckModelLoaded:
     def test_returns_true_when_model_loaded(self, mock_get_generator):
         """Returns True when model is loaded."""
         mock_generator = MagicMock()
-        mock_generator._model = "loaded_model"
+        mock_generator.is_loaded.return_value = True
         mock_get_generator.return_value = mock_generator
 
         result = _check_model_loaded()
@@ -161,7 +161,7 @@ class TestCheckModelLoaded:
     def test_returns_false_when_model_not_loaded(self, mock_get_generator):
         """Returns False when model is not loaded."""
         mock_generator = MagicMock()
-        mock_generator._model = None
+        mock_generator.is_loaded.return_value = False
         mock_get_generator.return_value = mock_generator
 
         result = _check_model_loaded()

@@ -1,0 +1,446 @@
+{
+  "qwen3-0.6b": {
+    "model_id": "qwen3-0.6b",
+    "n_samples": 0,
+    "time_seconds": 118.21884107589722,
+    "smart_wins": 0,
+    "baseline_wins": 0,
+    "ties": 0,
+    "smart_win_rate": 0,
+    "avg_baseline_sim": NaN,
+    "avg_smart_sim": NaN,
+    "avg_baseline_style": NaN,
+    "avg_smart_style": NaN,
+    "samples": []
+  },
+  "lfm2.5-1.2b": {
+    "model_id": "lfm2.5-1.2b",
+    "n_samples": 200,
+    "time_seconds": 304.33207988739014,
+    "smart_wins": 131,
+    "baseline_wins": 46,
+    "ties": 23,
+    "smart_win_rate": 0.655,
+    "avg_baseline_sim": 0.5080094553530217,
+    "avg_smart_sim": 0.5240853579342365,
+    "avg_baseline_style": 0.632,
+    "avg_smart_style": 0.7414999999999999,
+    "samples": [
+      {
+        "contact": "Faith",
+        "gold": "Haha",
+        "baseline_resp": "So basically, he\u2019s been publishing tons of books, but they don\u2019t have a whistleblower policy\u2014either online or in person. I guess that\u2019s a big deal, right? And honestly, if we went through everything, at least",
+        "smart_resp": "Sure! Here's a casual version under 31 characters:",
+        "baseline_sim": 0.4205043613910675,
+        "smart_sim": 0.5764592885971069,
+        "baseline_style": 0.5,
+        "smart_style": 0.5
+      },
+      {
+        "contact": "Mihir Shah",
+        "gold": "Would u ever go to heirloom",
+        "baseline_resp": "So, we\u2019re talking about a bungalow with a $100 gift card. They said if we book, they\u2019ll probably give it to us. But you\u2019re thinking about reserving a spot before the end of the year. You\u2019re not",
+        "smart_resp": "Check the plan, it\u2019s all set",
+        "baseline_sim": 0.5697232484817505,
+        "smart_sim": 0.44950154423713684,
+        "baseline_style": 0.5,
+        "smart_style": 0.8
+      },
+      {
+        "contact": "Mihir Shah, Dad",
+        "gold": "I tried couldn\u2019t find",
+        "baseline_resp": "Hey, Mihir! Just wanted to check in. You okay?",
+        "smart_resp": "They said he didn\u2019t rush but waited when you returned",
+        "baseline_sim": 0.504427433013916,
+        "smart_sim": 0.5549494028091431,
+        "baseline_style": 0.55,
+        "smart_style": 0.8499999999999999
+      },
+      {
+        "contact": "Rachit Pareek",
+        "gold": "Yea my start date was August 2nd but I went in July 29th",
+        "baseline_resp": "They said about 2 weeks of pay and some agreement.",
+        "smart_resp": "They act like it's normal, but it's not",
+        "baseline_sim": 0.5263680219650269,
+        "smart_sim": 0.4049767851829529,
+        "baseline_style": 0.5,
+        "smart_style": 0.8
+      },
+      {
+        "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+        "gold": "Uhh azul sheriff of Nottingham cascadia",
+        "baseline_resp": "They said the game\u2019s over, we\u2019re heading home.",
+        "smart_resp": "Hey, what games did you borrow again?",
+        "baseline_sim": 0.42026564478874207,
+        "smart_sim": 0.42796996235847473,
+        "baseline_style": 0.7,
+        "smart_style": 0.7
+      },
+      {
+        "contact": "Ishani Desai",
+        "gold": "Ok I\u2019ll get it tmrw morning then otw to brunch",
+        "baseline_resp": "Sounds like you're trying to be flexible, but it's clear you're a bit stressed. Let me know if you need help with anything else!",
+        "smart_resp": "Yeah, it\u2019s a mess, but I\u2019ll try tomorrow morning then",
+        "baseline_sim": 0.5464738607406616,
+        "smart_sim": 0.6620620489120483,
+        "baseline_style": 0.35,
+        "smart_style": 0.8
+      },
+      {
+        "contact": "Rutu",
+        "gold": "lol ok",
+        "baseline_resp": "Hey, so what\u2019s up? Just hanging out. \ud83d\ude0e",
+        "smart_resp": "Hey, you okay? \ud83d\ude0e lol",
+        "baseline_sim": 0.6732749342918396,
+        "smart_sim": 0.7859106659889221,
+        "baseline_style": 0.5,
+        "smart_style": 0.7
+      },
+      {
+        "contact": "Danalila\u2728",
+        "gold": "I\u2019ll take anything lol",
+        "baseline_resp": "Got it! Here\u2019s a quick rundown:",
+        "smart_resp": "Sure! Here\u2019s a quick version:",
+        "baseline_sim": 0.5321758389472961,
+        "smart_sim": 0.6233927011489868,
+        "baseline_style": 0.8,
+        "smart_style": 0.8
+      },
+      {
+        "contact": "Mateo",
+        "gold": "Mateo do you feel seen",
+        "baseline_resp": "Sure! Here's a casual version of your conversation:",
+        "smart_resp": "They pulled me in, you know.",
+        "baseline_sim": 0.468927264213562,
+        "smart_sim": 0.5285489559173584,
+        "baseline_style": 0.8499999999999999,
+        "smart_style": 0.7
+      },
+      {
+        "contact": "The Ochos",
+        "gold": "But I signed the paperwork w the lawyer and also gonna get one for workers comp, and in process of one for car accident",
+        "baseline_resp": "Yeah, it\u2019s wild how things unfolded. They said they wanted independence, but it feels like they just kept pushing through. I guess that\u2019s the cycle\u2014trying to get there, but it\u2019s not always smooth. Still, having this",
+        "smart_resp": "That's intense. It sounds like you're really frustrated but also seeking connection.",
+        "baseline_sim": 0.46323463320732117,
+        "smart_sim": 0.44085419178009033,
+        "baseline_style": 1.0,
+        "smart_style": 0.7
+      },
+      {
+        "contact": "Soham Shah",
+        "gold": "Yea fr",
+        "baseline_resp": "Yeah, it really does. Reading the problem well is key, but once you get it, it\u2019s like magic. And seeing other solutions? That\u2019s a bonus. Python makes it all easier, honestly.",
+        "smart_resp": "Yeah, it\u2019s pretty cool once you get the hang of it",
+        "baseline_sim": 0.5163378715515137,
+        "smart_sim": 0.5245688557624817,
+        "baseline_style": 0.2,
+        "smart_style": 0.5
+      },
+      {
+        "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+        "gold": "Yes we will be there by then easily",
+        "baseline_resp": "So, basically: take the 4:20 train and leave around 4pm. Arrive by 3pm to grab the subway. Also, plastic bottles are fine if they\u2019re factory sealed. Easy enough!",
+        "smart_resp": "Yeah, they\u2019re okay if sealed, that\u2019s the deal",
+        "baseline_sim": 0.5653374195098877,
+        "smart_sim": 0.5451327562332153,
+        "baseline_style": 0.4,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Mateo",
+        "gold": "Dont crash out like me!",
+        "baseline_resp": "Sounds like you're winding down. Hope you're all set for the day! Goodnight, Jwalin!",
+        "smart_resp": "Hey Jwalin, just trying to survive today \ud83d\ude05",
+        "baseline_sim": 0.6302486658096313,
+        "smart_sim": 0.6444475054740906,
+        "baseline_style": 0.7,
+        "smart_style": 0.7
+      },
+      {
+        "contact": "Ashutosh Kulkarni",
+        "gold": "How was your flight back home",
+        "baseline_resp": "So, you\u2019re free tonight but your cousin\u2019s family is coming in and leaving for their honeymoon on Wednesday. You\u2019re not sure if you can hang out then.",
+        "smart_resp": "Not much, just vibin'",
+        "baseline_sim": 0.5215549468994141,
+        "smart_sim": 0.4525589942932129,
+        "baseline_style": 0.4,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Soham Shah",
+        "gold": "951 bestor street San Jose",
+        "baseline_resp": "So you got into the final round for a sales engineer role in VR networks, but they said someone with experience is needed. They mentioned you were working on a GCP project and dealing with phone bills\u2014made sense. But honestly, it\u2019s tough",
+        "smart_resp": "Yeah, it\u2019s rough. Most people here are stuck in the same loop",
+        "baseline_sim": 0.39909687638282776,
+        "smart_sim": 0.36277443170547485,
+        "baseline_style": 0.7,
+        "smart_style": 0.8499999999999999
+      },
+      {
+        "contact": "Yash Tanna",
+        "gold": "Tatum bethune",
+        "baseline_resp": "They said the pictures are wild!",
+        "smart_resp": "Huh what's up?",
+        "baseline_sim": 0.3758862018585205,
+        "smart_sim": 0.39646920561790466,
+        "baseline_style": 0.55,
+        "smart_style": 0.7
+      },
+      {
+        "contact": "Soham Shah",
+        "gold": "Yea I mean the job description did ask for 3-5 years lol",
+        "baseline_resp": "Sure! Here\u2019s a concise version:",
+        "smart_resp": "Yeah, it\u2019s rough but worth it",
+        "baseline_sim": 0.544697642326355,
+        "smart_sim": 0.4952670931816101,
+        "baseline_style": 0.6,
+        "smart_style": 0.6
+      },
+      {
+        "contact": "Danalila\u2728, Siddarth Pandian",
+        "gold": "Why u texting and driving se\u00f1or",
+        "baseline_resp": "So, you\u2019re here to move, huh?",
+        "smart_resp": "Yeah it\u2019s close, just a bit there",
+        "baseline_sim": 0.4720625877380371,
+        "smart_sim": 0.39016759395599365,
+        "baseline_style": 0.5,
+        "smart_style": 0.8
+      },
+      {
+        "contact": "Mihir Shah, Dad",
+        "gold": "dont with all cosmetics",
+        "baseline_resp": "Sounds like you're planning the trip! Let's keep an eye on the timing. If you want to go to Milpitas, maybe check out Bart first. WTV works better there. If you're heading to Warm Springs, it's",
+        "smart_resp": "Left",
+        "baseline_sim": 0.4964538812637329,
+        "smart_sim": 0.5550127625465393,
+        "baseline_style": 0.7,
+        "smart_style": 0.7
+      },
+      {
+        "contact": "Mihir Shah, Dad",
+        "gold": "Tell when u leave cpk",
+        "baseline_resp": "So, your nose is still clogged, but you're trying to relax. Hopefully, you'll be back soon. Just let me know if you need anything.",
+        "smart_resp": "",
+        "baseline_sim": 0.5323070287704468,
+        "smart_sim": 0,
+        "baseline_style": 0.2,
+        "smart_style": 0.0
+      }
+    ]
+  },
+  "lfm2-2.6b-exp": {
+    "model_id": "lfm2-2.6b-exp",
+    "n_samples": 200,
+    "time_seconds": 570.3625659942627,
+    "smart_wins": 145,
+    "baseline_wins": 35,
+    "ties": 20,
+    "smart_win_rate": 0.725,
+    "avg_baseline_sim": 0.5282105460762978,
+    "avg_smart_sim": 0.6460556459426879,
+    "avg_baseline_style": 0.66475,
+    "avg_smart_style": 0.87625,
+    "samples": [
+      {
+        "contact": "Faith",
+        "gold": "Haha",
+        "baseline_resp": "me: Yeah, and the whole \"we didn't know\" thing? Total BS.",
+        "smart_resp": "lol yeah",
+        "baseline_sim": 0.5174803733825684,
+        "smart_sim": 0.8163308501243591,
+        "baseline_style": 0.2,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Mihir Shah",
+        "gold": "Would u ever go to heirloom",
+        "baseline_resp": "me: Let\u2019s check the itinerary first\u2014maybe there\u2019s a last-minute deal or we can adjust plans.",
+        "smart_resp": "u sure about that",
+        "baseline_sim": 0.5262657403945923,
+        "smart_sim": 0.4878709316253662,
+        "baseline_style": 0.2,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Mihir Shah, Dad",
+        "gold": "I tried couldn\u2019t find",
+        "baseline_resp": "Hey, just chillin' now. Got the Costco towel. You good? Hope you're back soon! \ud83d\ude0a",
+        "smart_resp": "i'm here got it",
+        "baseline_sim": 0.5098894238471985,
+        "smart_sim": 0.500339686870575,
+        "baseline_style": 0.7,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Rachit Pareek",
+        "gold": "Yea my start date was August 2nd but I went in July 29th",
+        "baseline_resp": "me: Alright, so I'm holding out for that 2 weeks plus the break pay. And maybe some extra if they messed up on my end too. Let's dig deeper\u2014OSHA, see what else is brewing.",
+        "smart_resp": "Yea my start date was Aug 2nd but I came July 29th",
+        "baseline_sim": 0.5407525897026062,
+        "smart_sim": 0.9570079445838928,
+        "baseline_style": 0.2,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+        "gold": "Uhh azul sheriff of Nottingham cascadia",
+        "baseline_resp": "Oh, the game with the retro vibe\u2014borrowed from Jax. And the snacks? Borrowed from Lila. Caught you red-handed! \ud83d\ude09",
+        "smart_resp": "Uhh blue sheriff of nortland",
+        "baseline_sim": 0.49819356203079224,
+        "smart_sim": 0.6727668046951294,
+        "baseline_style": 0.8499999999999999,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Ishani Desai",
+        "gold": "Ok I\u2019ll get it tmrw morning then otw to brunch",
+        "baseline_resp": "me: Cool, just text me when you're free!",
+        "smart_resp": "ok im on it then let's do it",
+        "baseline_sim": 0.5906569957733154,
+        "smart_sim": 0.6820545196533203,
+        "baseline_style": 0.5,
+        "smart_style": 0.8
+      },
+      {
+        "contact": "Rutu",
+        "gold": "lol ok",
+        "baseline_resp": "me: What's that? Spill it! \ud83d\ude0f",
+        "smart_resp": "lol ok",
+        "baseline_sim": 0.5909438133239746,
+        "smart_sim": 1.0,
+        "baseline_style": 0.5,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Danalila\u2728",
+        "gold": "I\u2019ll take anything lol",
+        "baseline_resp": "me: Alright, 10 mins. Phone's finally cooperating. Got it.",
+        "smart_resp": "lol just messed up my brain",
+        "baseline_sim": 0.5196340680122375,
+        "smart_sim": 0.6168733239173889,
+        "baseline_style": 0.35,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Mateo",
+        "gold": "Mateo do you feel seen",
+        "baseline_resp": "me: Haha, sounds chaotic! But at least you got in. Thanks for the update\u2014stay sane! \ud83d\ude05",
+        "smart_resp": "got it chill let's keep it light",
+        "baseline_sim": 0.5131472945213318,
+        "smart_sim": 0.4913424253463745,
+        "baseline_style": 0.5,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "The Ochos",
+        "gold": "But I signed the paperwork w the lawyer and also gonna get one for workers comp, and in process of one for car accident",
+        "baseline_resp": "me: Yeah, it's wild how things spiral sometimes. But we're here to help each other out. \ud83d\udcaa",
+        "smart_resp": "it's wild how things change but here we are",
+        "baseline_sim": 0.48576608300209045,
+        "smart_sim": 0.41390088200569153,
+        "baseline_style": 1.0,
+        "smart_style": 0.8499999999999999
+      },
+      {
+        "contact": "Soham Shah",
+        "gold": "Yea fr",
+        "baseline_resp": "me: Oh, I get it now\u2014less thinking, more code reuse. \ud83d\ude0e",
+        "smart_resp": "finally get it now",
+        "baseline_sim": 0.5330621004104614,
+        "smart_sim": 0.5555926561355591,
+        "baseline_style": 0.5,
+        "smart_style": 0.6499999999999999
+      },
+      {
+        "contact": "Mihir Shah, Soham Shah, Sangati Shah +1",
+        "gold": "Yes we will be there by then easily",
+        "baseline_resp": "Got it, 4:20 train, leave home at 4pm. Planning to catch the subway too. And yeah, plastic bottles okay if sealed\u2014smart move!",
+        "smart_resp": "Yeah got it we can do that",
+        "baseline_sim": 0.5664255619049072,
+        "smart_sim": 0.685123860836029,
+        "baseline_style": 0.4,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Mateo",
+        "gold": "Dont crash out like me!",
+        "baseline_resp": "Got it. Thanks for the heads-up. Let's keep it chill\u2014good luck with Remo and Cooper. Break a leg! \u2615\ufe0f\ud83d\ude09",
+        "smart_resp": "lol good night same",
+        "baseline_sim": 0.6470168232917786,
+        "smart_sim": 0.5740897059440613,
+        "baseline_style": 0.4,
+        "smart_style": 0.5
+      },
+      {
+        "contact": "Ashutosh Kulkarni",
+        "gold": "How was your flight back home",
+        "baseline_resp": "me: So, just gotta catch up later? Or maybe next week?",
+        "smart_resp": "So what's up?",
+        "baseline_sim": 0.5582520365715027,
+        "smart_sim": 0.6030490398406982,
+        "baseline_style": 0.7,
+        "smart_style": 0.55
+      },
+      {
+        "contact": "Soham Shah",
+        "gold": "951 bestor street San Jose",
+        "baseline_resp": "me: Yeah, feels like the market's super competitive. But I'm still hopeful! Maybe this is my break.",
+        "smart_resp": "",
+        "baseline_sim": 0.41934823989868164,
+        "smart_sim": 0,
+        "baseline_style": 0.4,
+        "smart_style": 0.0
+      },
+      {
+        "contact": "Yash Tanna",
+        "gold": "Tatum bethune",
+        "baseline_resp": "Me: Nah, just messed up. CMC\u2019s wild. Purdy\u2019s here. \ud83d\ude24",
+        "smart_resp": "me: gotcha",
+        "baseline_sim": 0.45558223128318787,
+        "smart_sim": 0.43593764305114746,
+        "baseline_style": 0.7,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Soham Shah",
+        "gold": "Yea I mean the job description did ask for 3-5 years lol",
+        "baseline_resp": "me: So, how\u2019s the prep for the interview? Any tips?",
+        "smart_resp": "Yea got the role now just need to prep more",
+        "baseline_sim": 0.4913979768753052,
+        "smart_sim": 0.5755467414855957,
+        "baseline_style": 0.3,
+        "smart_style": 0.8
+      },
+      {
+        "contact": "Danalila\u2728, Siddarth Pandian",
+        "gold": "Why u texting and driving se\u00f1or",
+        "baseline_resp": "me: Cool! So when are we catching up? \ud83d\ude0e",
+        "smart_resp": "Sure gonna catch up later",
+        "baseline_sim": 0.5381290316581726,
+        "smart_sim": 0.476193368434906,
+        "baseline_style": 0.8,
+        "smart_style": 0.8
+      },
+      {
+        "contact": "Mihir Shah, Dad",
+        "gold": "dont with all cosmetics",
+        "baseline_resp": "Got it, Milpitas station sounds good. Just leave early and keep me posted. \ud83d\ude0a",
+        "smart_resp": "walking down the street",
+        "baseline_sim": 0.5303248167037964,
+        "smart_sim": 0.44438859820365906,
+        "baseline_style": 0.7,
+        "smart_style": 1.0
+      },
+      {
+        "contact": "Mihir Shah, Dad",
+        "gold": "Tell when u leave cpk",
+        "baseline_resp": "",
+        "smart_resp": "I'm here",
+        "baseline_sim": 0,
+        "smart_sim": 0.5345634818077087,
+        "baseline_style": 0.0,
+        "smart_style": 0.6499999999999999
+      }
+    ]
+  }
+}

@@ -156,10 +156,11 @@ class TestAnalyzeSentimentTrends:
 
     def test_monthly_granularity(self):
         """Monthly granularity groups by month."""
-        now = datetime.now()
+        # Use fixed date mid-month to avoid crossing month boundaries
+        base_date = datetime(2024, 6, 15, 12, 0, 0)
         messages = [
-            create_message("Message 1", date=now),
-            create_message("Message 2", date=now + timedelta(days=5)),
+            create_message("Message 1", date=base_date),
+            create_message("Message 2", date=base_date + timedelta(days=5)),
         ]
         result = analyze_sentiment_trends(messages, granularity="month")
         assert len(result) == 1

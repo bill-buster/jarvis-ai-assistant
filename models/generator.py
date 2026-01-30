@@ -42,6 +42,7 @@ class MLXGenerator:
         template_matcher: TemplateMatcher | None = None,
         prompt_builder: PromptBuilder | None = None,
         config: ModelConfig | None = None,
+        skip_templates: bool = False,
     ) -> None:
         """Initialize the generator.
 
@@ -50,10 +51,12 @@ class MLXGenerator:
             template_matcher: Template matcher instance. Creates default if not provided.
             prompt_builder: Prompt builder instance. Creates default if not provided.
             config: Model configuration for the loader.
+            skip_templates: If True, skip template matching entirely (saves memory).
         """
         self.config = config or ModelConfig()
         self._loader = loader or MLXModelLoader(self.config)
-        self._template_matcher = template_matcher or TemplateMatcher()
+        self._skip_templates = skip_templates
+        self._template_matcher = None if skip_templates else (template_matcher or TemplateMatcher())
         self._prompt_builder = prompt_builder or PromptBuilder()
 
     def generate(self, request: GenerationRequest) -> GenerationResponse:
@@ -84,6 +87,9 @@ class MLXGenerator:
         Returns:
             GenerationResponse if template matched, None otherwise
         """
+        if self._template_matcher is None:
+            return None
+
         match = self._template_matcher.match(request.prompt)
         if match is None:
             return None

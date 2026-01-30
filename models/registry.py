@@ -81,9 +81,9 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         path="mlx-community/Qwen2.5-3B-Instruct-4bit",
         display_name="Qwen 2.5 3B (Quality)",
         size_gb=2.5,
-        min_ram_gb=16,
+        min_ram_gb=8,
         quality_tier="excellent",
-        description="Best quality responses. Requires 16GB+ RAM.",
+        description="Best quality responses for 4-bit quantized model.",
         recommended_for=["summarization", "drafting", "complex_replies"],
     ),
     "phi3-mini": ModelSpec(
@@ -105,6 +105,16 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         quality_tier="excellent",
         description="Best instruction following, natural tone, concise responses. Recommended.",
         recommended_for=["quick_replies", "summarization", "drafting", "natural_conversation"],
+    ),
+    "bitnet-2b": ModelSpec(
+        id="bitnet-2b",
+        path="microsoft/bitnet-b1.58-2B-4T",
+        display_name="BitNet b1.58 2B (Experimental)",
+        size_gb=0.4,
+        min_ram_gb=8,
+        quality_tier="good",
+        description="1.58-bit quantized model. 10x memory efficient, 2x faster on CPU. Experimental.",
+        recommended_for=["quick_replies", "cpu_inference"],
     ),
 }
 

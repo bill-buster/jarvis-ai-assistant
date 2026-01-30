@@ -69,8 +69,8 @@ def _check_model_loaded() -> bool:
         from models import get_generator
 
         generator = get_generator()
-        # Check if internal model is loaded (accessing private attribute for status check)
-        return generator._model is not None  # type: ignore[attr-defined]
+        # Use the public is_loaded() method
+        return generator.is_loaded()
     except Exception:
         return False
 

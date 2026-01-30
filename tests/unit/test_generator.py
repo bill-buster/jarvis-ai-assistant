@@ -152,7 +152,7 @@ class TestModelConfig:
         # Default is now qwen-1.5b from the registry
         assert config.model_path == "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
         assert config.estimated_memory_mb == 1.5 * 1024  # 1.5GB in MB
-        assert config.memory_buffer_multiplier == 1.5
+        assert config.memory_buffer_multiplier == 1.1  # 10% safety buffer
 
     def test_custom_config_with_model_id(self):
         """Test custom configuration with model_id."""

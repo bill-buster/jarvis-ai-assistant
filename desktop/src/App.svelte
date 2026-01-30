@@ -12,7 +12,7 @@
   import { checkApiConnection } from "./lib/stores/health";
   import { clearSelection } from "./lib/stores/conversations";
 
-  let currentView: "messages" | "dashboard" | "health" | "settings" | "templates" = "messages";
+  let currentView = $state<"messages" | "dashboard" | "health" | "settings" | "templates">("messages");
   let showSearch = $state(false);
 
   function handleKeydown(event: KeyboardEvent) {

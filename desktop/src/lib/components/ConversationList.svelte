@@ -243,6 +243,9 @@
   {:else}
     <div class="list">
       {#each $conversationsStore.conversations as conv (conv.chat_id)}
+        {@const identifier = getPrimaryIdentifier(conv)}
+        {@const avatarUrl = identifier ? avatarUrls.get(identifier) : null}
+        {@const avatarState = identifier ? avatarStates.get(identifier) : null}
         <button
           class="conversation"
           class:active={$conversationsStore.selectedChatId === conv.chat_id}
@@ -250,9 +253,6 @@
           class:has-new={hasNewMessages(conv.chat_id)}
           on:click={() => selectConversation(conv.chat_id)}
         >
-          {@const identifier = getPrimaryIdentifier(conv)}
-          {@const avatarUrl = identifier ? avatarUrls.get(identifier) : null}
-          {@const avatarState = identifier ? avatarStates.get(identifier) : null}
           <div class="avatar-container">
             <div
               class="avatar"

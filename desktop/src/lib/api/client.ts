@@ -79,7 +79,7 @@ import type {
   VariantConfig,
 } from "./types";
 
-const API_BASE = "http://localhost:8742";
+const API_BASE = "http://localhost:8000";
 
 /**
  * Custom API error with additional details
@@ -142,7 +142,10 @@ class ApiClient {
 
   // Conversation endpoints
   async getConversations(): Promise<Conversation[]> {
-    return this.request<Conversation[]>("/conversations");
+    const response = await this.request<{ conversations: Conversation[]; total: number }>(
+      "/conversations"
+    );
+    return response.conversations;
   }
 
   async getConversation(chatId: string): Promise<Conversation> {
@@ -160,7 +163,10 @@ class ApiClient {
     if (before) {
       url += `&before=${encodeURIComponent(before)}`;
     }
-    return this.request<Message[]>(url);
+    const response = await this.request<{ messages: Message[]; chat_id: string; total: number }>(
+      url
+    );
+    return response.messages;
   }
 
   // Topics endpoints
