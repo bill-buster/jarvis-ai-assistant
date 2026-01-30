@@ -118,7 +118,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     ),
     "lfm-1.2b": ModelSpec(
         id="lfm-1.2b",
-        path="mlx-community/LFM-2.5-1.2B-Instruct-4bit",
+        path="LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit",
         display_name="LFM 2.5 1.2B (Conversational)",
         size_gb=1.2,
         min_ram_gb=8,
