@@ -35,10 +35,11 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import numpy as np
 
+from jarvis.embedding_adapter import get_embedder, reset_embedder
 from jarvis.metrics import get_template_analytics
 
 if TYPE_CHECKING:
-    from sentence_transformers import SentenceTransformer
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -120,57 +121,55 @@ class EmbeddingCache(Generic[K, V]):
             }
 
 
-# Lazy-loaded sentence transformer
-_sentence_model: SentenceTransformer | None = None
-
-
 class SentenceModelError(Exception):
     """Raised when sentence transformer model cannot be loaded."""
 
 
 def _get_sentence_model() -> Any:
-    """Lazy-load the sentence transformer model.
+    """Get the embedder for template matching.
+
+    Returns the unified embedder instance. For backward compatibility,
+    this function name is preserved but now delegates to the unified adapter.
 
     Returns:
-        The loaded SentenceTransformer model
+        The UnifiedEmbedder instance (not SentenceTransformer directly)
 
     Raises:
-        SentenceModelError: If model cannot be loaded (network issues, etc.)
+        SentenceModelError: If no embedding backend is available
     """
-    global _sentence_model
-    if _sentence_model is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-
-            logger.info("Loading sentence transformer: all-MiniLM-L6-v2")
-            _sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
-        except Exception as e:
-            logger.exception("Failed to load sentence transformer")
-            msg = f"Failed to load sentence transformer: {e}"
-            raise SentenceModelError(msg) from e
-    return _sentence_model
+    try:
+        embedder = get_embedder()
+        if not embedder.is_available():
+            raise SentenceModelError("No embedding backend available")
+        return embedder
+    except Exception as e:
+        logger.exception("Failed to initialize embedding backend")
+        msg = f"Failed to initialize embedding backend: {e}"
+        raise SentenceModelError(msg) from e
 
 
 def unload_sentence_model() -> None:
-    """Unload the sentence transformer model to free memory.
+    """Unload the embedding model to free memory.
 
     Call this when template matching is no longer needed and you want
     to reclaim memory for other operations (e.g., loading the MLX model).
     """
-    global _sentence_model
-    if _sentence_model is not None:
-        logger.info("Unloading sentence transformer model")
-        _sentence_model = None
-        gc.collect()
+    logger.info("Unloading embedding model")
+    reset_embedder()
+    gc.collect()
 
 
 def is_sentence_model_loaded() -> bool:
-    """Check if the sentence transformer model is currently loaded.
+    """Check if an embedding model is currently available.
 
     Returns:
-        True if model is loaded, False otherwise
+        True if an embedding backend is available, False otherwise
     """
-    return _sentence_model is not None
+    try:
+        embedder = get_embedder()
+        return embedder.backend != "none"
+    except Exception:
+        return False
 
 
 @dataclass
@@ -1904,7 +1903,7 @@ class TemplateMatcher:
         """Compute and cache embeddings for all template patterns.
 
         Uses double-check locking for thread-safe lazy initialization.
-        Pre-normalizes embeddings for faster cosine similarity computation.
+        Embeddings are normalized by the embedder for direct cosine similarity.
         """
         # Fast path: embeddings already computed
         if self._pattern_embeddings is not None:
@@ -1916,7 +1915,7 @@ class TemplateMatcher:
             if self._pattern_embeddings is not None:
                 return
 
-            model = _get_sentence_model()
+            embedder = _get_sentence_model()
 
             # Collect all patterns with their templates
             all_patterns = []
@@ -1929,10 +1928,11 @@ class TemplateMatcher:
             embeddings = None
             norms = None
             try:
-                # Compute embeddings in batch
-                embeddings = model.encode(all_patterns, convert_to_numpy=True)
+                # Compute embeddings in batch (normalized by default)
+                embeddings = embedder.encode(all_patterns, normalize=True)
 
                 # Pre-compute norms for faster cosine similarity
+                # Even though embeddings are normalized, we keep this for consistency
                 norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
                 # Avoid division by zero
                 norms = np.where(norms == 0, 1, norms)
@@ -1956,7 +1956,7 @@ class TemplateMatcher:
             query: Query string to encode
 
         Returns:
-            Query embedding as numpy array
+            Query embedding as numpy array (normalized)
         """
         # Create cache key from query hash
         cache_key = hashlib.md5(query.encode(), usedforsecurity=False).hexdigest()
@@ -1966,9 +1966,9 @@ class TemplateMatcher:
         if cached is not None:
             return cached
 
-        # Encode and cache
-        model = _get_sentence_model()
-        embedding_result = model.encode([query], convert_to_numpy=True)[0]
+        # Encode and cache (normalized by default)
+        embedder = _get_sentence_model()
+        embedding_result = embedder.encode([query], normalize=True)[0]
         # Cast to ndarray to satisfy mypy (encode returns Any)
         embedding: np.ndarray = np.asarray(embedding_result)
         self._query_cache.set(cache_key, embedding)

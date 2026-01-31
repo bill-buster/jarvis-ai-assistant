@@ -680,7 +680,7 @@ class TestRAGPromptBuilder:
 
         assert "John" in prompt
         assert "Hey, want dinner?" in prompt
-        assert "### Your reply:" in prompt
+        assert "### Your reply" in prompt  # Template ends with "### Your reply (keep it brief):"
 
     def test_build_rag_reply_prompt_with_exchanges(self):
         """Test RAG prompt with similar exchanges."""

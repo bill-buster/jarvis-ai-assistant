@@ -192,7 +192,7 @@ def get_response_groups_with_full_context(
     try:
         coherence_model = SentenceTransformer(coherence_model_name)
         logger.info("✓ Loaded %s for coherence checking", coherence_model_name)
-    except:
+    except Exception:
         coherence_model = None
         logger.warning("Sentence model not available, using rule-based coherence only")
 
@@ -389,7 +389,7 @@ def extract_pairs_with_full_context(
     burst_gap_ns = max_burst_gap_seconds * 1_000_000_000
 
     # Model passed in from parent, or None for rule-based only
-    use_semantic_coherence = sentence_model is not None
+    _ = sentence_model is not None  # use_semantic_coherence available for future use
 
     i = 0
     while i < len(messages) - 1:
@@ -661,7 +661,7 @@ def stratified_clustering(
                             if score > best_score:
                                 best_score = score
                                 best_eps = eps
-                        except:
+                        except Exception:
                             pass
 
             clusterer = DBSCAN(eps=best_eps, min_samples=2, metric="euclidean", n_jobs=-1)
@@ -771,7 +771,8 @@ def main():
         "--model",
         type=str,
         default="sentence-transformers/all-mpnet-base-v2",
-        help="Embedding model (options: all-mpnet-base-v2, sentence-t5-large, BAAI/bge-large-en-v1.5)",
+        help="Embedding model (options: all-mpnet-base-v2, sentence-t5-large, "
+        "BAAI/bge-large-en-v1.5)",
     )
     parser.add_argument(
         "--sample",

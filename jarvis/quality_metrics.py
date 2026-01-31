@@ -959,6 +959,74 @@ def reset_quality_metrics() -> None:
         _quality_metrics = None
 
 
+def score_response_coherence(trigger: str, response: str) -> float:
+    """Score how appropriate a response is for the trigger.
+
+    Evaluates coherence based on:
+    - Question appropriateness: response to question vs non-question
+    - Proper noun consistency: response shouldn't introduce unrelated names
+    - Length appropriateness: very short responses to complex triggers
+
+    Args:
+        trigger: The incoming message that triggered the response
+        response: The candidate response
+
+    Returns:
+        Coherence score from 0.0 (incoherent) to 1.0 (coherent)
+    """
+    import re
+
+    score = 1.0
+
+    trigger_stripped = trigger.strip()
+    response_stripped = response.strip()
+
+    # 1. Penalize if response is a question to a non-question
+    # Questions as responses are often context-dependent
+    if response_stripped.endswith("?") and not trigger_stripped.endswith("?"):
+        score *= 0.5
+
+    # 2. Penalize if response contains proper nouns not in trigger
+    # This suggests the response references unrelated context
+    def extract_proper_nouns(text: str) -> set[str]:
+        """Extract potential proper nouns (capitalized words not at sentence start)."""
+        words = text.split()
+        proper_nouns = set()
+        for i, word in enumerate(words):
+            if i == 0:
+                continue
+            clean_word = re.sub(r"[^\w]", "", word)
+            if clean_word and clean_word[0].isupper() and not clean_word.isupper():
+                proper_nouns.add(clean_word.lower())
+        return proper_nouns
+
+    trigger_nouns = extract_proper_nouns(trigger)
+    response_nouns = extract_proper_nouns(response)
+    unrelated_nouns = response_nouns - trigger_nouns
+
+    if unrelated_nouns:
+        # More unrelated nouns = more penalty
+        penalty = 0.6 ** len(unrelated_nouns)
+        score *= max(0.3, penalty)  # Floor at 0.3
+
+    # 3. Penalize very short responses to complex triggers
+    trigger_words = len(trigger.split())
+    response_words = len(response.split())
+
+    if response_words < 3 and trigger_words > 10:
+        score *= 0.7
+
+    # 4. Penalize responses that are much longer than the trigger (verbose)
+    if response_words > trigger_words * 5 and response_words > 20:
+        score *= 0.8
+
+    # 5. Bonus for appropriate length matching (roughly similar complexity)
+    if 0.3 <= response_words / max(trigger_words, 1) <= 3.0:
+        score = min(1.0, score * 1.1)
+
+    return round(score, 3)
+
+
 def compute_edit_distance(s1: str, s2: str) -> int:
     """Compute Levenshtein edit distance between two strings.
 

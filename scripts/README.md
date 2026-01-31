@@ -2,6 +2,24 @@
 
 Utility scripts for development, benchmarking, and automation.
 
+## Canonical Scripts
+
+- `eval_pipeline.py` - Train/test split and evaluation pipeline
+- `score_pair_quality.py` - Pair quality analysis and updates
+- `build_embedding_profiles.py` - Embedding profile builder
+- `mine_response_pairs_production.py` - Production pair mining
+- `validate_templates_human.py` - Interactive template validation
+- `generate_report.py` - Benchmark report generator
+- `check_gates.py` - Gate status evaluation
+- `summarize_phase.py` - Phase summary generator
+- `setup_contacts.py` - Contact setup helper
+- `overnight_evaluation.py` - Long-running evaluation runner
+
+## Experimental Scripts
+
+Experimental and one-off scripts live in `scripts/experiments/`.
+See `scripts/experiments/README.md` for details.
+
 ## Context Management
 
 ### `summarize_phase.py`

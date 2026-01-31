@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 CONFIG_PATH = Path.home() / ".jarvis" / "config.json"
 
 # Current config schema version for migration tracking
-CONFIG_VERSION = 6
+CONFIG_VERSION = 7
 
 
 class MemoryThresholds(BaseModel):
@@ -80,6 +80,16 @@ class ChatConfig(BaseModel):
 
     stream_responses: bool = True
     show_typing_indicator: bool = True
+
+
+class RoutingConfig(BaseModel):
+    """Routing thresholds and A/B testing configuration."""
+
+    template_threshold: float = Field(default=0.90, ge=0.0, le=1.0)
+    context_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
+    generate_threshold: float = Field(default=0.50, ge=0.0, le=1.0)
+    ab_test_group: str = Field(default="control")
+    ab_test_thresholds: dict[str, dict[str, float]] = Field(default_factory=dict)
 
 
 class RateLimitConfig(BaseModel):
@@ -169,6 +179,7 @@ class JarvisConfig(BaseModel):
         ui: UI preferences for the Tauri frontend.
         search: Search preferences.
         chat: Chat preferences.
+        routing: Routing thresholds and A/B configuration.
         model: Model configuration for text generation.
         rate_limit: Rate limiting configuration for the API.
         task_queue: Task queue configuration for background operations.
@@ -183,6 +194,7 @@ class JarvisConfig(BaseModel):
     ui: UIConfig = Field(default_factory=UIConfig)
     search: SearchConfig = Field(default_factory=SearchConfig)
     chat: ChatConfig = Field(default_factory=ChatConfig)
+    routing: RoutingConfig = Field(default_factory=RoutingConfig)
     model: ModelSettings = Field(default_factory=ModelSettings)
     rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
     task_queue: TaskQueueConfig = Field(default_factory=TaskQueueConfig)
@@ -265,6 +277,14 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
             data["digest"] = {}
 
         version = 6
+
+    if version < 7:
+        logger.info(f"Migrating config from version {version} to {CONFIG_VERSION}")
+
+        if "routing" not in data:
+            data["routing"] = {}
+
+        version = 7
 
     # Update version
     data["config_version"] = CONFIG_VERSION

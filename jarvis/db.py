@@ -20,7 +20,7 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -38,9 +38,6 @@ def _convert_timestamp(val: bytes) -> datetime:
         timepart, tz_offset = timepart.rsplit(b"+", 1)
     elif timepart.count(b"-") == 1:
         timepart, tz_offset = timepart.rsplit(b"-", 1)
-    else:
-        tz_offset = None
-
     # Handle microseconds
     if b"." in timepart:
         timepart, microseconds = timepart.split(b".")
@@ -107,6 +104,13 @@ class Pair:
     # Quality and filtering
     quality_score: float = 1.0
     flags_json: str | None = None  # JSON: {"attachment_only":true, "short":true}
+    is_group: bool = False  # True if from group chat
+    is_holdout: bool = False  # True if reserved for evaluation (not in training index)
+    # Validity gate results (v6+)
+    gate_a_passed: bool | None = None  # Rule gate result
+    gate_b_score: float | None = None  # Embedding similarity score
+    gate_c_verdict: str | None = None  # NLI verdict (accept/reject/uncertain)
+    validity_status: str | None = None  # Final: valid/invalid/uncertain
     # Freshness and usage tracking
     usage_count: int = 0
     last_used_at: datetime | None = None
@@ -145,6 +149,63 @@ class Pair:
 
 
 @dataclass
+class PairArtifact:
+    """Heavy artifacts for a pair (stored separately to keep pairs table lean).
+
+    Stored in pair_artifacts table to avoid bloating the main pairs table.
+    """
+
+    pair_id: int
+    context_json: str | None = None  # Structured context window (JSON list of messages)
+    gate_a_reason: str | None = None  # Why Gate A rejected (if rejected)
+    gate_c_scores_json: str | None = None  # Raw NLI scores (JSON dict)
+    raw_trigger_text: str | None = None  # Original text before normalization
+    raw_response_text: str | None = None  # Original text before normalization
+
+    @property
+    def context_messages(self) -> list[dict]:
+        """Get context messages from JSON."""
+        if self.context_json:
+            try:
+                return json.loads(self.context_json)
+            except json.JSONDecodeError:
+                return []
+        return []
+
+    @property
+    def gate_c_scores(self) -> dict[str, float]:
+        """Get Gate C scores from JSON."""
+        if self.gate_c_scores_json:
+            try:
+                return json.loads(self.gate_c_scores_json)
+            except json.JSONDecodeError:
+                return {}
+        return {}
+
+
+@dataclass
+class ContactStyleTargets:
+    """Style targets for a contact (computed from their pairs)."""
+
+    contact_id: int
+    median_reply_length: int = 10  # Median word count
+    punctuation_rate: float = 0.5  # Fraction with ending punctuation
+    emoji_rate: float = 0.1  # Fraction containing emojis
+    greeting_rate: float = 0.2  # Fraction starting with greeting
+    updated_at: datetime | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "contact_id": self.contact_id,
+            "median_reply_length": self.median_reply_length,
+            "punctuation_rate": self.punctuation_rate,
+            "emoji_rate": self.emoji_rate,
+            "greeting_rate": self.greeting_rate,
+        }
+
+
+@dataclass
 class Cluster:
     """An intent cluster grouping similar responses."""
 
@@ -180,7 +241,7 @@ class IndexVersion:
     created_at: datetime | None = None
 
 
-# Schema SQL - Version 2 with improvements
+# Schema SQL - Version 6 with validity gates and split tables
 SCHEMA_SQL = """
 -- Schema version tracking
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -201,7 +262,17 @@ CREATE TABLE IF NOT EXISTS contacts (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Extracted message pairs from history (turn-based)
+-- Style targets for contacts (computed from their pairs)
+CREATE TABLE IF NOT EXISTS contact_style_targets (
+    contact_id INTEGER PRIMARY KEY REFERENCES contacts(id),
+    median_reply_length INTEGER DEFAULT 10,   -- median word count
+    punctuation_rate REAL DEFAULT 0.5,        -- fraction with ending punctuation
+    emoji_rate REAL DEFAULT 0.1,              -- fraction containing emojis
+    greeting_rate REAL DEFAULT 0.2,           -- fraction starting with greeting
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Extracted message pairs from history (lean table)
 CREATE TABLE IF NOT EXISTS pairs (
     id INTEGER PRIMARY KEY,
     contact_id INTEGER REFERENCES contacts(id),
@@ -215,11 +286,18 @@ CREATE TABLE IF NOT EXISTS pairs (
     response_msg_id INTEGER,          -- primary response message ID
     trigger_msg_ids_json TEXT,        -- JSON array for multi-message triggers
     response_msg_ids_json TEXT,       -- JSON array for multi-message responses
-    -- Conversation context
+    -- Conversation context (legacy, use pair_artifacts for v6+)
     context_text TEXT,                -- previous messages before trigger (for LLM context)
     -- Quality and filtering
     quality_score REAL DEFAULT 1.0,   -- 0.0-1.0, lower = worse
     flags_json TEXT,                  -- JSON: {"attachment_only":true, "short":true}
+    is_group BOOLEAN DEFAULT FALSE,   -- True if from group chat (for filtering)
+    is_holdout BOOLEAN DEFAULT FALSE, -- True if reserved for evaluation (not in training)
+    -- Validity gate results (v6+)
+    gate_a_passed BOOLEAN,            -- Rule gate result
+    gate_b_score REAL,                -- Embedding similarity score
+    gate_c_verdict TEXT,              -- NLI verdict (accept/reject/uncertain)
+    validity_status TEXT,             -- Final: valid/invalid/uncertain
     -- Freshness and usage tracking
     usage_count INTEGER DEFAULT 0,    -- times this pair was used for generation
     last_used_at TIMESTAMP,           -- last time pair was used
@@ -227,6 +305,16 @@ CREATE TABLE IF NOT EXISTS pairs (
     source_timestamp TIMESTAMP,       -- original message timestamp (for decay)
     -- Uniqueness: use primary message IDs
     UNIQUE(trigger_msg_id, response_msg_id)
+);
+
+-- Heavy artifacts for pairs (split table to keep pairs lean)
+CREATE TABLE IF NOT EXISTS pair_artifacts (
+    pair_id INTEGER PRIMARY KEY REFERENCES pairs(id),
+    context_json TEXT,                -- Structured context window (JSON list of messages)
+    gate_a_reason TEXT,               -- Why Gate A rejected (if rejected)
+    gate_c_scores_json TEXT,          -- Raw NLI scores (JSON dict)
+    raw_trigger_text TEXT,            -- Original text before normalization
+    raw_response_text TEXT            -- Original text before normalization
 );
 
 -- Clustered intent groups (optional, for later analytics)
@@ -264,12 +352,13 @@ CREATE TABLE IF NOT EXISTS index_versions (
 CREATE INDEX IF NOT EXISTS idx_pairs_contact ON pairs(contact_id);
 CREATE INDEX IF NOT EXISTS idx_pairs_chat ON pairs(chat_id);
 CREATE INDEX IF NOT EXISTS idx_pairs_quality ON pairs(quality_score);
+CREATE INDEX IF NOT EXISTS idx_pairs_validity ON pairs(validity_status);
 CREATE INDEX IF NOT EXISTS idx_contacts_chat ON contacts(chat_id);
 CREATE INDEX IF NOT EXISTS idx_embeddings_index ON pair_embeddings(index_version);
 CREATE INDEX IF NOT EXISTS idx_embeddings_faiss ON pair_embeddings(faiss_id);
 """
 
-CURRENT_SCHEMA_VERSION = 3  # Added context_text column to pairs
+CURRENT_SCHEMA_VERSION = 6  # Added validity gates and split tables
 
 
 class JarvisDB:
@@ -346,6 +435,43 @@ class JarvisDB:
                 except sqlite3.OperationalError:
                     # Column already exists (e.g., during development)
                     pass
+
+            if current_version <= 3:
+                # Migration v3 -> v4: Add is_group column to pairs
+                try:
+                    conn.execute("ALTER TABLE pairs ADD COLUMN is_group BOOLEAN DEFAULT FALSE")
+                    logger.info("Added is_group column to pairs table")
+                except sqlite3.OperationalError:
+                    # Column already exists (e.g., during development)
+                    pass
+
+            if current_version <= 4:
+                # Migration v4 -> v5: Add is_holdout column for train/test split
+                try:
+                    conn.execute("ALTER TABLE pairs ADD COLUMN is_holdout BOOLEAN DEFAULT FALSE")
+                    logger.info("Added is_holdout column to pairs table")
+                except sqlite3.OperationalError:
+                    # Column already exists (e.g., during development)
+                    pass
+
+            if current_version <= 5:
+                # Migration v5 -> v6: Add validity gate columns and split tables
+                # Add gate columns to pairs table
+                gate_columns = [
+                    ("gate_a_passed", "BOOLEAN"),
+                    ("gate_b_score", "REAL"),
+                    ("gate_c_verdict", "TEXT"),
+                    ("validity_status", "TEXT"),
+                ]
+                for col_name, col_type in gate_columns:
+                    try:
+                        conn.execute(f"ALTER TABLE pairs ADD COLUMN {col_name} {col_type}")
+                        logger.info("Added %s column to pairs table", col_name)
+                    except sqlite3.OperationalError:
+                        pass
+
+                # Create new tables (handled by SCHEMA_SQL, but ensure they exist)
+                # pair_artifacts and contact_style_targets are created by executescript
 
             # Apply schema
             conn.executescript(SCHEMA_SQL)
@@ -639,8 +765,8 @@ class JarvisDB:
                         (contact_id, trigger_text, response_text, trigger_timestamp,
                          response_timestamp, chat_id, trigger_msg_id, response_msg_id,
                          trigger_msg_ids_json, response_msg_ids_json, context_text,
-                         quality_score, flags_json)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         quality_score, flags_json, is_group)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             pair.get("contact_id"),
@@ -656,6 +782,7 @@ class JarvisDB:
                             pair.get("context_text"),
                             pair.get("quality_score", 1.0),
                             flags_json,
+                            pair.get("is_group", False),
                         ),
                     )
                     added += 1
@@ -730,8 +857,60 @@ class JarvisDB:
             cursor = conn.execute("DELETE FROM pairs")
             return cursor.rowcount
 
+    def get_pairs_by_trigger_pattern(
+        self,
+        contact_id: int,
+        pattern_type: str = "acknowledgment",
+        limit: int = 10,
+    ) -> list[Pair]:
+        """Get pairs matching a trigger pattern type.
+
+        Used to analyze user's typical response patterns to certain message types.
+        For example, checking if user typically provides substantive info after
+        acknowledgments like "ok" or "sure".
+
+        Args:
+            contact_id: Contact to query.
+            pattern_type: Pattern to match. Currently supported:
+                - "acknowledgment": Short ack triggers like "ok", "sure", "yes"
+            limit: Max pairs to return.
+
+        Returns:
+            List of Pair objects matching the pattern, ordered by recency.
+        """
+        if pattern_type == "acknowledgment":
+            ack_triggers = (
+                "ok",
+                "okay",
+                "sure",
+                "yes",
+                "yeah",
+                "yep",
+                "yup",
+                "got it",
+                "k",
+                "kk",
+                "alright",
+                "sounds good",
+            )
+            placeholders = ",".join("?" * len(ack_triggers))
+            query = f"""
+                SELECT * FROM pairs
+                WHERE contact_id = ?
+                AND LOWER(TRIM(trigger_text)) IN ({placeholders})
+                AND quality_score >= 0.5
+                ORDER BY trigger_timestamp DESC
+                LIMIT ?
+            """
+            with self.connection() as conn:
+                cursor = conn.execute(query, (contact_id, *ack_triggers, limit))
+                return [self._row_to_pair(row) for row in cursor]
+
+        return []
+
     def _row_to_pair(self, row: sqlite3.Row) -> Pair:
         """Convert a database row to a Pair object."""
+        keys = row.keys()
         return Pair(
             id=row["id"],
             contact_id=row["contact_id"],
@@ -740,18 +919,184 @@ class JarvisDB:
             trigger_timestamp=row["trigger_timestamp"],
             response_timestamp=row["response_timestamp"],
             chat_id=row["chat_id"],
-            trigger_msg_id=row["trigger_msg_id"] if "trigger_msg_id" in row.keys() else None,
-            response_msg_id=row["response_msg_id"] if "response_msg_id" in row.keys() else None,
+            trigger_msg_id=row["trigger_msg_id"] if "trigger_msg_id" in keys else None,
+            response_msg_id=row["response_msg_id"] if "response_msg_id" in keys else None,
             trigger_msg_ids_json=row["trigger_msg_ids_json"]
-            if "trigger_msg_ids_json" in row.keys()
+            if "trigger_msg_ids_json" in keys
             else None,
             response_msg_ids_json=row["response_msg_ids_json"]
-            if "response_msg_ids_json" in row.keys()
+            if "response_msg_ids_json" in keys
             else None,
-            context_text=row["context_text"] if "context_text" in row.keys() else None,
-            quality_score=row["quality_score"] if "quality_score" in row.keys() else 1.0,
-            flags_json=row["flags_json"] if "flags_json" in row.keys() else None,
+            context_text=row["context_text"] if "context_text" in keys else None,
+            quality_score=row["quality_score"] if "quality_score" in keys else 1.0,
+            flags_json=row["flags_json"] if "flags_json" in keys else None,
+            is_group=bool(row["is_group"]) if "is_group" in keys else False,
+            is_holdout=bool(row["is_holdout"]) if "is_holdout" in keys else False,
+            gate_a_passed=(
+                bool(row["gate_a_passed"])
+                if "gate_a_passed" in keys and row["gate_a_passed"] is not None
+                else None
+            ),
+            gate_b_score=(
+                float(row["gate_b_score"])
+                if "gate_b_score" in keys and row["gate_b_score"] is not None
+                else None
+            ),
+            gate_c_verdict=row["gate_c_verdict"] if "gate_c_verdict" in keys else None,
+            validity_status=row["validity_status"] if "validity_status" in keys else None,
         )
+
+    # -------------------------------------------------------------------------
+    # Train/Test Split Operations
+    # -------------------------------------------------------------------------
+
+    def split_train_test(
+        self,
+        holdout_ratio: float = 0.2,
+        min_pairs_per_contact: int = 5,
+        seed: int | None = None,
+    ) -> dict[str, Any]:
+        """Split pairs into training and holdout sets by contact.
+
+        All pairs for a contact go to the same set to test generalization
+        to new conversation styles, not just new messages from known contacts.
+
+        Args:
+            holdout_ratio: Fraction of contacts to hold out (default 0.2 = 20%).
+            min_pairs_per_contact: Minimum pairs a contact must have to be
+                considered for holdout (default 5).
+            seed: Random seed for reproducibility.
+
+        Returns:
+            Statistics about the split.
+        """
+        import random
+
+        if seed is not None:
+            random.seed(seed)
+
+        with self.connection() as conn:
+            # Get contacts with their pair counts
+            cursor = conn.execute(
+                """
+                SELECT contact_id, COUNT(*) as pair_count
+                FROM pairs
+                WHERE contact_id IS NOT NULL
+                GROUP BY contact_id
+                HAVING pair_count >= ?
+                """,
+                (min_pairs_per_contact,),
+            )
+            eligible_contacts = [(row["contact_id"], row["pair_count"]) for row in cursor]
+
+            if not eligible_contacts:
+                return {
+                    "success": False,
+                    "error": f"No contacts with >= {min_pairs_per_contact} pairs",
+                    "contacts_total": 0,
+                    "contacts_holdout": 0,
+                }
+
+            # Shuffle and select holdout contacts
+            random.shuffle(eligible_contacts)
+            num_holdout = max(1, int(len(eligible_contacts) * holdout_ratio))
+            holdout_contacts = [c[0] for c in eligible_contacts[:num_holdout]]
+            training_contacts = [c[0] for c in eligible_contacts[num_holdout:]]
+
+            # Reset all pairs to training first
+            conn.execute("UPDATE pairs SET is_holdout = FALSE")
+
+            # Mark holdout contact pairs
+            if holdout_contacts:
+                placeholders = ",".join("?" * len(holdout_contacts))
+                conn.execute(
+                    f"UPDATE pairs SET is_holdout = TRUE WHERE contact_id IN ({placeholders})",
+                    holdout_contacts,
+                )
+
+            # Get final counts
+            cursor = conn.execute("SELECT COUNT(*) as cnt FROM pairs WHERE is_holdout = FALSE")
+            training_pairs = cursor.fetchone()["cnt"]
+
+            cursor = conn.execute("SELECT COUNT(*) as cnt FROM pairs WHERE is_holdout = TRUE")
+            holdout_pairs = cursor.fetchone()["cnt"]
+
+            return {
+                "success": True,
+                "contacts_total": len(eligible_contacts),
+                "contacts_holdout": len(holdout_contacts),
+                "contacts_training": len(training_contacts),
+                "pairs_training": training_pairs,
+                "pairs_holdout": holdout_pairs,
+                "holdout_ratio_actual": holdout_pairs / (training_pairs + holdout_pairs)
+                if (training_pairs + holdout_pairs) > 0
+                else 0,
+                "holdout_contact_ids": holdout_contacts,
+            }
+
+    def get_training_pairs(self, min_quality: float = 0.0, limit: int = 100000) -> list[Pair]:
+        """Get pairs designated for training (is_holdout=False)."""
+        with self.connection() as conn:
+            cursor = conn.execute(
+                """
+                SELECT * FROM pairs
+                WHERE is_holdout = FALSE AND quality_score >= ?
+                ORDER BY trigger_timestamp DESC
+                LIMIT ?
+                """,
+                (min_quality, limit),
+            )
+            return [self._row_to_pair(row) for row in cursor]
+
+    def get_holdout_pairs(self, min_quality: float = 0.0, limit: int = 100000) -> list[Pair]:
+        """Get pairs designated for evaluation (is_holdout=True)."""
+        with self.connection() as conn:
+            cursor = conn.execute(
+                """
+                SELECT * FROM pairs
+                WHERE is_holdout = TRUE AND quality_score >= ?
+                ORDER BY trigger_timestamp DESC
+                LIMIT ?
+                """,
+                (min_quality, limit),
+            )
+            return [self._row_to_pair(row) for row in cursor]
+
+    def get_split_stats(self) -> dict[str, Any]:
+        """Get statistics about the current train/test split."""
+        with self.connection() as conn:
+            stats: dict[str, Any] = {}
+
+            # Training pairs
+            cursor = conn.execute("SELECT COUNT(*) as cnt FROM pairs WHERE is_holdout = FALSE")
+            stats["training_pairs"] = cursor.fetchone()["cnt"]
+
+            # Holdout pairs
+            cursor = conn.execute("SELECT COUNT(*) as cnt FROM pairs WHERE is_holdout = TRUE")
+            stats["holdout_pairs"] = cursor.fetchone()["cnt"]
+
+            # Training contacts
+            cursor = conn.execute(
+                """
+                SELECT COUNT(DISTINCT contact_id) as cnt
+                FROM pairs WHERE is_holdout = FALSE AND contact_id IS NOT NULL
+                """
+            )
+            stats["training_contacts"] = cursor.fetchone()["cnt"]
+
+            # Holdout contacts
+            cursor = conn.execute(
+                """
+                SELECT COUNT(DISTINCT contact_id) as cnt
+                FROM pairs WHERE is_holdout = TRUE AND contact_id IS NOT NULL
+                """
+            )
+            stats["holdout_contacts"] = cursor.fetchone()["cnt"]
+
+            total = stats["training_pairs"] + stats["holdout_pairs"]
+            stats["holdout_ratio"] = stats["holdout_pairs"] / total if total > 0 else 0
+
+            return stats
 
     # -------------------------------------------------------------------------
     # Cluster Operations (Optional - for later analytics)
@@ -873,7 +1218,8 @@ class JarvisDB:
         with self.connection() as conn:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO pair_embeddings (pair_id, faiss_id, cluster_id, index_version)
+                INSERT OR REPLACE INTO pair_embeddings
+                (pair_id, faiss_id, cluster_id, index_version)
                 VALUES (?, ?, ?, ?)
                 """,
                 (pair_id, faiss_id, cluster_id, index_version),
@@ -890,7 +1236,8 @@ class JarvisDB:
         with self.connection() as conn:
             conn.executemany(
                 """
-                INSERT OR REPLACE INTO pair_embeddings (pair_id, faiss_id, cluster_id, index_version)
+                INSERT OR REPLACE INTO pair_embeddings
+                (pair_id, faiss_id, cluster_id, index_version)
                 VALUES (?, ?, ?, ?)
                 """,
                 [
@@ -1097,6 +1444,342 @@ class JarvisDB:
             ]
 
             return stats
+
+    # -------------------------------------------------------------------------
+    # Pair Artifact Operations (v6+)
+    # -------------------------------------------------------------------------
+
+    def add_artifact(
+        self,
+        pair_id: int,
+        context_json: str | None = None,
+        gate_a_reason: str | None = None,
+        gate_c_scores_json: str | None = None,
+        raw_trigger_text: str | None = None,
+        raw_response_text: str | None = None,
+    ) -> PairArtifact:
+        """Add or update artifacts for a pair.
+
+        Args:
+            pair_id: ID of the pair these artifacts belong to.
+            context_json: Structured context window (JSON list).
+            gate_a_reason: Why Gate A rejected (if rejected).
+            gate_c_scores_json: Raw NLI scores (JSON dict).
+            raw_trigger_text: Original text before normalization.
+            raw_response_text: Original text before normalization.
+
+        Returns:
+            The created or updated PairArtifact.
+        """
+        with self.connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO pair_artifacts
+                (pair_id, context_json, gate_a_reason, gate_c_scores_json,
+                 raw_trigger_text, raw_response_text)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    pair_id,
+                    context_json,
+                    gate_a_reason,
+                    gate_c_scores_json,
+                    raw_trigger_text,
+                    raw_response_text,
+                ),
+            )
+            return PairArtifact(
+                pair_id=pair_id,
+                context_json=context_json,
+                gate_a_reason=gate_a_reason,
+                gate_c_scores_json=gate_c_scores_json,
+                raw_trigger_text=raw_trigger_text,
+                raw_response_text=raw_response_text,
+            )
+
+    def get_artifact(self, pair_id: int) -> PairArtifact | None:
+        """Get artifacts for a pair."""
+        with self.connection() as conn:
+            cursor = conn.execute("SELECT * FROM pair_artifacts WHERE pair_id = ?", (pair_id,))
+            row = cursor.fetchone()
+            if row:
+                return PairArtifact(
+                    pair_id=row["pair_id"],
+                    context_json=row["context_json"],
+                    gate_a_reason=row["gate_a_reason"],
+                    gate_c_scores_json=row["gate_c_scores_json"],
+                    raw_trigger_text=row["raw_trigger_text"],
+                    raw_response_text=row["raw_response_text"],
+                )
+            return None
+
+    def clear_artifacts(self) -> int:
+        """Delete all artifacts."""
+        with self.connection() as conn:
+            cursor = conn.execute("DELETE FROM pair_artifacts")
+            return cursor.rowcount
+
+    # -------------------------------------------------------------------------
+    # Contact Style Targets Operations (v6+)
+    # -------------------------------------------------------------------------
+
+    def set_style_targets(
+        self,
+        contact_id: int,
+        median_reply_length: int = 10,
+        punctuation_rate: float = 0.5,
+        emoji_rate: float = 0.1,
+        greeting_rate: float = 0.2,
+    ) -> ContactStyleTargets:
+        """Set style targets for a contact.
+
+        Args:
+            contact_id: Contact ID.
+            median_reply_length: Median word count.
+            punctuation_rate: Fraction with ending punctuation.
+            emoji_rate: Fraction containing emojis.
+            greeting_rate: Fraction starting with greeting.
+
+        Returns:
+            The created or updated ContactStyleTargets.
+        """
+        with self.connection() as conn:
+            now = datetime.now()
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO contact_style_targets
+                (contact_id, median_reply_length, punctuation_rate,
+                 emoji_rate, greeting_rate, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (contact_id, median_reply_length, punctuation_rate, emoji_rate, greeting_rate, now),
+            )
+            return ContactStyleTargets(
+                contact_id=contact_id,
+                median_reply_length=median_reply_length,
+                punctuation_rate=punctuation_rate,
+                emoji_rate=emoji_rate,
+                greeting_rate=greeting_rate,
+                updated_at=now,
+            )
+
+    def get_style_targets(self, contact_id: int) -> ContactStyleTargets | None:
+        """Get style targets for a contact."""
+        with self.connection() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM contact_style_targets WHERE contact_id = ?",
+                (contact_id,),
+            )
+            row = cursor.fetchone()
+            if row:
+                return ContactStyleTargets(
+                    contact_id=row["contact_id"],
+                    median_reply_length=row["median_reply_length"],
+                    punctuation_rate=row["punctuation_rate"],
+                    emoji_rate=row["emoji_rate"],
+                    greeting_rate=row["greeting_rate"],
+                    updated_at=row["updated_at"],
+                )
+            return None
+
+    # -------------------------------------------------------------------------
+    # Validated Pair Operations (v6+ extraction pipeline)
+    # -------------------------------------------------------------------------
+
+    def add_validated_pair(
+        self,
+        trigger_text: str,
+        response_text: str,
+        trigger_timestamp: datetime,
+        response_timestamp: datetime,
+        chat_id: str,
+        contact_id: int | None = None,
+        trigger_msg_id: int | None = None,
+        response_msg_id: int | None = None,
+        trigger_msg_ids: list[int] | None = None,
+        response_msg_ids: list[int] | None = None,
+        quality_score: float = 1.0,
+        flags: dict[str, Any] | None = None,
+        is_group: bool = False,
+        # Gate results
+        gate_a_passed: bool = True,
+        gate_b_score: float | None = None,
+        gate_c_verdict: str | None = None,
+        validity_status: str = "valid",
+        # Artifacts (stored separately)
+        context_json: str | None = None,
+        gate_a_reason: str | None = None,
+        gate_c_scores_json: str | None = None,
+        raw_trigger_text: str | None = None,
+        raw_response_text: str | None = None,
+    ) -> Pair | None:
+        """Add a validated pair with gate results and artifacts.
+
+        This is the v6+ version of add_pair that includes validity gate
+        results and stores heavy artifacts in a separate table.
+
+        Returns:
+            The created Pair, or None if duplicate.
+        """
+        with self.connection() as conn:
+            trigger_msg_ids_json = json.dumps(trigger_msg_ids) if trigger_msg_ids else None
+            response_msg_ids_json = json.dumps(response_msg_ids) if response_msg_ids else None
+            flags_json = json.dumps(flags) if flags else None
+
+            try:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO pairs
+                    (contact_id, trigger_text, response_text, trigger_timestamp,
+                     response_timestamp, chat_id, trigger_msg_id, response_msg_id,
+                     trigger_msg_ids_json, response_msg_ids_json,
+                     quality_score, flags_json, is_group,
+                     gate_a_passed, gate_b_score, gate_c_verdict, validity_status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        contact_id,
+                        trigger_text,
+                        response_text,
+                        trigger_timestamp,
+                        response_timestamp,
+                        chat_id,
+                        trigger_msg_id,
+                        response_msg_id,
+                        trigger_msg_ids_json,
+                        response_msg_ids_json,
+                        quality_score,
+                        flags_json,
+                        is_group,
+                        gate_a_passed,
+                        gate_b_score,
+                        gate_c_verdict,
+                        validity_status,
+                    ),
+                )
+                pair_id = cursor.lastrowid
+
+                # Store artifacts in separate table if provided
+                if context_json or gate_a_reason or gate_c_scores_json or raw_trigger_text:
+                    conn.execute(
+                        """
+                        INSERT INTO pair_artifacts
+                        (pair_id, context_json, gate_a_reason, gate_c_scores_json,
+                         raw_trigger_text, raw_response_text)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            pair_id,
+                            context_json,
+                            gate_a_reason,
+                            gate_c_scores_json,
+                            raw_trigger_text,
+                            raw_response_text,
+                        ),
+                    )
+
+                return Pair(
+                    id=pair_id,
+                    contact_id=contact_id,
+                    trigger_text=trigger_text,
+                    response_text=response_text,
+                    trigger_timestamp=trigger_timestamp,
+                    response_timestamp=response_timestamp,
+                    chat_id=chat_id,
+                    trigger_msg_id=trigger_msg_id,
+                    response_msg_id=response_msg_id,
+                    trigger_msg_ids_json=trigger_msg_ids_json,
+                    response_msg_ids_json=response_msg_ids_json,
+                    quality_score=quality_score,
+                    flags_json=flags_json,
+                    is_group=is_group,
+                    gate_a_passed=gate_a_passed,
+                    gate_b_score=gate_b_score,
+                    gate_c_verdict=gate_c_verdict,
+                    validity_status=validity_status,
+                )
+            except sqlite3.IntegrityError:
+                # Duplicate pair
+                return None
+
+    def get_gate_stats(self) -> dict[str, Any]:
+        """Get statistics about validity gate results."""
+        with self.connection() as conn:
+            stats: dict[str, Any] = {}
+
+            # Total pairs with gate data
+            cursor = conn.execute(
+                "SELECT COUNT(*) as cnt FROM pairs WHERE validity_status IS NOT NULL"
+            )
+            stats["total_gated"] = cursor.fetchone()["cnt"]
+
+            # By validity status
+            for status in ["valid", "invalid", "uncertain"]:
+                cursor = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM pairs WHERE validity_status = ?",
+                    (status,),
+                )
+                stats[f"status_{status}"] = cursor.fetchone()["cnt"]
+
+            # Gate A rejections
+            cursor = conn.execute("SELECT COUNT(*) as cnt FROM pairs WHERE gate_a_passed = FALSE")
+            stats["gate_a_rejected"] = cursor.fetchone()["cnt"]
+
+            # Gate A rejection reasons (from artifacts)
+            cursor = conn.execute(
+                """
+                SELECT gate_a_reason, COUNT(*) as cnt
+                FROM pair_artifacts
+                WHERE gate_a_reason IS NOT NULL
+                GROUP BY gate_a_reason
+                ORDER BY cnt DESC
+                """
+            )
+            stats["gate_a_reasons"] = {row["gate_a_reason"]: row["cnt"] for row in cursor}
+
+            # Gate B score distribution
+            cursor = conn.execute(
+                """
+                SELECT
+                    CASE
+                        WHEN gate_b_score >= 0.62 THEN 'accept'
+                        WHEN gate_b_score >= 0.48 THEN 'borderline'
+                        ELSE 'reject'
+                    END as band,
+                    COUNT(*) as cnt
+                FROM pairs
+                WHERE gate_b_score IS NOT NULL
+                GROUP BY band
+                """
+            )
+            stats["gate_b_bands"] = {row["band"]: row["cnt"] for row in cursor}
+
+            # Gate C verdicts
+            cursor = conn.execute(
+                """
+                SELECT gate_c_verdict, COUNT(*) as cnt
+                FROM pairs
+                WHERE gate_c_verdict IS NOT NULL
+                GROUP BY gate_c_verdict
+                """
+            )
+            stats["gate_c_verdicts"] = {row["gate_c_verdict"]: row["cnt"] for row in cursor}
+
+            return stats
+
+    def get_valid_pairs(self, min_quality: float = 0.0, limit: int = 100000) -> list[Pair]:
+        """Get pairs with validity_status='valid'."""
+        with self.connection() as conn:
+            cursor = conn.execute(
+                """
+                SELECT * FROM pairs
+                WHERE validity_status = 'valid' AND quality_score >= ?
+                ORDER BY trigger_timestamp DESC
+                LIMIT ?
+                """,
+                (min_quality, limit),
+            )
+            return [self._row_to_pair(row) for row in cursor]
 
 
 # Singleton instance

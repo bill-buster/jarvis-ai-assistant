@@ -2,7 +2,7 @@
 
 ## Overview
 
-This plan addresses all 173 issues identified in `docs/CODE_AUDIT_REPORT.md`:
+This plan addresses issues identified in the previous audit documents (now archived):
 - **Critical**: 1 issue
 - **High Severity**: 20 issues
 - **Medium Severity**: 84 issues
@@ -171,7 +171,7 @@ After each phase:
 
 After all phases:
 1. `./scripts/overnight_eval.sh --quick` - Run benchmarks
-2. `python -m jarvis.setup --check` - Verify setup
+2. `uv run python -m jarvis.setup --check` - Verify setup
 3. Manual testing of chat, search, reply commands
 
 ---

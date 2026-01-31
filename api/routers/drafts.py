@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -682,7 +683,7 @@ def _route_reply_sync(
     chat_id: str,
     last_message: str,
     thread_context: list[str],
-) -> dict:
+) -> dict[str, Any]:
     """Run the router synchronously (for thread pool execution).
 
     Args:

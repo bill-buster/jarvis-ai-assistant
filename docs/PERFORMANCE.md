@@ -46,6 +46,19 @@ Available metrics:
 
 Default histogram buckets (in seconds): 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, +Inf
 
+### Routing Metrics (SQLite)
+
+Routing decisions are logged to a local SQLite database for offline analysis:
+
+- Storage: `~/.jarvis/metrics.db`
+- Data: per-request routing decision, similarity score, cache hit, model loaded flag, FAISS candidate count, and latency breakdowns
+
+Analyze collected data:
+
+```bash
+uv run python -m scripts.analyze_routing_metrics
+```
+
 ### Detailed Memory Breakdown
 
 Get detailed memory statistics:
@@ -106,7 +119,7 @@ The template matcher uses several optimizations:
 
 3. **Batch Encoding**: All pattern embeddings are computed in a single batch call during initialization using the `all-MiniLM-L6-v2` sentence transformer model.
 
-4. **Similarity Threshold**: Templates match when cosine similarity >= 0.7 (configurable via `SIMILARITY_THRESHOLD`).
+4. **Similarity Threshold**: TemplateMatcher uses a default 0.7 cosine threshold (`SIMILARITY_THRESHOLD`).
 
 ```python
 # Cache statistics available via

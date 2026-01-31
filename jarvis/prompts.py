@@ -10,7 +10,7 @@ Import prompts from here, not from other modules.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
@@ -347,16 +347,18 @@ class PromptTemplate:
 
 REPLY_TEMPLATE = PromptTemplate(
     name="reply_generation",
-    system_message="You are helping draft a text message reply. Keep replies natural, concise, "
-    "and friendly. Match the conversation's tone.",
+    system_message="You are helping draft a text message reply. Match the user's texting style "
+    "exactly - same length, formality, and patterns.",
     template="""### Conversation Context:
 {context}
 
 ### Instructions:
-Generate a natural reply to the last message. The reply should:
+Generate a reply that matches the user's texting style exactly:
 - Match the tone of the conversation ({tone})
-- Be concise (1-2 sentences for texts)
-- Sound like something a real person would send
+- Keep response length similar to user's typical messages
+- Use the same level of formality as the examples
+- Sound like the user wrote it, not an AI
+{style_instructions}
 {custom_instruction}
 
 ### Examples:
@@ -641,6 +643,218 @@ def detect_tone(messages: list[str]) -> Literal["casual", "professional", "mixed
 
 
 # =============================================================================
+# User Style Analysis
+# =============================================================================
+
+
+@dataclass
+class UserStyleAnalysis:
+    """Analysis of user's texting style from message examples.
+
+    Attributes:
+        avg_length: Average message length in characters
+        min_length: Minimum message length seen
+        max_length: Maximum message length seen
+        formality: Detected formality level
+        uses_lowercase: Whether user typically uses lowercase
+        uses_abbreviations: Whether user uses text abbreviations (u, ur, gonna)
+        uses_minimal_punctuation: Whether user avoids excessive punctuation
+        common_abbreviations: List of abbreviations user commonly uses
+        emoji_frequency: Emojis per message
+        exclamation_frequency: Exclamation marks per message
+    """
+
+    avg_length: float = 50.0
+    min_length: int = 0
+    max_length: int = 200
+    formality: Literal["formal", "casual", "very_casual"] = "casual"
+    uses_lowercase: bool = False
+    uses_abbreviations: bool = False
+    uses_minimal_punctuation: bool = False
+    common_abbreviations: list[str] = field(default_factory=list)
+    emoji_frequency: float = 0.0
+    exclamation_frequency: float = 0.0
+
+
+# Common text abbreviations to detect
+TEXT_ABBREVIATIONS: set[str] = {
+    "u",
+    "ur",
+    "r",
+    "y",
+    "n",
+    "k",
+    "kk",
+    "ok",
+    "bc",
+    "cuz",
+    "gonna",
+    "wanna",
+    "gotta",
+    "thx",
+    "ty",
+    "pls",
+    "plz",
+    "idk",
+    "nvm",
+    "brb",
+    "ttyl",
+    "omw",
+    "lol",
+    "lmao",
+    "omg",
+    "tbh",
+    "imo",
+    "ikr",
+    "rn",
+    "atm",
+    "btw",
+    "fyi",
+}
+
+
+def analyze_user_style(messages: list[str]) -> UserStyleAnalysis:
+    """Analyze user's texting style from message examples.
+
+    Examines the user's actual messages to extract style patterns including:
+    - Average/min/max message length
+    - Formality level
+    - Use of lowercase, abbreviations, punctuation
+    - Emoji and exclamation frequency
+
+    Args:
+        messages: List of message strings from the user
+
+    Returns:
+        UserStyleAnalysis with detected patterns
+    """
+    if not messages:
+        return UserStyleAnalysis()
+
+    # Filter to non-empty messages
+    messages = [m for m in messages if m and m.strip()]
+    if not messages:
+        return UserStyleAnalysis()
+
+    # Calculate length statistics
+    lengths = [len(m) for m in messages]
+    avg_length = sum(lengths) / len(lengths)
+    min_length = min(lengths)
+    max_length = max(lengths)
+
+    # Analyze case usage - check if messages are predominantly lowercase
+    lowercase_count = 0
+    for msg in messages:
+        # Remove emojis and punctuation for case analysis
+        letters_only = re.sub(r"[^a-zA-Z]", "", msg)
+        if letters_only:
+            lowercase_ratio = sum(1 for c in letters_only if c.islower()) / len(letters_only)
+            if lowercase_ratio > 0.9:  # 90%+ lowercase
+                lowercase_count += 1
+    uses_lowercase = lowercase_count / len(messages) > 0.7  # 70%+ of messages
+
+    # Detect abbreviation usage
+    combined_lower = " ".join(messages).lower()
+    words = set(re.findall(r"\b\w+\b", combined_lower))
+    found_abbreviations = list(words & TEXT_ABBREVIATIONS)
+    uses_abbreviations = len(found_abbreviations) >= 2  # At least 2 different abbreviations
+
+    # Analyze punctuation - minimal if low exclamation/period density
+    total_chars = sum(len(m) for m in messages)
+    total_exclamations = sum(m.count("!") for m in messages)
+    total_periods = sum(m.count(".") for m in messages)
+    exclamation_density = total_exclamations / max(total_chars, 1)
+    period_density = total_periods / max(total_chars, 1)
+    uses_minimal_punctuation = exclamation_density < 0.02 and period_density < 0.03
+
+    # Calculate frequencies per message
+    emoji_count = sum(len(EMOJI_PATTERN.findall(m)) for m in messages)
+    emoji_frequency = emoji_count / len(messages)
+    exclamation_frequency = total_exclamations / len(messages)
+
+    # Determine formality level
+    casual_count = len(words & CASUAL_INDICATORS)
+    if casual_count >= 3 or (uses_abbreviations and uses_lowercase):
+        formality: Literal["formal", "casual", "very_casual"] = "very_casual"
+    elif casual_count >= 1 or uses_abbreviations or avg_length < 30:
+        formality = "casual"
+    else:
+        formality = "formal"
+
+    return UserStyleAnalysis(
+        avg_length=round(avg_length, 1),
+        min_length=min_length,
+        max_length=max_length,
+        formality=formality,
+        uses_lowercase=uses_lowercase,
+        uses_abbreviations=uses_abbreviations,
+        uses_minimal_punctuation=uses_minimal_punctuation,
+        common_abbreviations=found_abbreviations[:5],  # Top 5
+        emoji_frequency=round(emoji_frequency, 2),
+        exclamation_frequency=round(exclamation_frequency, 2),
+    )
+
+
+def build_style_instructions(style: UserStyleAnalysis) -> str:
+    """Build style-matching instructions from a UserStyleAnalysis.
+
+    Generates specific instructions for the model to match the user's
+    texting style based on analyzed patterns.
+
+    Args:
+        style: UserStyleAnalysis from analyze_user_style()
+
+    Returns:
+        String with style-matching instructions for the prompt
+    """
+    instructions = []
+
+    # Length guidance
+    if style.avg_length < 15:
+        instructions.append(
+            f"Keep response VERY short (1-{max(5, int(style.avg_length * 1.5))} words)"
+        )
+    elif style.avg_length < 30:
+        instructions.append(
+            f"Keep response brief ({int(style.min_length)}-{int(style.avg_length * 1.2)} chars)"
+        )
+    elif style.avg_length < 60:
+        instructions.append("Keep response concise (1 short sentence)")
+    else:
+        instructions.append("Response can be 1-2 sentences")
+
+    # Case/formality guidance
+    if style.uses_lowercase:
+        instructions.append("Use lowercase (no capitalization)")
+
+    if style.formality == "very_casual":
+        instructions.append("Be very casual - no formal greetings like 'Hey!' or 'Hi there!'")
+    elif style.formality == "casual":
+        instructions.append("Keep it casual - skip formal greetings")
+
+    # Abbreviation guidance
+    if style.uses_abbreviations and style.common_abbreviations:
+        abbrevs = ", ".join(style.common_abbreviations[:3])
+        instructions.append(f"Use abbreviations like: {abbrevs}")
+
+    # Punctuation guidance
+    if style.uses_minimal_punctuation:
+        instructions.append("Use minimal punctuation")
+
+    # Emoji guidance
+    if style.emoji_frequency < 0.1:
+        instructions.append("Avoid emojis")
+    elif style.emoji_frequency > 0.5:
+        instructions.append("Feel free to use emojis")
+
+    # Exclamation guidance
+    if style.exclamation_frequency < 0.3:
+        instructions.append("Avoid excessive exclamation marks")
+
+    return "\n".join(f"- {inst}" for inst in instructions)
+
+
+# =============================================================================
 # Prompt Builder Functions
 # =============================================================================
 
@@ -722,6 +936,7 @@ def build_reply_prompt(
     instruction: str | None = None,
     tone: Literal["casual", "professional", "mixed"] = "casual",
     relationship_profile: RelationshipProfile | None = None,
+    user_messages: list[str] | None = None,
 ) -> str:
     """Build a prompt for generating iMessage replies.
 
@@ -733,6 +948,9 @@ def build_reply_prompt(
         relationship_profile: Optional relationship profile for personalized replies.
             If provided, the profile's communication patterns will be used to
             customize the reply style (emoji usage, formality, typical phrases).
+        user_messages: Optional list of user's own messages for style analysis.
+            If provided, the prompt will include explicit instructions to match
+            the user's texting style (length, formality, abbreviations, etc.).
 
     Returns:
         Formatted prompt string ready for model input
@@ -778,6 +996,12 @@ def build_reply_prompt(
     else:
         tone_str = "casual/friendly"
 
+    # Build style instructions from user's actual messages
+    style_instructions = ""
+    if user_messages:
+        style_analysis = analyze_user_style(user_messages)
+        style_instructions = build_style_instructions(style_analysis)
+
     # Format custom instruction
     custom_instruction = ""
     if instruction:
@@ -798,6 +1022,7 @@ def build_reply_prompt(
     prompt = REPLY_TEMPLATE.template.format(
         context=truncated_context,
         tone=tone_str,
+        style_instructions=style_instructions,
         custom_instruction=custom_instruction,
         examples=_format_examples(examples),
         last_message=last_message,
@@ -1090,8 +1315,8 @@ def get_thread_max_tokens(config: ThreadedReplyConfig) -> int:
 
 RAG_REPLY_TEMPLATE = PromptTemplate(
     name="rag_reply_generation",
-    system_message="You are helping draft a personalized text message reply based on the user's "
-    "communication history. Match their typical tone and style with this person.",
+    system_message="You are helping draft a text message reply. "
+    "Match the user's exact texting style - same length, same formality, same patterns.",
     template="""### Communication Style with {contact_name}:
 {relationship_context}
 
@@ -1102,17 +1327,20 @@ RAG_REPLY_TEMPLATE = PromptTemplate(
 {context}
 
 ### Instructions:
-Generate a natural reply to the last message that:
-- Matches how you typically communicate with {contact_name} ({tone})
-- Is consistent with your past response patterns
-- Sounds authentic to your voice
+Generate a reply (~{avg_length} chars) that EXACTLY matches the user's style:
+- Match the user's texting style exactly (see examples above)
+- Keep response length similar to user's typical responses
+- Use the same level of formality as the examples
+- If user uses lowercase/abbreviations, do the same
+- No formal greetings like "Hey!" or "Hi there!" unless user does that
+- Sound like the user wrote it, not an AI
 {custom_instruction}
 
-### Last message to reply to:
+### Last message:
 {last_message}
 
-### Your reply:""",
-    max_output_tokens=75,
+### Your reply (match user's style):""",
+    max_output_tokens=40,
 )
 
 
@@ -1140,6 +1368,7 @@ def _format_relationship_context(
     tone: str,
     avg_length: float,
     response_patterns: dict[str, float | int] | None = None,
+    user_messages: list[str] | None = None,
 ) -> str:
     """Format relationship context for RAG prompt.
 
@@ -1147,36 +1376,69 @@ def _format_relationship_context(
         tone: Typical communication tone
         avg_length: Average message length
         response_patterns: Optional response pattern statistics
+        user_messages: Optional list of user's messages for style analysis
 
     Returns:
         Formatted relationship context string
     """
     lines = []
 
-    # Tone description
+    # If we have user messages, analyze their style directly
+    if user_messages:
+        style = analyze_user_style(user_messages)
+
+        # Formality guidance based on actual analysis
+        if style.formality == "very_casual":
+            lines.append("- You text very casually (no greetings, short responses)")
+        elif style.formality == "casual":
+            lines.append("- You keep it casual and friendly")
+        else:
+            lines.append("- You use a more formal tone")
+
+        # Length guidance with specific numbers
+        lines.append(f"- Your typical message length: {int(style.avg_length)} chars")
+
+        # Style-specific patterns
+        if style.uses_lowercase:
+            lines.append("- You use lowercase (don't capitalize)")
+        if style.uses_abbreviations and style.common_abbreviations:
+            abbrevs = ", ".join(style.common_abbreviations[:3])
+            lines.append(f"- You use abbreviations: {abbrevs}")
+        if style.uses_minimal_punctuation:
+            lines.append("- You use minimal punctuation")
+        if style.emoji_frequency < 0.1:
+            lines.append("- You rarely use emojis")
+        elif style.emoji_frequency > 0.5:
+            lines.append("- You use emojis frequently")
+
+        return "\n".join(lines)
+
+    # Fallback: use provided tone and avg_length
     tone_descriptions = {
-        "casual": "You typically use casual, friendly language with this person",
-        "professional": "You typically use professional, formal language with this person",
-        "mixed": "You use a mix of casual and professional language with this person",
+        "casual": "You use casual, friendly language (no formal greetings)",
+        "professional": "You use professional but concise language",
+        "mixed": "You mix casual and professional language",
     }
     lines.append(f"- {tone_descriptions.get(tone, tone_descriptions['casual'])}")
 
-    # Message length guidance
-    if avg_length < 30:
-        lines.append("- You usually keep messages short and concise")
-    elif avg_length < 100:
-        lines.append("- You usually write moderate-length messages")
+    # Message length guidance - more specific brackets
+    if avg_length < 20:
+        lines.append("- You keep messages VERY short (1-5 words)")
+    elif avg_length < 40:
+        lines.append("- You write brief messages (1 short sentence)")
+    elif avg_length < 80:
+        lines.append("- You write moderate messages (1-2 sentences)")
     else:
-        lines.append("- You tend to write longer, detailed messages")
+        lines.append("- You write longer messages (2-3 sentences max)")
 
     # Response pattern insights
     if response_patterns:
         avg_response = response_patterns.get("avg_response_time_seconds")
         if avg_response:
             if avg_response < 300:
-                lines.append("- You usually respond quickly to this person")
+                lines.append("- You respond quickly")
             elif avg_response > 3600:
-                lines.append("- You often take time before responding to this person")
+                lines.append("- You take time before responding")
 
     return "\n".join(lines)
 
@@ -1188,6 +1450,7 @@ def build_rag_reply_prompt(
     similar_exchanges: list[tuple[str, str]] | None = None,
     relationship_profile: dict[str, Any] | None = None,
     instruction: str | None = None,
+    user_messages: list[str] | None = None,
 ) -> str:
     """Build a RAG-enhanced prompt for generating personalized iMessage replies.
 
@@ -1201,6 +1464,9 @@ def build_rag_reply_prompt(
         similar_exchanges: List of (context, response) tuples from similar past conversations
         relationship_profile: Dict with tone, avg_message_length, response_patterns, etc.
         instruction: Optional custom instruction for the reply
+        user_messages: Optional list of user's own messages for style analysis.
+            If provided, the prompt will include explicit instructions to match
+            the user's texting style (length, formality, abbreviations, etc.).
 
     Returns:
         Formatted prompt string ready for model input
@@ -1218,6 +1484,7 @@ def build_rag_reply_prompt(
         ...     contact_name="John",
         ...     similar_exchanges=exchanges,
         ...     relationship_profile={"tone": profile.typical_tone, ...},
+        ...     user_messages=["yeah", "k sounds good", "omw"],
         ... )
     """
     # Extract profile info
@@ -1226,11 +1493,17 @@ def build_rag_reply_prompt(
     avg_length = float(profile.get("avg_message_length", 50))
     response_patterns = profile.get("response_patterns")
 
-    # Format relationship context
+    # If user_messages provided, use style analysis for avg_length
+    if user_messages:
+        style = analyze_user_style(user_messages)
+        avg_length = style.avg_length
+
+    # Format relationship context with user messages for style analysis
     relationship_context = _format_relationship_context(
         tone=tone,
         avg_length=avg_length,
         response_patterns=response_patterns if isinstance(response_patterns, dict) else None,
+        user_messages=user_messages,
     )
 
     # Format similar exchanges
@@ -1252,6 +1525,7 @@ def build_rag_reply_prompt(
         similar_exchanges=similar_context,
         context=truncated_context,
         tone=tone,
+        avg_length=int(avg_length),
         custom_instruction=custom_instruction,
         last_message=last_message,
     )

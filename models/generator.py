@@ -413,6 +413,8 @@ class ThreadAwareGenerator:
             return None
 
         # Try template matching
+        if self._generator._template_matcher is None:
+            return None
         match = self._generator._template_matcher.match(last_text)
         if match is not None:
             return GenerationResponse(

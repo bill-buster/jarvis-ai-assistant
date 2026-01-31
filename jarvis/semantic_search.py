@@ -1,8 +1,8 @@
 """Semantic search for iMessage conversations.
 
-Uses sentence embeddings (all-MiniLM-L6-v2) to find messages by meaning
-rather than exact text matching. Embeddings are cached in SQLite for
-efficient repeated searches.
+Uses sentence embeddings (bge-small-en-v1.5 via unified adapter) to find
+messages by meaning rather than exact text matching. Embeddings are cached
+in SQLite for efficient repeated searches.
 
 Example:
     from jarvis.semantic_search import SemanticSearcher
@@ -32,13 +32,15 @@ if TYPE_CHECKING:
     from contracts.imessage import Message
     from integrations.imessage import ChatDBReader
 
+from jarvis.embedding_adapter import get_embedder
+
+# Embedding dimension for bge-small-en-v1.5
+EMBEDDING_DIM = 384
+
 logger = logging.getLogger(__name__)
 
 # Default cache location
 DEFAULT_CACHE_PATH = Path.home() / ".jarvis" / "embedding_cache.db"
-
-# Embedding dimension for all-MiniLM-L6-v2
-EMBEDDING_DIM = 384
 
 
 @dataclass
@@ -60,6 +62,10 @@ class SearchFilters:
     has_attachments: bool | None = None
 
 
+# Cache schema version - bump when changing embedding model to invalidate cache
+CACHE_SCHEMA_VERSION = 2
+
+
 class EmbeddingCache:
     """SQLite-backed cache for message embeddings.
 
@@ -70,7 +76,7 @@ class EmbeddingCache:
         Uses internal locking for concurrent access. Safe for multi-threaded use.
     """
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = CACHE_SCHEMA_VERSION
 
     def __init__(self, cache_path: Path | None = None) -> None:
         """Initialize the embedding cache.
@@ -367,19 +373,6 @@ class SemanticSearcher:
         self.reader = reader
         self.cache = cache or EmbeddingCache()
         self.similarity_threshold = similarity_threshold
-        self._model = None
-        self._model_lock = threading.Lock()
-
-    def _get_model(self):  # type: ignore[no-untyped-def]
-        """Lazy-load the sentence transformer model."""
-        if self._model is None:
-            with self._model_lock:
-                if self._model is None:
-                    # Reuse the sentence model from templates.py
-                    from models.templates import _get_sentence_model
-
-                    self._model = _get_sentence_model()
-        return self._model
 
     def _encode_texts(self, texts: list[str]) -> np.ndarray:
         """Encode texts to embeddings.
@@ -390,8 +383,8 @@ class SemanticSearcher:
         Returns:
             Numpy array of embeddings (shape: [len(texts), EMBEDDING_DIM])
         """
-        model = self._get_model()  # type: ignore[no-untyped-call]
-        return model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+        embedder = get_embedder()
+        return embedder.encode(texts, normalize=True)
 
     def _encode_single(self, text: str) -> np.ndarray:
         """Encode a single text to embedding.
@@ -402,7 +395,8 @@ class SemanticSearcher:
         Returns:
             Embedding vector (shape: [EMBEDDING_DIM])
         """
-        return self._encode_texts([text])[0]
+        embedder = get_embedder()
+        return embedder.encode([text], normalize=True)[0]
 
     def _get_messages_to_index(
         self,

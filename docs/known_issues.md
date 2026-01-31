@@ -21,11 +21,12 @@ JARVIS requires macOS because:
 
 | Model | Min RAM | Recommended |
 |-------|---------|-------------|
-| Qwen2.5-0.5B-4bit | 4GB | 6GB |
-| Qwen2.5-1.5B-4bit | 6GB | 8GB (default) |
+| Qwen2.5-0.5B-4bit | 8GB | 8GB |
+| Qwen2.5-1.5B-4bit | 8GB | 8GB |
 | Qwen2.5-3B-4bit | 8GB | 12GB |
+| LFM2.5-1.2B-4bit | 8GB | 8GB (default) |
 
-The default model (Qwen2.5-1.5B-Instruct-4bit) targets 8GB MacBook Air.
+The default model (LFM2.5-1.2B-Instruct-MLX-4bit) targets 8GB Macs.
 
 ---
 
@@ -44,7 +45,7 @@ The default model (Qwen2.5-1.5B-Instruct-4bit) targets 8GB MacBook Air.
 2. Add your Terminal app (or IDE)
 3. Restart the Terminal/IDE
 
-**Verification**: `python -m jarvis.setup --check`
+**Verification**: `uv run python -m jarvis.setup --check`
 
 #### 2. Model Download Required Before First Use
 
@@ -54,12 +55,12 @@ The default model (Qwen2.5-1.5B-Instruct-4bit) targets 8GB MacBook Air.
 
 **Solution**:
 ```bash
-huggingface-cli download mlx-community/Qwen2.5-1.5B-Instruct-4bit
+huggingface-cli download LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit
 ```
 
 Or run setup wizard:
 ```bash
-python -m jarvis.setup
+uv run python -m jarvis.setup
 ```
 
 #### 3. First Generation is Slow (Cold Start)
@@ -164,7 +165,7 @@ The template system covers common responses (~25 templates) but won't match ever
 
 - RAG search requires embedding index build (first run)
 - Cross-conversation search requires relationship registry setup
-- Embedding similarity threshold (0.7) may miss relevant context
+- Embedding similarity thresholds are configurable; defaults may still miss relevant context
 
 ---
 
@@ -196,7 +197,7 @@ The template system covers common responses (~25 templates) but won't match ever
 
 1. Check if issue is listed above
 2. Run `make health` and capture output
-3. Run `python -m jarvis.setup --check` and capture output
+3. Run `uv run python -m jarvis.setup --check` and capture output
 4. Include macOS version, Python version, available RAM
 5. Report at: https://github.com/anthropics/claude-code/issues
 

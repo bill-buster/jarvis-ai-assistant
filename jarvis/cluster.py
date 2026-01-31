@@ -1,11 +1,21 @@
 """Response Clustering - Group similar responses into intent clusters.
 
+NOTE: This module requires the optional 'hdbscan' dependency which is not
+installed by default. Install with: pip install hdbscan
+
+The router now uses a simpler top-K selection approach that doesn't require
+clustering. This module is optional and primarily useful for:
+- Analyzing your response patterns
+- Mining templates from historical data
+- Advanced customization
+
 Uses HDBSCAN to discover natural clusters in your response patterns:
 - ACCEPT_INVITATION: "sounds good", "I'm down", "let's do it"
 - DECLINE_POLITELY: "can't today", "maybe next time"
 - CONFIRM_ARRIVAL: "omw", "be there soon", "5 min"
 
 Usage:
+    pip install hdbscan                # Install optional dependency
     jarvis db cluster                  # Auto-cluster responses
     jarvis db label-cluster 0 GREETING # Name a cluster
 """
@@ -29,9 +39,6 @@ class ClusterConfig:
     min_cluster_size: int = 10  # Minimum responses to form a cluster
     min_samples: int = 5  # Core point density requirement
     metric: str = "euclidean"  # Distance metric for normalized embeddings
-
-    # Embedding model
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # Number of example responses to keep per cluster
     num_examples: int = 5
@@ -63,16 +70,16 @@ class ResponseClusterer:
             config: Clustering configuration. Uses defaults if None.
         """
         self.config = config or ClusterConfig()
-        self._model = None
+        self._embedder = None
 
     @property
-    def model(self) -> Any:
-        """Get or load the sentence transformer model."""
-        if self._model is None:
-            from sentence_transformers import SentenceTransformer
+    def embedder(self) -> Any:
+        """Get the unified embedder."""
+        if self._embedder is None:
+            from jarvis.embedding_adapter import get_embedder
 
-            self._model = SentenceTransformer(self.config.embedding_model)
-        return self._model
+            self._embedder = get_embedder()
+        return self._embedder
 
     def cluster_responses(
         self,
@@ -91,12 +98,14 @@ class ResponseClusterer:
         if not pairs:
             return []
 
-        # Import HDBSCAN
+        # Import HDBSCAN (optional dependency)
         try:
             from hdbscan import HDBSCAN
         except ImportError:
             raise ImportError(
-                "HDBSCAN is required for clustering. Install with: pip install hdbscan"
+                "HDBSCAN is required for clustering. Install with: pip install hdbscan\n"
+                "Note: The router now uses top-K selection which doesn't require clustering.\n"
+                "Clustering is optional and only needed for advanced response pattern analysis."
             )
 
         # Stage 1: Extract response texts
@@ -112,12 +121,7 @@ class ResponseClusterer:
             progress_callback("encoding", 0.2, f"Encoding {len(responses)} responses...")
 
         logger.info("Computing embeddings for %d responses...", len(responses))
-        embeddings = self.model.encode(
-            responses,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-            batch_size=32,
-        )
+        embeddings = self.embedder.encode(responses, normalize=True)
 
         # Stage 3: Run HDBSCAN clustering
         if progress_callback:
@@ -147,7 +151,7 @@ class ResponseClusterer:
         logger.info(
             "Found %d clusters (plus %d noise points)",
             len(unique_labels),
-            sum(1 for l in labels if l == -1),
+            sum(1 for label in labels if label == -1),
         )
 
         # Build cluster results
@@ -155,7 +159,7 @@ class ResponseClusterer:
 
         for cluster_label in sorted(unique_labels):
             # Get indices for this cluster
-            indices = [i for i, l in enumerate(labels) if l == cluster_label]
+            indices = [i for i, label in enumerate(labels) if label == cluster_label]
 
             # Get responses, triggers, and pair IDs for this cluster
             cluster_responses = [responses[i] for i in indices]
@@ -390,7 +394,7 @@ def save_cluster_results(
             for r in results
         ],
         "labels": labels.tolist(),
-        "noise_count": sum(1 for l in labels if l == -1),
+        "noise_count": sum(1 for label in labels if label == -1),
         "total_pairs": len(labels),
     }
 

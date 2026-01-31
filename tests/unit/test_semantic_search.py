@@ -316,17 +316,17 @@ class TestSemanticSearcher:
         assert results == []
         searcher.close()
 
-    @patch("jarvis.semantic_search.SemanticSearcher._get_model")
+    @patch("jarvis.semantic_search.get_embedder")
     def test_search_returns_results(
         self,
-        mock_get_model: MagicMock,
+        mock_get_embedder: MagicMock,
         mock_reader: MagicMock,
         sample_messages: list[Message],
         temp_cache_path: Path,
     ) -> None:
         """Test that search returns results with similarity scores."""
-        # Mock the sentence transformer model
-        mock_model = MagicMock()
+        # Mock the embedder
+        mock_embedder = MagicMock()
 
         # Create embeddings that will produce known similarity scores
         # Query embedding
@@ -348,8 +348,8 @@ class TestSemanticSearcher:
                 return np.array([query_embedding])
             return msg_embeddings[: len(texts)]
 
-        mock_model.encode.side_effect = encode_side_effect
-        mock_get_model.return_value = mock_model
+        mock_embedder.encode.side_effect = encode_side_effect
+        mock_get_embedder.return_value = mock_embedder
 
         cache = EmbeddingCache(cache_path=temp_cache_path)
         searcher = SemanticSearcher(
@@ -369,16 +369,16 @@ class TestSemanticSearcher:
 
         searcher.close()
 
-    @patch("jarvis.semantic_search.SemanticSearcher._get_model")
+    @patch("jarvis.semantic_search.get_embedder")
     def test_search_respects_threshold(
         self,
-        mock_get_model: MagicMock,
+        mock_get_embedder: MagicMock,
         mock_reader: MagicMock,
         sample_messages: list[Message],
         temp_cache_path: Path,
     ) -> None:
         """Test that search respects similarity threshold."""
-        mock_model = MagicMock()
+        mock_embedder = MagicMock()
 
         # All messages will have low similarity
         query_embedding = np.array([1.0, 0.0, 0.0], dtype=np.float32)
@@ -389,8 +389,8 @@ class TestSemanticSearcher:
                 return np.array([query_embedding])
             return msg_embeddings[: len(texts)]
 
-        mock_model.encode.side_effect = encode_side_effect
-        mock_get_model.return_value = mock_model
+        mock_embedder.encode.side_effect = encode_side_effect
+        mock_get_embedder.return_value = mock_embedder
 
         cache = EmbeddingCache(cache_path=temp_cache_path)
         # High threshold should filter out all results
@@ -404,16 +404,16 @@ class TestSemanticSearcher:
         assert len(results) == 0
         searcher.close()
 
-    @patch("jarvis.semantic_search.SemanticSearcher._get_model")
+    @patch("jarvis.semantic_search.get_embedder")
     def test_search_respects_limit(
         self,
-        mock_get_model: MagicMock,
+        mock_get_embedder: MagicMock,
         mock_reader: MagicMock,
         sample_messages: list[Message],
         temp_cache_path: Path,
     ) -> None:
         """Test that search respects result limit."""
-        mock_model = MagicMock()
+        mock_embedder = MagicMock()
 
         # All messages will have high similarity
         query_embedding = np.array([1.0, 0.0, 0.0], dtype=np.float32)
@@ -424,8 +424,8 @@ class TestSemanticSearcher:
                 return np.array([query_embedding])
             return msg_embeddings[: len(texts)]
 
-        mock_model.encode.side_effect = encode_side_effect
-        mock_get_model.return_value = mock_model
+        mock_embedder.encode.side_effect = encode_side_effect
+        mock_get_embedder.return_value = mock_embedder
 
         cache = EmbeddingCache(cache_path=temp_cache_path)
         searcher = SemanticSearcher(
@@ -438,18 +438,18 @@ class TestSemanticSearcher:
         assert len(results) <= 2
         searcher.close()
 
-    @patch("jarvis.semantic_search.SemanticSearcher._get_model")
+    @patch("jarvis.semantic_search.get_embedder")
     def test_search_with_filters(
         self,
-        mock_get_model: MagicMock,
+        mock_get_embedder: MagicMock,
         mock_reader: MagicMock,
         sample_messages: list[Message],
         temp_cache_path: Path,
     ) -> None:
         """Test search with filters applied."""
-        mock_model = MagicMock()
-        mock_model.encode.return_value = np.array([[0.5, 0.5, 0.0]], dtype=np.float32)
-        mock_get_model.return_value = mock_model
+        mock_embedder = MagicMock()
+        mock_embedder.encode.return_value = np.array([[0.5, 0.5, 0.0]], dtype=np.float32)
+        mock_get_embedder.return_value = mock_embedder
 
         cache = EmbeddingCache(cache_path=temp_cache_path)
         searcher = SemanticSearcher(
@@ -470,16 +470,16 @@ class TestSemanticSearcher:
         mock_reader.get_messages.assert_called()
         searcher.close()
 
-    @patch("jarvis.semantic_search.SemanticSearcher._get_model")
+    @patch("jarvis.semantic_search.get_embedder")
     def test_search_caches_embeddings(
         self,
-        mock_get_model: MagicMock,
+        mock_get_embedder: MagicMock,
         mock_reader: MagicMock,
         sample_messages: list[Message],
         temp_cache_path: Path,
     ) -> None:
         """Test that embeddings are cached after first search."""
-        mock_model = MagicMock()
+        mock_embedder = MagicMock()
 
         query_embedding = np.array([0.5, 0.5, 0.0], dtype=np.float32)
         msg_embeddings = np.array([[0.5, 0.5, 0.0] for _ in sample_messages], dtype=np.float32)
@@ -489,8 +489,8 @@ class TestSemanticSearcher:
                 return np.array([query_embedding])
             return msg_embeddings[: len(texts)]
 
-        mock_model.encode.side_effect = encode_side_effect
-        mock_get_model.return_value = mock_model
+        mock_embedder.encode.side_effect = encode_side_effect
+        mock_get_embedder.return_value = mock_embedder
 
         cache = EmbeddingCache(cache_path=temp_cache_path)
         searcher = SemanticSearcher(
@@ -501,11 +501,11 @@ class TestSemanticSearcher:
 
         # First search
         searcher.search("test query")
-        first_call_count = mock_model.encode.call_count
+        first_call_count = mock_embedder.encode.call_count
 
         # Second search - embeddings should be cached
         searcher.search("different query")
-        second_call_count = mock_model.encode.call_count
+        second_call_count = mock_embedder.encode.call_count
 
         # Should only encode the new query, not the messages again
         assert second_call_count < first_call_count + len(sample_messages) + 1

@@ -244,9 +244,10 @@ class TestDefaultModelId:
         assert DEFAULT_MODEL_ID in MODEL_REGISTRY
 
     def test_default_model_is_balanced(self):
-        """Test default model is the balanced tier."""
+        """Test default model has appropriate quality tier."""
         spec = MODEL_REGISTRY[DEFAULT_MODEL_ID]
-        assert spec.quality_tier == "good"
+        # LFM 2.5 is the default with "excellent" tier for conversation
+        assert spec.quality_tier in ("good", "excellent")
 
 
 class TestIsModelAvailable:

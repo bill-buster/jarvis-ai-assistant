@@ -95,9 +95,13 @@ __all__ = [
 # Singleton generator instance with thread-safe initialization
 _generator: MLXGenerator | None = None
 _generator_lock = threading.Lock()
+_current_model_id: str | None = None
 
 
-def get_generator(skip_templates: bool = True) -> MLXGenerator:
+def get_generator(
+    skip_templates: bool = True,
+    model_id: str | None = None,
+) -> MLXGenerator:
     """Get or create singleton generator instance.
 
     Thread-safe using double-check locking pattern.
@@ -106,16 +110,26 @@ def get_generator(skip_templates: bool = True) -> MLXGenerator:
         skip_templates: If True (default), skip template matching to save memory.
                        Templates are disabled by default because they load a
                        separate model that consumes memory needed for the LLM.
+        model_id: Optional model ID from registry. If different from current,
+                 resets the generator to load the new model.
 
     Returns:
         The shared MLXGenerator instance
     """
-    global _generator
+    global _generator, _current_model_id
+
+    # If requesting a different model, reset first
+    if model_id is not None and _current_model_id != model_id:
+        reset_generator()
+        _current_model_id = model_id
+
     if _generator is None:
         with _generator_lock:
             # Double-check after acquiring lock
             if _generator is None:
-                _generator = MLXGenerator(skip_templates=skip_templates)
+                config = ModelConfig(model_id=model_id) if model_id else None
+                _generator = MLXGenerator(config=config, skip_templates=skip_templates)
+                _current_model_id = model_id
     return _generator
 
 
@@ -142,9 +156,10 @@ def reset_generator() -> None:
     This function DOES unload any loaded models to prevent memory leaks.
     A new generator instance will be created on the next get_generator() call.
     """
-    global _generator
+    global _generator, _current_model_id
     with _generator_lock:
         if _generator is not None:
             # Unload model if loaded to prevent memory leaks
             _generator.unload()
         _generator = None
+        _current_model_id = None

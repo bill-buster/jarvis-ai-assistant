@@ -30,9 +30,6 @@ INDEXES_DIR = JARVIS_DIR / "indexes" / "triggers"
 class IndexConfig:
     """Configuration for FAISS index building."""
 
-    # Embedding model for triggers
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
-
     # Base directory for indexes
     indexes_dir: Path = INDEXES_DIR
 
@@ -67,21 +64,27 @@ class TriggerIndexBuilder:
     def __init__(self, config: IndexConfig | None = None) -> None:
         """Initialize index builder."""
         self.config = config or IndexConfig()
-        self._model = None
+        self._embedder = None
 
     @property
-    def model(self) -> Any:
-        """Get or load the sentence transformer model."""
-        if self._model is None:
-            from sentence_transformers import SentenceTransformer
+    def embedder(self) -> Any:
+        """Get the unified embedder."""
+        if self._embedder is None:
+            from jarvis.embedding_adapter import get_embedder
 
-            self._model = SentenceTransformer(self.config.embedding_model)
-        return self._model
+            self._embedder = get_embedder()
+        return self._embedder
+
+    def _get_model_name(self) -> str:
+        """Get the model name from the embedder."""
+        from jarvis.embedding_adapter import EMBEDDING_MODEL
+
+        return EMBEDDING_MODEL
 
     def _get_model_dir_name(self) -> str:
         """Get safe directory name for model."""
         # Convert "BAAI/bge-small-en-v1.5" to "bge-small-en-v1.5"
-        return self.config.embedding_model.split("/")[-1]
+        return self._get_model_name().split("/")[-1]
 
     def _generate_version_id(self) -> str:
         """Generate a version ID based on current timestamp."""
@@ -130,12 +133,7 @@ class TriggerIndexBuilder:
         if progress_callback:
             progress_callback("encoding", 0.2, f"Encoding {len(triggers)} triggers...")
 
-        embeddings = self.model.encode(
-            triggers,
-            normalize_embeddings=self.config.normalize,
-            show_progress_bar=False,
-            batch_size=self.config.batch_size,
-        )
+        embeddings = self.embedder.encode(triggers, normalize=self.config.normalize)
 
         embeddings = embeddings.astype(np.float32)
         dimension = embeddings.shape[1]
@@ -183,7 +181,7 @@ class TriggerIndexBuilder:
         # Stage 6: Register index version and set as active
         jarvis_db.add_index_version(
             version_id=version_id,
-            model_name=self.config.embedding_model,
+            model_name=self._get_model_name(),
             embedding_dim=dimension,
             num_vectors=len(pairs),
             index_path=str(index_path.relative_to(JARVIS_DIR)),
@@ -218,27 +216,21 @@ class TriggerIndexSearcher:
 
         Args:
             jarvis_db: JarvisDB instance for index metadata.
-            embedding_model: Override embedding model (must match index).
+            embedding_model: Deprecated - model is now determined by unified adapter.
         """
         self.jarvis_db = jarvis_db
-        self._embedding_model = embedding_model
         self._index = None
-        self._model = None
+        self._embedder = None
         self._active_version: str | None = None
 
     @property
-    def model(self) -> Any:
-        """Get or load the sentence transformer model."""
-        if self._model is None:
-            from sentence_transformers import SentenceTransformer
+    def embedder(self) -> Any:
+        """Get the unified embedder."""
+        if self._embedder is None:
+            from jarvis.embedding_adapter import get_embedder
 
-            # Use model from active index or override
-            active_index = self.jarvis_db.get_active_index()
-            model_name = self._embedding_model or (
-                active_index.model_name if active_index else "BAAI/bge-small-en-v1.5"
-            )
-            self._model = SentenceTransformer(model_name)
-        return self._model
+            self._embedder = get_embedder()
+        return self._embedder
 
     @property
     def index(self) -> Any:
@@ -268,6 +260,7 @@ class TriggerIndexSearcher:
         query: str,
         k: int = 5,
         threshold: float = 0.5,
+        embedder: Any | None = None,
     ) -> list[tuple[int, float]]:
         """Search for similar triggers.
 
@@ -275,15 +268,14 @@ class TriggerIndexSearcher:
             query: The incoming message to match.
             k: Number of results to return.
             threshold: Minimum similarity score (0-1).
+            embedder: Optional embedder override (for per-request caching).
 
         Returns:
             List of (faiss_id, similarity_score) tuples, sorted by score descending.
         """
         # Encode query
-        query_embedding = self.model.encode(
-            [query],
-            normalize_embeddings=True,
-        ).astype(np.float32)
+        query_embedder = embedder or self.embedder
+        query_embedding = query_embedder.encode([query], normalize=True).astype(np.float32)
 
         # Search index
         scores, indices = self.index.search(query_embedding, k)
@@ -302,6 +294,7 @@ class TriggerIndexSearcher:
         k: int = 5,
         threshold: float = 0.5,
         prefer_recent: bool = True,
+        embedder: Any | None = None,
     ) -> list[dict[str, Any]]:
         """Search and return full pair information with freshness weighting.
 
@@ -310,6 +303,7 @@ class TriggerIndexSearcher:
             k: Number of results to return.
             threshold: Minimum similarity score.
             prefer_recent: Weight results by recency (source_timestamp).
+            embedder: Optional embedder override (for per-request caching).
 
         Returns:
             List of dicts with pair info and similarity score.
@@ -319,7 +313,12 @@ class TriggerIndexSearcher:
         if not active_index:
             return []
 
-        matches = self.search(query, k * 2 if prefer_recent else k, threshold)
+        matches = self.search(
+            query,
+            k * 2 if prefer_recent else k,
+            threshold,
+            embedder=embedder,
+        )
 
         results = []
         for faiss_id, score in matches:
@@ -363,21 +362,28 @@ def build_index_from_db(
     jarvis_db: Any,
     config: IndexConfig | None = None,
     progress_callback: Any | None = None,
-    min_quality: float = 0.0,
+    min_quality: float = 0.5,
+    include_holdout: bool = False,
 ) -> dict[str, Any]:
-    """Build a new versioned FAISS index from all pairs in the database.
+    """Build a new versioned FAISS index from training pairs in the database.
 
     Args:
         jarvis_db: JarvisDB instance.
         config: Index configuration.
         progress_callback: Optional progress callback.
         min_quality: Minimum quality score for pairs to include.
+        include_holdout: If False (default), exclude holdout pairs from index.
+            Set to True only for full index rebuild (not recommended for eval).
 
     Returns:
         Statistics about the index building.
     """
-    # Get all pairs meeting quality threshold
-    pairs = jarvis_db.get_all_pairs(min_quality=min_quality)
+    # Get pairs meeting quality threshold, excluding holdout by default
+    if include_holdout:
+        pairs = jarvis_db.get_all_pairs(min_quality=min_quality)
+    else:
+        pairs = jarvis_db.get_training_pairs(min_quality=min_quality)
+
     if not pairs:
         return {
             "success": False,
@@ -396,7 +402,7 @@ def build_index_from_db(
         "index_size_bytes": stats.index_size_bytes,
         "version_id": stats.version_id,
         "index_path": stats.index_path,
-        "model_name": builder.config.embedding_model,
+        "model_name": builder._get_model_name(),
     }
 
 

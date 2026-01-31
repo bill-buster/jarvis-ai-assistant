@@ -106,16 +106,6 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         description="Best instruction following, natural tone, concise responses. Recommended.",
         recommended_for=["quick_replies", "summarization", "drafting", "natural_conversation"],
     ),
-    "bitnet-2b": ModelSpec(
-        id="bitnet-2b",
-        path="microsoft/bitnet-b1.58-2B-4T",
-        display_name="BitNet b1.58 2B (Experimental)",
-        size_gb=0.4,
-        min_ram_gb=8,
-        quality_tier="good",
-        description="1.58-bit quantized model. 10x memory efficient, 2x faster on CPU. Experimental.",
-        recommended_for=["quick_replies", "cpu_inference"],
-    ),
     "lfm-1.2b": ModelSpec(
         id="lfm-1.2b",
         path="LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit",
@@ -125,6 +115,26 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         quality_tier="excellent",
         description="LFM 2.5 1.2B optimized for conversation. Best for natural chat.",
         recommended_for=["quick_replies", "natural_conversation", "drafting", "iMessage"],
+    ),
+    "lfm-1.2b-thinking": ModelSpec(
+        id="lfm-1.2b-thinking",
+        path="LiquidAI/LFM2.5-1.2B-Thinking-MLX-4bit",
+        display_name="LFM 2.5 1.2B (Thinking)",
+        size_gb=1.2,
+        min_ram_gb=8,
+        quality_tier="excellent",
+        description="LFM 2.5 1.2B with chain-of-thought reasoning. Better for complex decisions.",
+        recommended_for=["complex_replies", "reasoning", "analysis"],
+    ),
+    "lfm-1.2b-base": ModelSpec(
+        id="lfm-1.2b-base",
+        path="mlx-community/LFM2.5-1.2B-Base-4bit",
+        display_name="LFM 2.5 1.2B (Base)",
+        size_gb=1.2,
+        min_ram_gb=8,
+        quality_tier="good",
+        description="LFM 2.5 1.2B base model. No instruct tuning - raw completion.",
+        recommended_for=["completion", "few_shot", "style_matching"],
     ),
 }
 

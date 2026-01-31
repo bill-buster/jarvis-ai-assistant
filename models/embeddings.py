@@ -1,36 +1,41 @@
-"""MLX-based embeddings for local inference on Apple Silicon.
+"""MLX Embedding Service Client - Low-level GPU-accelerated embeddings.
 
-Provides fast, memory-efficient embedding computation using MLX models.
-This is an alternative to sentence-transformers for environments where
-MLX acceleration is preferred.
+This is the LOW-LEVEL MLX embedding service client. It communicates with
+a separate MLX microservice via HTTP for GPU-accelerated embeddings.
+
+IMPORTANT: Most code should NOT import from this module directly.
+Instead, use the unified interface in jarvis/embedding_adapter.py:
+
+    from jarvis.embedding_adapter import get_embedder
+    embedder = get_embedder()  # Auto-selects MLX or CPU fallback
+
+Architecture (3-layer embedding stack):
+    1. jarvis/embeddings.py       - Embedding STORAGE (SQLite-backed message search)
+    2. jarvis/embedding_adapter.py - UNIFIED INTERFACE (MLX-first with CPU fallback)
+    3. models/embeddings.py       - MLX SERVICE CLIENT (this file, low-level)
+
+This module is appropriate for:
+- Direct MLX service health checks
+- Starting/managing the MLX embedding service
+- Low-level MLX-specific operations
 
 Key Features:
-- Native MLX acceleration on Apple Silicon
+- GPU acceleration on Apple Silicon via MLX
 - Thread-safe singleton pattern
-- Normalized embeddings by default
-- Compatible with bge, e5, and other MLX embedding models
+- Automatic service health checking
 
-Usage:
-    from models.embeddings import get_mlx_embedder, MLXEmbedder
-
-    # Get singleton embedder
-    embedder = get_mlx_embedder()
-
-    # Encode texts
-    embeddings = embedder.encode(["Hello, world!", "How are you?"])
-
-    # Encode without normalization
-    embeddings = embedder.encode(texts, normalize=False)
-
-Note:
-    Requires mlx-embeddings package: pip install mlx-embeddings
-    Only available on Apple Silicon Macs.
+Service Setup:
+    The MLX embedding service runs separately at ~/.jarvis/mlx-embed-service/
+    Start it with: cd ~/.jarvis/mlx-embed-service && uv run python server.py
 """
 
 from __future__ import annotations
 
 import logging
+import subprocess
 import threading
+import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -46,8 +51,10 @@ logger = logging.getLogger(__name__)
 # Configuration
 # =============================================================================
 
-DEFAULT_MLX_EMBEDDING_MODEL = "mlx-community/bge-small-en-v1.5"
+DEFAULT_MLX_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 MLX_EMBEDDING_DIM = 384  # Dimension for bge-small-en-v1.5
+MLX_EMBED_SERVICE_URL = "http://127.0.0.1:8766"
+MLX_EMBED_SERVICE_DIR = Path.home() / ".jarvis" / "mlx-embed-service"
 
 
 # =============================================================================
@@ -62,10 +69,10 @@ class MLXEmbeddingError(JarvisError):
     default_code = ErrorCode.MDL_LOAD_FAILED
 
 
-class MLXModelNotAvailableError(MLXEmbeddingError):
-    """Raised when MLX is not available (non-Apple Silicon)."""
+class MLXServiceNotAvailableError(MLXEmbeddingError):
+    """Raised when MLX embedding service is not running."""
 
-    default_message = "MLX is not available on this platform"
+    default_message = "MLX embedding service is not available"
 
 
 class MLXModelLoadError(MLXEmbeddingError):
@@ -74,21 +81,24 @@ class MLXModelLoadError(MLXEmbeddingError):
     default_message = "Failed to load MLX embedding model"
 
 
+# For backwards compatibility
+MLXModelNotAvailableError = MLXServiceNotAvailableError
+
+
 # =============================================================================
-# MLX Embedder
+# MLX Embedder (Service Client)
 # =============================================================================
 
 
 class MLXEmbedder:
-    """MLX-based embedding model for Apple Silicon.
+    """Client for MLX embedding microservice.
 
-    Provides text embedding using MLX-optimized models for fast
-    inference on Apple Silicon. Uses lazy loading to defer model
-    initialization until first use.
+    Communicates with a separate MLX embedding service to generate
+    embeddings. The service runs in its own environment to avoid
+    dependency conflicts.
 
     Thread Safety:
-        This class is thread-safe. The model is loaded using
-        double-check locking to ensure safe initialization.
+        This class is thread-safe for concurrent encode() calls.
 
     Example:
         >>> embedder = MLXEmbedder()
@@ -97,85 +107,65 @@ class MLXEmbedder:
         (2, 384)
     """
 
-    def __init__(self, model_name: str = DEFAULT_MLX_EMBEDDING_MODEL) -> None:
-        """Initialize the MLX embedder.
+    def __init__(
+        self,
+        model_name: str = DEFAULT_MLX_EMBEDDING_MODEL,
+        service_url: str = MLX_EMBED_SERVICE_URL,
+        timeout: float = 30.0,
+    ) -> None:
+        """Initialize the MLX embedder client.
 
         Args:
-            model_name: Name/path of the MLX embedding model to use.
-                       Defaults to "mlx-community/bge-small-en-v1.5".
-
-        Note:
-            The model is not loaded until the first call to encode().
-            This allows for fast initialization and deferred resource usage.
+            model_name: Name/path of the embedding model to use.
+            service_url: URL of the MLX embedding service.
+            timeout: Request timeout in seconds.
         """
         self.model_name = model_name
-        self._model = None
+        self.service_url = service_url.rstrip("/")
+        self.timeout = timeout
         self._lock = threading.Lock()
-        self._is_available: bool | None = None
+        self._service_available: bool | None = None
+        self._last_health_check: float = 0
 
-    def _check_mlx_available(self) -> bool:
-        """Check if MLX is available on this system.
+    def _check_service_health(self, force: bool = False) -> bool:
+        """Check if the embedding service is healthy.
+
+        Args:
+            force: Force a fresh health check even if cached.
 
         Returns:
-            True if MLX is available, False otherwise.
+            True if service is healthy, False otherwise.
         """
-        if self._is_available is not None:
-            return self._is_available
+        # Cache health check for 30 seconds
+        now = time.time()
+        if not force and self._service_available is not None:
+            if now - self._last_health_check < 30:
+                return self._service_available
 
         try:
-            import mlx.core  # noqa: F401
+            import urllib.request
 
-            self._is_available = True
-        except ImportError:
-            self._is_available = False
-            logger.warning("MLX is not available on this system")
+            url = f"{self.service_url}/health"
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=5) as response:
+                if response.status == 200:
+                    self._service_available = True
+                    self._last_health_check = now
+                    return True
+        except Exception as e:
+            logger.debug("Health check failed: %s", e)
 
-        return self._is_available
+        self._service_available = False
+        self._last_health_check = now
+        return False
 
-    def _load_model(self) -> None:
-        """Load the MLX embedding model.
+    def is_available(self) -> bool:
+        """Check if the MLX embedding service is available.
 
-        Uses double-check locking for thread-safe initialization.
-
-        Raises:
-            MLXModelNotAvailableError: If MLX is not available.
-            MLXModelLoadError: If model fails to load.
+        Returns:
+            True if service is running and healthy.
         """
-        # Fast path: already loaded
-        if self._model is not None:
-            return
-
-        # Slow path: acquire lock and load
-        with self._lock:
-            # Double-check after acquiring lock
-            if self._model is not None:
-                return
-
-            if not self._check_mlx_available():
-                raise MLXModelNotAvailableError(
-                    "MLX is not available. This feature requires Apple Silicon."
-                )
-
-            try:
-                from mlx_embeddings import load_model
-
-                logger.info("Loading MLX embedding model: %s", self.model_name)
-                self._model = load_model(self.model_name)
-                logger.debug("MLX embedding model loaded successfully")
-
-            except ImportError as e:
-                raise MLXModelLoadError(
-                    "mlx-embeddings package not installed. "
-                    "Install with: pip install mlx-embeddings",
-                    cause=e,
-                ) from e
-
-            except Exception as e:
-                logger.exception("Failed to load MLX embedding model: %s", self.model_name)
-                raise MLXModelLoadError(
-                    f"Failed to load MLX embedding model '{self.model_name}': {e}",
-                    cause=e,
-                ) from e
+        return self._check_service_health()
 
     def encode(
         self,
@@ -187,15 +177,12 @@ class MLXEmbedder:
         Args:
             texts: Single text string or list of texts to encode.
             normalize: If True (default), L2-normalize the embeddings.
-                      Normalized embeddings enable cosine similarity via dot product.
 
         Returns:
-            NumPy array of shape (n_texts, embedding_dim) containing the embeddings.
-            If a single string was provided, returns shape (1, embedding_dim).
+            NumPy array of shape (n_texts, embedding_dim).
 
         Raises:
-            MLXModelNotAvailableError: If MLX is not available.
-            MLXModelLoadError: If model fails to load.
+            MLXServiceNotAvailableError: If service is not running.
             MLXEmbeddingError: If encoding fails.
 
         Example:
@@ -210,67 +197,90 @@ class MLXEmbedder:
         if not texts:
             return np.array([], dtype=np.float32).reshape(0, MLX_EMBEDDING_DIM)
 
-        # Ensure model is loaded
-        self._load_model()
+        # Check service availability
+        if not self._check_service_health():
+            raise MLXServiceNotAvailableError(
+                "MLX embedding service is not running. "
+                "Start it with: cd ~/.jarvis/mlx-embed-service && uv run python server.py"
+            )
 
         try:
-            # Generate embeddings using the model
-            embeddings = self._model.encode(texts)
+            import json
+            import urllib.request
 
-            # Convert to numpy if not already
-            if not isinstance(embeddings, np.ndarray):
-                embeddings = np.array(embeddings, dtype=np.float32)
+            # Prepare request
+            url = f"{self.service_url}/embed"
+            data = json.dumps(
+                {
+                    "texts": texts,
+                    "normalize": normalize,
+                    "model": self.model_name,
+                }
+            ).encode("utf-8")
 
-            # Ensure float32 dtype
-            if embeddings.dtype != np.float32:
-                embeddings = embeddings.astype(np.float32)
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
 
-            # Normalize if requested
-            if normalize:
-                norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-                # Avoid division by zero
-                norms = np.maximum(norms, 1e-12)
-                embeddings = embeddings / norms
+            # Make request
+            with urllib.request.urlopen(req, timeout=self.timeout) as response:
+                result = json.loads(response.read().decode("utf-8"))
 
+            # Convert to numpy array
+            embeddings = np.array(result["embeddings"], dtype=np.float32)
             return embeddings
 
+        except MLXServiceNotAvailableError:
+            raise
         except Exception as e:
-            logger.exception("Failed to encode texts with MLX")
+            logger.exception("Failed to encode texts via MLX service")
             raise MLXEmbeddingError(
                 f"Failed to encode texts: {e}",
                 cause=e,
             ) from e
 
     def is_loaded(self) -> bool:
-        """Check if the model is loaded.
+        """Check if the model is loaded in the service.
 
         Returns:
-            True if the model is currently loaded in memory.
+            True if model is loaded in the service.
         """
-        return self._model is not None
+        if not self._check_service_health():
+            return False
+
+        try:
+            import json
+            import urllib.request
+
+            url = f"{self.service_url}/health"
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=5) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                return bool(result.get("model_loaded", False))
+        except Exception:
+            return False
 
     def unload(self) -> None:
-        """Unload the model to free memory.
+        """Request the service to unload the model.
 
-        Safe to call even if model is not loaded.
-        The model will be reloaded on the next encode() call.
+        Sends unload request to free GPU memory.
         """
-        with self._lock:
-            if self._model is not None:
-                logger.info("Unloading MLX embedding model")
-                self._model = None
+        if not self._check_service_health():
+            return
 
-                # Attempt to free MLX memory
-                try:
-                    import gc
+        try:
+            import urllib.request
 
-                    import mlx.core as mx
-
-                    gc.collect()
-                    if hasattr(mx, "metal") and hasattr(mx.metal, "clear_cache"):
-                        mx.metal.clear_cache()
-                except Exception:
-                    pass  # Best effort cleanup
+            url = f"{self.service_url}/unload"
+            req = urllib.request.Request(url, method="POST")
+            with urllib.request.urlopen(req, timeout=5):
+                pass
+            logger.info("Requested model unload from MLX service")
+        except Exception as e:
+            logger.warning("Failed to unload model: %s", e)
 
     @property
     def embedding_dim(self) -> int:
@@ -316,8 +326,6 @@ def get_mlx_embedder(model_name: str | None = None) -> MLXEmbedder:
         if _mlx_embedder is not None:
             if model_name is None or model_name == _mlx_embedder.model_name:
                 return _mlx_embedder
-            # Different model requested, unload old one
-            _mlx_embedder.unload()
 
         # Create new embedder
         _mlx_embedder = MLXEmbedder(model_name or DEFAULT_MLX_EMBEDDING_MODEL)
@@ -327,8 +335,8 @@ def get_mlx_embedder(model_name: str | None = None) -> MLXEmbedder:
 def reset_mlx_embedder() -> None:
     """Reset the singleton MLX embedder.
 
-    Unloads the model and clears the singleton. A new instance
-    will be created on the next get_mlx_embedder() call.
+    Clears the singleton. A new instance will be created on
+    the next get_mlx_embedder() call.
     """
     global _mlx_embedder
 
@@ -339,17 +347,61 @@ def reset_mlx_embedder() -> None:
 
 
 def is_mlx_available() -> bool:
-    """Check if MLX is available on this system.
+    """Check if MLX embedding service is available.
 
     Returns:
-        True if MLX can be imported, False otherwise.
+        True if the MLX embedding service is running.
     """
-    try:
-        import mlx.core  # noqa: F401
+    embedder = get_mlx_embedder()
+    return embedder.is_available()
 
-        return True
-    except ImportError:
-        return False
+
+def start_mlx_service() -> subprocess.Popen[bytes] | None:
+    """Start the MLX embedding service if not running.
+
+    Returns:
+        Popen object if service was started, None if already running
+        or if service directory doesn't exist.
+    """
+    # Check if already running
+    embedder = get_mlx_embedder()
+    if embedder.is_available():
+        logger.info("MLX embedding service already running")
+        return None
+
+    # Check if service directory exists
+    if not MLX_EMBED_SERVICE_DIR.exists():
+        logger.warning(
+            "MLX embedding service not installed at %s",
+            MLX_EMBED_SERVICE_DIR,
+        )
+        return None
+
+    # Start the service
+    logger.info("Starting MLX embedding service...")
+    try:
+        process = subprocess.Popen(
+            ["uv", "run", "python", "server.py"],
+            cwd=MLX_EMBED_SERVICE_DIR,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        # Wait a bit for startup
+        time.sleep(2)
+
+        # Check if it started successfully
+        if embedder._check_service_health(force=True):
+            logger.info("MLX embedding service started successfully")
+            return process
+        else:
+            logger.warning("MLX embedding service failed to start")
+            process.terminate()
+            return None
+
+    except Exception as e:
+        logger.exception("Failed to start MLX embedding service: %s", e)
+        return None
 
 
 # =============================================================================
@@ -360,9 +412,11 @@ __all__ = [
     # Constants
     "DEFAULT_MLX_EMBEDDING_MODEL",
     "MLX_EMBEDDING_DIM",
+    "MLX_EMBED_SERVICE_URL",
     # Exceptions
     "MLXEmbeddingError",
-    "MLXModelNotAvailableError",
+    "MLXServiceNotAvailableError",
+    "MLXModelNotAvailableError",  # backwards compat
     "MLXModelLoadError",
     # Class
     "MLXEmbedder",
@@ -370,4 +424,5 @@ __all__ = [
     "get_mlx_embedder",
     "reset_mlx_embedder",
     "is_mlx_available",
+    "start_mlx_service",
 ]

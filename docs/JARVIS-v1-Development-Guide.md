@@ -8,7 +8,7 @@
 > **Note**: This document was the original development plan. Implementation is now complete.
 > All workstreams (WS1-WS8, WS10) are implemented. WS9 was removed from scope.
 > The actual model used is Qwen2.5-0.5B-Instruct-4bit (smaller than the 3B originally planned).
-> See `CODEBASE_AUDIT_REPORT.md` for current implementation status.
+> See `docs/GUIDE.md` for current documentation index.
 
 ---
 

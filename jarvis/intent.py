@@ -422,23 +422,27 @@ class IntentClassifier:
         self._intent_centroids: dict[IntentType, np.ndarray] | None = None
         self._lock = threading.Lock()
 
-    def _get_sentence_model(self) -> Any:
-        """Get the sentence transformer model from templates module.
+    def _get_embedder(self) -> Any:
+        """Get the embedder for intent classification.
 
-        Reuses the model from models.templates to avoid loading it twice.
+        Uses the unified embedding adapter which tries MLX first with
+        SentenceTransformer fallback.
 
         Returns:
-            The loaded SentenceTransformer model
+            The UnifiedEmbedder instance
 
         Raises:
-            SentenceModelError: If model cannot be loaded
+            RuntimeError: If no embedding backend is available
         """
-        from models.templates import SentenceModelError, _get_sentence_model
+        from jarvis.embedding_adapter import get_embedder
 
         try:
-            return _get_sentence_model()
-        except SentenceModelError:
-            logger.warning("Failed to load sentence model for intent classification")
+            embedder = get_embedder()
+            if not embedder.is_available():
+                raise RuntimeError("No embedding backend available")
+            return embedder
+        except Exception as e:
+            logger.warning("Failed to get embedder for intent classification: %s", e)
             raise
 
     def _ensure_embeddings_computed(self) -> None:
@@ -458,15 +462,15 @@ class IntentClassifier:
             if self._intent_centroids is not None:
                 return
 
-            model = self._get_sentence_model()
+            embedder = self._get_embedder()
 
             # Compute embeddings for each intent
             intent_embeddings: dict[IntentType, np.ndarray] = {}
             intent_centroids: dict[IntentType, np.ndarray] = {}
 
             for intent_type, examples in INTENT_EXAMPLES.items():
-                # Compute embeddings in batch for efficiency
-                embeddings = model.encode(examples, convert_to_numpy=True)
+                # Compute embeddings in batch for efficiency (normalized)
+                embeddings = embedder.encode(examples, normalize=True)
                 intent_embeddings[intent_type] = embeddings
 
                 # Compute centroid (mean embedding) for this intent
@@ -487,7 +491,7 @@ class IntentClassifier:
                 total_examples,
             )
 
-    def classify(self, query: str) -> IntentResult:
+    def classify(self, query: str, embedder: Any | None = None) -> IntentResult:
         """Classify a user query into an intent.
 
         Uses a hybrid approach:
@@ -496,6 +500,7 @@ class IntentClassifier:
 
         Args:
             query: The user query to classify
+            embedder: Optional embedder override (for per-request caching)
 
         Returns:
             IntentResult with intent type, confidence, and extracted parameters
@@ -533,10 +538,10 @@ class IntentClassifier:
             )
 
         try:
-            model = self._get_sentence_model()
-            query_embedding = model.encode([query], convert_to_numpy=True)[0]
+            query_embedder = embedder or self._get_embedder()
+            query_embedding = query_embedder.encode([query], normalize=True)[0]
 
-            # Normalize query embedding for cosine similarity
+            # Embedding is already normalized, but compute norm for safety
             query_norm = query_embedding / np.linalg.norm(query_embedding)
 
             # Compute similarity to each intent centroid

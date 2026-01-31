@@ -35,7 +35,7 @@ dependencies = [
     "slowapi>=0.1.9",
     "python-dateutil>=2.9.0",
     "faiss-cpu>=1.9.0",
-    "hdbscan>=0.8.38",
+    "pyarrow>=18.0.0",
 ]
 
 [project.optional-dependencies]
@@ -56,6 +56,7 @@ benchmarks = [
     "scikit-learn>=1.6.1",
     "numpy>=2.2.3",
     "tqdm>=4.67.0",
+    "hdbscan>=0.8.38",
 ]
 
 [project.scripts]
@@ -91,9 +92,22 @@ warn_unused_ignores = true
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
-addopts = "-v --cov=. --cov-report=term-missing"
+addopts = "-v --cov=jarvis --cov=api --cov=models --cov=core --cov=integrations --cov=contracts --cov=benchmarks --cov=mcp_server --cov-report=term-missing"
 timeout = 30
 timeout_method = "thread"
+
+[tool.coverage.run]
+source = ["jarvis", "api", "models", "core", "integrations", "contracts", "benchmarks", "mcp_server"]
+omit = ["tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
 
 [dependency-groups]
 dev = [

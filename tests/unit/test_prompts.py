@@ -26,12 +26,16 @@ from jarvis.prompts import (
     SUMMARIZATION_EXAMPLES,
     SUMMARY_EXAMPLES,
     SUMMARY_TEMPLATE,
+    TEXT_ABBREVIATIONS,
     FewShotExample,
     PromptMetadata,
     PromptRegistry,
     PromptTemplate,
+    UserStyleAnalysis,
+    analyze_user_style,
     build_reply_prompt,
     build_search_answer_prompt,
+    build_style_instructions,
     build_summary_prompt,
     detect_tone,
     estimate_tokens,
@@ -805,3 +809,243 @@ class TestPromptRegistrySingleton:
         reset_prompt_registry()
         registry2 = get_prompt_registry()
         assert registry1 is not registry2
+
+
+class TestUserStyleAnalysis:
+    """Tests for UserStyleAnalysis dataclass."""
+
+    def test_user_style_analysis_creation(self):
+        """Test creating a UserStyleAnalysis instance."""
+        style = UserStyleAnalysis(
+            avg_length=25.0,
+            min_length=5,
+            max_length=50,
+            formality="very_casual",
+            uses_lowercase=True,
+            uses_abbreviations=True,
+            uses_minimal_punctuation=True,
+            common_abbreviations=["u", "ur", "lol"],
+            emoji_frequency=0.5,
+            exclamation_frequency=0.1,
+        )
+
+        assert style.avg_length == 25.0
+        assert style.formality == "very_casual"
+        assert style.uses_lowercase is True
+        assert style.uses_abbreviations is True
+        assert "lol" in style.common_abbreviations
+
+    def test_user_style_analysis_defaults(self):
+        """Test UserStyleAnalysis default values."""
+        style = UserStyleAnalysis()
+
+        assert style.avg_length == 50.0
+        assert style.formality == "casual"
+        assert style.uses_lowercase is False
+        assert style.uses_abbreviations is False
+        assert style.common_abbreviations == []
+
+
+class TestAnalyzeUserStyle:
+    """Tests for analyze_user_style function."""
+
+    def test_analyze_empty_messages(self):
+        """Test analysis with empty message list."""
+        result = analyze_user_style([])
+        assert result.avg_length == 50.0  # Default
+        assert result.formality == "casual"  # Default
+
+    def test_analyze_very_casual_messages(self):
+        """Test analysis of very casual messages."""
+        messages = ["yeah", "lol ok", "u coming?", "k thx", "gonna be late"]
+        result = analyze_user_style(messages)
+
+        assert result.formality == "very_casual"
+        assert result.uses_abbreviations is True
+        assert result.avg_length < 20
+
+    def test_analyze_casual_messages(self):
+        """Test analysis of casual messages."""
+        messages = [
+            "sounds good to me",
+            "let me know when you get here",
+            "see you later",
+        ]
+        result = analyze_user_style(messages)
+
+        assert result.formality in ("casual", "very_casual")
+
+    def test_analyze_lowercase_detection(self):
+        """Test detection of lowercase usage."""
+        messages = ["hey whats up", "yeah im down", "cool see u later", "ok sounds good"]
+        result = analyze_user_style(messages)
+
+        assert result.uses_lowercase is True
+
+    def test_analyze_mixed_case_messages(self):
+        """Test that mixed case messages don't trigger lowercase flag."""
+        messages = ["Hey! What's up?", "I'll be there soon.", "Sounds good!"]
+        result = analyze_user_style(messages)
+
+        assert result.uses_lowercase is False
+
+    def test_analyze_abbreviation_detection(self):
+        """Test detection of abbreviation usage."""
+        messages = ["u there?", "gonna grab lunch", "thx for letting me know", "idk maybe"]
+        result = analyze_user_style(messages)
+
+        assert result.uses_abbreviations is True
+        assert len(result.common_abbreviations) >= 2
+
+    def test_analyze_message_length(self):
+        """Test message length calculation."""
+        short_messages = ["ok", "k", "yes", "no", "yep"]
+        result = analyze_user_style(short_messages)
+
+        assert result.avg_length < 10
+        assert result.min_length <= 2
+        assert result.max_length >= 2
+
+    def test_analyze_minimal_punctuation(self):
+        """Test detection of minimal punctuation usage."""
+        messages = ["yeah sounds good", "ok cool", "see you there", "thanks"]
+        result = analyze_user_style(messages)
+
+        assert result.uses_minimal_punctuation is True
+
+    def test_analyze_emoji_frequency(self):
+        """Test emoji frequency calculation."""
+        messages = ["sounds good! 😊", "see you soon! 👋", "awesome 🎉"]
+        result = analyze_user_style(messages)
+
+        assert result.emoji_frequency > 0.5
+
+    def test_analyze_no_emojis(self):
+        """Test emoji frequency with no emojis."""
+        messages = ["sounds good", "ok", "yes"]
+        result = analyze_user_style(messages)
+
+        assert result.emoji_frequency == 0.0
+
+    def test_analyze_exclamation_frequency(self):
+        """Test exclamation frequency calculation."""
+        messages = ["Awesome!", "Can't wait!", "So excited!!"]
+        result = analyze_user_style(messages)
+
+        assert result.exclamation_frequency > 1.0
+
+
+class TestBuildStyleInstructions:
+    """Tests for build_style_instructions function."""
+
+    def test_build_instructions_very_casual(self):
+        """Test instructions for very casual style."""
+        style = UserStyleAnalysis(
+            avg_length=15.0,
+            formality="very_casual",
+            uses_lowercase=True,
+            uses_abbreviations=True,
+            common_abbreviations=["u", "ur", "lol"],
+            uses_minimal_punctuation=True,
+            emoji_frequency=0.0,
+            exclamation_frequency=0.1,
+        )
+        result = build_style_instructions(style)
+
+        # Check for length guidance (brief, short, etc.)
+        assert "brief" in result.lower() or "short" in result.lower()
+        assert "lowercase" in result
+        assert "casual" in result.lower() or "greetings" in result.lower()
+        assert "abbreviations" in result
+
+    def test_build_instructions_longer_messages(self):
+        """Test instructions for longer message style."""
+        style = UserStyleAnalysis(
+            avg_length=100.0,
+            formality="casual",
+        )
+        result = build_style_instructions(style)
+
+        assert "1-2 sentences" in result
+
+    def test_build_instructions_no_emojis(self):
+        """Test instructions include emoji guidance when frequency is low."""
+        style = UserStyleAnalysis(
+            emoji_frequency=0.0,
+        )
+        result = build_style_instructions(style)
+
+        assert "emoji" in result.lower()
+
+    def test_build_instructions_avoid_exclamations(self):
+        """Test instructions when exclamation frequency is low."""
+        style = UserStyleAnalysis(
+            exclamation_frequency=0.1,
+        )
+        result = build_style_instructions(style)
+
+        assert "exclamation" in result.lower()
+
+
+class TestBuildReplyPromptWithStyle:
+    """Tests for build_reply_prompt with user_messages parameter."""
+
+    def test_build_reply_prompt_with_user_messages(self):
+        """Test that user_messages parameter adds style instructions."""
+        context = "[10:00] John: Hey, want to grab lunch?"
+        last_message = "Hey, want to grab lunch?"
+        user_messages = ["yeah", "k sounds good", "lol ok"]
+
+        result = build_reply_prompt(
+            context=context,
+            last_message=last_message,
+            user_messages=user_messages,
+        )
+
+        # Should include style-matching instructions
+        assert "### Your reply:" in result
+        # Should have style guidance since user_messages provided
+        assert "short" in result.lower() or "brief" in result.lower()
+
+    def test_build_reply_prompt_without_user_messages(self):
+        """Test that prompt works without user_messages."""
+        context = "[10:00] John: Hey, want to grab lunch?"
+        last_message = "Hey, want to grab lunch?"
+
+        result = build_reply_prompt(
+            context=context,
+            last_message=last_message,
+        )
+
+        # Should still produce valid prompt
+        assert "### Your reply:" in result
+        assert "### Conversation Context:" in result
+
+    def test_build_reply_prompt_style_includes_length_guidance(self):
+        """Test that style analysis includes length guidance."""
+        context = "Test context"
+        last_message = "Test message"
+        user_messages = ["ok", "k", "yes", "yep", "sure"]
+
+        result = build_reply_prompt(
+            context=context,
+            last_message=last_message,
+            user_messages=user_messages,
+        )
+
+        # Should have length guidance for short messages
+        assert "short" in result.lower() or "brief" in result.lower()
+
+
+class TestTextAbbreviations:
+    """Tests for TEXT_ABBREVIATIONS constant."""
+
+    def test_text_abbreviations_not_empty(self):
+        """Verify TEXT_ABBREVIATIONS set is populated."""
+        assert len(TEXT_ABBREVIATIONS) > 0
+
+    def test_common_abbreviations_present(self):
+        """Verify common text abbreviations are in the set."""
+        common = ["u", "ur", "lol", "omg", "brb", "idk", "thx", "ty", "pls"]
+        for abbrev in common:
+            assert abbrev in TEXT_ABBREVIATIONS, f"Expected '{abbrev}' in TEXT_ABBREVIATIONS"

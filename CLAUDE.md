@@ -33,10 +33,16 @@ JARVIS is a local-first AI assistant for macOS that provides intelligent iMessag
 | Reply Router | COMPLETE | `jarvis/router.py` with template/generate/clarify routing logic |
 | FAISS Index | COMPLETE | `jarvis/index.py` for trigger similarity search |
 | JARVIS Database | COMPLETE | `jarvis/db.py` with contacts, pairs, clusters, embeddings |
+| Train/Test Split | COMPLETE | `jarvis/db.py` with `is_holdout` column and split methods |
+| Evaluation Pipeline | COMPLETE | `scripts/eval_pipeline.py` for testing on holdout data |
+| Embedding Profiles | COMPLETE | `jarvis/embedding_profile.py` for semantic relationship analysis |
+| Pair Quality Scoring | COMPLETE | `scripts/score_pair_quality.py` for coherence analysis |
 
 **Default Model**: LFM-2.5-1.2B-Instruct-4bit (configured in `models/registry.py`)
 
-See [docs/CODEBASE_AUDIT_REPORT.md](docs/CODEBASE_AUDIT_REPORT.md) for full audit details.
+**Known Issues**: See [docs/EVALUATION_AND_KNOWN_ISSUES.md](docs/EVALUATION_AND_KNOWN_ISSUES.md) for detailed issue tracking.
+
+See `docs/GUIDE.md` for current documentation index.
 
 ## Quick Reference
 
@@ -48,8 +54,8 @@ make health   # Check project status
 make help     # List all commands
 
 # JARVIS Setup Wizard
-python -m jarvis.setup          # Run full setup (validates environment, creates config)
-python -m jarvis.setup --check  # Just check status, don't modify
+uv run python -m jarvis.setup          # Run full setup (validates environment, creates config)
+uv run python -m jarvis.setup --check  # Just check status, don't modify
 ```
 
 ## Build and Development Commands
@@ -328,7 +334,7 @@ JARVIS provides a command-line interface for interacting with the assistant. For
 jarvis --help
 
 # Via module (development)
-python -m jarvis --help
+uv run python -m jarvis --help
 
 # Show detailed examples
 jarvis --examples
@@ -503,7 +509,28 @@ Use `get_reply_router()` for singleton access. API endpoint: `POST /drafts/smart
 - Extracted (trigger, response) pairs from message history
 - Intent clusters for grouping similar response patterns
 - FAISS vector index metadata and versioning
+- Train/test split via `is_holdout` column
 Use `get_db()` for singleton access. CLI: `jarvis db init`, `jarvis db extract`, `jarvis db build-index`.
+
+**Train/Test Split**: `jarvis/db.py` provides methods for evaluation:
+- `split_train_test(holdout_ratio, min_pairs_per_contact, seed)` - Split by contact (all pairs for a contact go to same set)
+- `get_training_pairs(min_quality)` - Get pairs where `is_holdout=False`
+- `get_holdout_pairs(min_quality)` - Get pairs where `is_holdout=True`
+- `get_split_stats()` - Get counts for training/holdout pairs and contacts
+Index building excludes holdout pairs by default (`include_holdout=False`).
+
+**Embedding Profiles**: `jarvis/embedding_profile.py` provides semantic relationship analysis:
+- Topic clusters via K-means on message embeddings
+- Communication dynamics (style similarity, initiation patterns, topic diversity)
+- Response semantic shift measurement
+Use `build_embedding_profile()` for single contact, `build_profiles_for_all_contacts()` for batch.
+Storage: `~/.jarvis/embedding_profiles/{contact_hash}.json`
+
+**Pair Extraction with Context**: `jarvis/extract.py` extracts turn-based pairs with conversation context:
+- Groups consecutive messages from same speaker into turns
+- Stores up to 5 previous turns as `context_text` for LLM prompts
+- Quality scoring based on response time, length, and content patterns
+- Filters reactions, generic responses, and topic shifts
 
 ### Data Flow for Text Generation (Current)
 
@@ -523,16 +550,35 @@ Four gates determine project viability. All benchmarks are implemented.
 
 | Gate | Metric | Pass | Conditional | Fail | How to Run |
 |------|--------|------|-------------|------|------------|
-| G1 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB | `python -m benchmarks.memory.run` |
-| G2 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 | `python -m benchmarks.hallucination.run` |
-| G3 | Warm-start latency | <3s | 3-5s | >5s | `python -m benchmarks.latency.run` |
-| G4 | Cold-start latency | <15s | 15-20s | >20s | `python -m benchmarks.latency.run` |
+| G1 | Model stack memory | <5.5GB | 5.5-6.5GB | >6.5GB | `uv run python -m benchmarks.memory.run` |
+| G2 | Mean HHEM score | >=0.5 | 0.4-0.5 | <0.4 | `uv run python -m benchmarks.hallucination.run` |
+| G3 | Warm-start latency | <3s | 3-5s | >5s | `uv run python -m benchmarks.latency.run` |
+| G4 | Cold-start latency | <15s | 15-20s | >20s | `uv run python -m benchmarks.latency.run` |
 
 ### Benchmark Scripts
 
 - `scripts/generate_report.py` - Generates BENCHMARKS.md from benchmark results
 - `scripts/check_gates.py` - Evaluates gate pass/fail status from results
 - `scripts/overnight_eval.sh` - Runs all benchmarks sequentially and generates report
+
+### Evaluation Scripts
+
+```bash
+# Train/test split and evaluation pipeline
+uv run python -m scripts.eval_pipeline --setup              # Create 80/20 split by contact
+uv run python -m scripts.eval_pipeline --rebuild-index      # Rebuild FAISS (training only)
+uv run python -m scripts.eval_pipeline --limit 100          # Evaluate 100 holdout pairs
+uv run python -m scripts.eval_pipeline --output results.json  # Save detailed results
+
+# Pair quality analysis
+uv run python -m scripts.score_pair_quality --analyze       # Show quality distribution
+uv run python -m scripts.score_pair_quality --update        # Preview quality updates
+uv run python -m scripts.score_pair_quality --update --commit  # Apply quality updates
+
+# Embedding profile building
+uv run python -m scripts.build_embedding_profiles --contact "Name"  # Single contact
+uv run python -m scripts.build_embedding_profiles --limit 50        # Batch build
+```
 
 #### Running the Overnight Evaluation
 

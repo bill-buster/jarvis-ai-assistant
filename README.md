@@ -8,7 +8,7 @@ Local-first AI assistant for macOS with intelligent iMessage management using ML
 
 - **iMessage Integration** - Read-only local database access with schema auto-detection (v14/v15)
 - **MLX Model Generation** - Local inference on Apple Silicon with memory-aware loading
-- **Template-First Generation** - Semantic matching against 25 iMessage scenario templates (0.7 threshold)
+- **Template-First Generation** - Semantic matching against iMessage scenario templates with configurable thresholds
 - **Intent Classification** - Natural language understanding for reply, summarize, and search intents
 
 ### AI-Powered Features
@@ -26,6 +26,7 @@ Local-first AI assistant for macOS with intelligent iMessage management using ML
 ### Performance and Monitoring
 
 - **Prometheus-Compatible Metrics** - Memory, latency, and request metrics at `/metrics`
+- **Routing Metrics (SQLite)** - Per-request routing decisions and latency breakdowns (see `scripts/analyze_routing_metrics.py`)
 - **Memory Controller** - Three-tier modes based on available RAM (FULL/LITE/MINIMAL)
 - **Graceful Degradation** - Circuit breaker pattern for feature failures
 - **HHEM Validation** - Post-generation hallucination scoring via Vectara model
@@ -37,7 +38,7 @@ Local-first AI assistant for macOS with intelligent iMessage management using ML
 - **AI Draft Panel** - Generate reply suggestions with keyboard shortcut (Cmd+D)
 - **Conversation Summary Modal** - One-click summaries with key points (Cmd+S)
 
-**Default Model**: Qwen2.5-1.5B-Instruct-4bit
+**Default Model**: LFM 2.5 1.2B Instruct (4-bit, `lfm-1.2b`)
 
 ## Requirements
 
@@ -56,7 +57,7 @@ cd jarvis-ai-assistant
 make setup  # Installs deps + enables git hooks
 
 # Run setup wizard (validates environment)
-python -m jarvis.setup
+uv run python -m jarvis.setup
 
 # Verify everything works
 make verify
@@ -159,12 +160,12 @@ All benchmarks are implemented and functional:
 ./scripts/overnight_eval.sh --quick
 
 # Individual benchmarks
-python -m benchmarks.memory.run --output results/memory.json
-python -m benchmarks.hallucination.run --output results/hhem.json
-python -m benchmarks.latency.run --output results/latency.json
+uv run python -m benchmarks.memory.run --output results/memory.json
+uv run python -m benchmarks.hallucination.run --output results/hhem.json
+uv run python -m benchmarks.latency.run --output results/latency.json
 
 # Check gate pass/fail status
-python scripts/check_gates.py results/latest/
+uv run python scripts/check_gates.py results/latest/
 ```
 
 ### Validation Gates
@@ -216,12 +217,12 @@ For parallel work, use git worktrees - see [CLAUDE.md](CLAUDE.md) for details.
 
 ## Documentation
 
+- [docs/GUIDE.md](docs/GUIDE.md) - Canonical documentation index
 - [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) - Complete CLI reference with examples
 - [docs/API_REFERENCE.md](docs/API_REFERENCE.md) - REST API documentation
 - [docs/PERFORMANCE.md](docs/PERFORMANCE.md) - Performance tuning and metrics guide
 - [desktop/README.md](desktop/README.md) - Desktop app setup and E2E testing
 - [CLAUDE.md](CLAUDE.md) - Development workflow, architecture, and coding guidelines
-- [docs/CODEBASE_AUDIT_REPORT.md](docs/CODEBASE_AUDIT_REPORT.md) - Full codebase audit
 
 ## License
 

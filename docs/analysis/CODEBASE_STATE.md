@@ -147,7 +147,7 @@ python scripts/check_gates.py results/latest  # Check gate status
 | 8GB RAM sufficient for LITE mode | Design Doc | CONDITIONAL | May require cloud fallback |
 | Qwen 2.5-1.5B achieves HHEM ≥0.5 | Design Doc | UNVALIDATED | Requires benchmark run |
 | all-MiniLM-L6-v2 adequate for template matching | Design Doc | VALIDATED | In production use |
-| Template coverage can reach 60% at 0.7 threshold | Design Doc | UNVALIDATED | Coverage tool exists |
+| Template coverage can reach 60% at default 0.7 threshold | Design Doc | UNVALIDATED | Coverage tool exists |
 | MLX provides better memory control than Ollama | Design Doc | VALIDATED | Explicit cache clearing |
 | Fine-tuning increases hallucinations | Design Doc (Gekhman et al.) | ASSUMED | No fine-tuning in codebase |
 | Cold start takes 10-18 seconds | Design Doc | UNVALIDATED | Latency benchmark exists |

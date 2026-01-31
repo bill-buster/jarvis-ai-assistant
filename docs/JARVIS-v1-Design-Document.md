@@ -255,7 +255,7 @@ Five gates determine project viability. All gates are evaluated after the benchm
 
 | Gate | Metric | Pass | Conditional | Fail |
 |------|--------|------|-------------|------|
-| G1 | Template coverage at 0.7 threshold | ≥ 60% | 40-60% | < 40% |
+| G1 | Template coverage at default 0.7 threshold | ≥ 60% | 40-60% | < 40% |
 | G2 | Total model stack memory | < 5.5GB | 5.5-6.5GB | > 6.5GB |
 | G3 | Mean HHEM score | ≥ 0.5 | 0.4-0.5 | < 0.4 |
 | G4 | Warm-start latency (p95) | < 3s | 3-5s | > 5s |
@@ -584,4 +584,4 @@ All referenced scripts exist and are functional:
 - **579 tests** with 95% code coverage
 - All tests pass
 
-See `docs/CODEBASE_AUDIT_REPORT.md` for comprehensive audit details.
+See `docs/GUIDE.md` for current documentation index.

@@ -62,7 +62,7 @@ def unload(self) -> None:
 **Purpose**: Orchestrates template matching and model generation
 
 **Generation Flow**:
-1. Check template match (similarity >= 0.7)
+1. Check template match (similarity >= default 0.7 threshold)
    - If match: return immediately with `finish_reason="template"`
 2. Check memory, load model if needed
 3. Build prompt with RAG context + few-shot examples

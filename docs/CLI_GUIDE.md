@@ -52,7 +52,7 @@ pip install -e .
 jarvis --version
 
 # Run setup wizard to validate environment
-python -m jarvis.setup
+uv run python -m jarvis.setup
 
 # Check system health
 jarvis health
@@ -592,7 +592,7 @@ JARVIS stores configuration in `~/.jarvis/config.json`. The setup wizard creates
 
 ```json
 {
-  "config_version": 3,
+  "config_version": 7,
   "model_path": "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
   "template_similarity_threshold": 0.7,
   "memory_thresholds": {
@@ -612,6 +612,13 @@ JARVIS stores configuration in `~/.jarvis/config.json`. The setup wizard creates
   "chat": {
     "stream_responses": true,
     "show_typing_indicator": true
+  },
+  "routing": {
+    "template_threshold": 0.9,
+    "context_threshold": 0.7,
+    "generate_threshold": 0.5,
+    "ab_test_group": "control",
+    "ab_test_thresholds": {}
   },
   "model": {
     "model_id": "qwen-1.5b",
@@ -653,16 +660,26 @@ JARVIS stores configuration in `~/.jarvis/config.json`. The setup wizard creates
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `template_similarity_threshold` | Minimum similarity for template matches (0-1) | `0.7` |
+| `template_similarity_threshold` | Template matcher similarity threshold (0-1) | `0.7` |
+
+#### Routing Thresholds
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `routing.template_threshold` | Template decision threshold (0-1) | `0.90` |
+| `routing.context_threshold` | Context threshold (0-1) | `0.70` |
+| `routing.generate_threshold` | Generation threshold (0-1) | `0.50` |
+| `routing.ab_test_group` | A/B group name | `control` |
+| `routing.ab_test_thresholds` | Threshold overrides by group | `{}` |
 
 ### Running the Setup Wizard
 
 ```bash
 # Full setup (validates environment, creates config)
-python -m jarvis.setup
+uv run python -m jarvis.setup
 
 # Check status only (no modifications)
-python -m jarvis.setup --check
+uv run python -m jarvis.setup --check
 ```
 
 ## Environment Variables
@@ -788,7 +805,7 @@ Debug logs show:
 If issues persist:
 
 1. Check the health status: `jarvis health`
-2. Run setup validation: `python -m jarvis.setup --check`
+2. Run setup validation: `uv run python -m jarvis.setup --check`
 3. Review debug logs: `jarvis -v <command>`
 4. Check the [GitHub Issues](https://github.com/jwalinshah/jarvis-ai-assistant/issues)
 

@@ -31,16 +31,26 @@ from __future__ import annotations
 import logging
 import random
 import threading
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from jarvis.config import get_config
 from jarvis.db import Contact, JarvisDB, get_db
+from jarvis.embedding_adapter import CachedEmbedder, get_embedder
 from jarvis.errors import ErrorCode, JarvisError
 from jarvis.intent import IntentClassifier, IntentType, get_intent_classifier
+from jarvis.message_classifier import (
+    ContextRequirement,
+    MessageClassifier,
+    MessageType,
+    get_message_classifier,
+)
+from jarvis.metrics_router import RoutingMetrics, get_routing_metrics_store, hash_query
+from jarvis.metrics_validation import get_audit_logger, get_sampling_validator
 from jarvis.quality_metrics import score_response_coherence
 from jarvis.relationships import (
     MIN_MESSAGES_FOR_PROFILE,
-    RelationshipProfile,
     generate_style_guide,
     load_profile,
 )
@@ -71,11 +81,98 @@ MAX_TEMPLATE_RESPONSES = 5  # Max responses to choose from for variety
 MIN_RESPONSE_SIMILARITY = 0.6  # Responses must be somewhat similar to pick randomly
 
 # Simple acknowledgments that should be handled directly
-SIMPLE_ACKNOWLEDGMENTS = frozenset({
-    "ok", "okay", "k", "kk", "yes", "yeah", "yep", "yup", "no", "nope", "nah",
-    "sure", "thanks", "thank you", "thx", "ty", "np", "cool", "nice", "good",
-    "great", "awesome", "alright", "got it", "lol", "haha", "bye", "later",
-})
+SIMPLE_ACKNOWLEDGMENTS = frozenset(
+    {
+        "ok",
+        "okay",
+        "k",
+        "kk",
+        "yes",
+        "yeah",
+        "yep",
+        "yup",
+        "no",
+        "nope",
+        "nah",
+        "sure",
+        "thanks",
+        "thank you",
+        "thx",
+        "ty",
+        "np",
+        "cool",
+        "nice",
+        "good",
+        "great",
+        "awesome",
+        "alright",
+        "got it",
+        "lol",
+        "haha",
+        "bye",
+        "later",
+    }
+)
+
+# Context-dependent patterns that ALWAYS need clarification
+# These should NEVER use template responses even with high similarity
+# because the answer depends on current context, not past responses
+CONTEXT_DEPENDENT_PATTERNS = frozenset(
+    {
+        # Time questions - answer depends on WHAT event
+        "what time",
+        "what time?",
+        "when?",
+        "when",
+        "how long",
+        # Location questions - answer depends on WHAT place
+        "where?",
+        "where",
+        "which place",
+        # Reference questions - answer depends on WHAT thing
+        "which one",
+        "which one?",
+        "what?",
+        "what",
+        # Vague confirmations that need context
+        "you sure",
+        "you sure?",
+        "really",
+        "really?",
+    }
+)
+
+# Questions that require USER's personal input - system cannot answer these
+# Even with high similarity, system doesn't know user's current schedule/plans/opinions
+USER_INPUT_REQUIRED_STARTERS = (
+    # Commitment questions - system can't commit for user
+    "are you coming",
+    "are you going",
+    "are you free",
+    "can you come",
+    "can you make it",
+    "will you be",
+    "will you come",
+    "are you available",
+    "can you do",
+    "could you",
+    "would you",
+    "do you want",
+    # Personal fact questions - system doesn't know user's current state
+    "where are you",
+    "what are you doing",
+    "how are you",
+    "what's your",
+    # Opinion questions - system doesn't know user's opinion
+    "what do you think",
+    "do you like",
+    "how do you feel",
+    "what's your opinion",
+    # Yes/no about user's actions/plans
+    "did you",
+    "have you",
+    "do you have",
+)
 
 
 # =============================================================================
@@ -133,9 +230,9 @@ class ReplyRouter:
     """Routes incoming messages to template, LLM generation, or clarification.
 
     Implements a three-tier routing strategy:
-    1. Template (similarity >= 0.85): Return cached response instantly
-    2. Generate (0.40 <= similarity < 0.85): Use LLM with similar examples
-    3. Clarify (similarity < 0.40): Ask user for more context
+    1. Template (similarity >= template threshold): Return cached response instantly
+    2. Generate (similarity >= generate threshold): Use LLM with similar examples
+    3. Clarify (below thresholds): Ask user for more context
 
     Thread Safety:
         This class is thread-safe for routing operations.
@@ -148,6 +245,7 @@ class ReplyRouter:
         index_searcher: TriggerIndexSearcher | None = None,
         generator: MLXGenerator | None = None,
         intent_classifier: IntentClassifier | None = None,
+        message_classifier: MessageClassifier | None = None,
         imessage_reader: ChatDBReader | None = None,
     ) -> None:
         """Initialize the router.
@@ -157,12 +255,16 @@ class ReplyRouter:
             index_searcher: FAISS index searcher. Created lazily if None.
             generator: MLX generator for LLM responses. Created lazily if None.
             intent_classifier: Intent classifier for routing decisions. Created lazily if None.
-            imessage_reader: iMessage reader for fetching conversation history. Created lazily if None.
+            message_classifier: Message classifier for type/context analysis.
+                Created lazily if None.
+            imessage_reader: iMessage reader for fetching conversation history.
+                Created lazily if None.
         """
         self._db = db
         self._index_searcher = index_searcher
         self._generator = generator
         self._intent_classifier = intent_classifier
+        self._message_classifier = message_classifier
         self._imessage_reader = imessage_reader
         self._lock = threading.Lock()
 
@@ -206,6 +308,15 @@ class ReplyRouter:
         return self._intent_classifier
 
     @property
+    def message_classifier(self) -> MessageClassifier:
+        """Get or create the message classifier."""
+        if self._message_classifier is None:
+            with self._lock:
+                if self._message_classifier is None:
+                    self._message_classifier = get_message_classifier()
+        return self._message_classifier
+
+    @property
     def imessage_reader(self) -> ChatDBReader | None:
         """Get or create the iMessage reader for fetching conversation history."""
         if self._imessage_reader is None:
@@ -220,9 +331,7 @@ class ReplyRouter:
                         return None
         return self._imessage_reader
 
-    def _fetch_conversation_context(
-        self, chat_id: str, limit: int = 10
-    ) -> list[str]:
+    def _fetch_conversation_context(self, chat_id: str, limit: int = 10) -> list[str]:
         """Fetch recent conversation history from iMessage.
 
         Args:
@@ -254,6 +363,81 @@ class ReplyRouter:
             logger.warning("Failed to fetch conversation context: %s", e)
             return []
 
+    def _get_thresholds(self) -> dict[str, float]:
+        """Get routing thresholds with optional A/B overrides."""
+        config = get_config()
+        routing = config.routing
+
+        if routing.ab_test_group in routing.ab_test_thresholds:
+            group_thresholds = routing.ab_test_thresholds[routing.ab_test_group]
+            return {
+                "template": group_thresholds.get("template", routing.template_threshold),
+                "context": group_thresholds.get("context", routing.context_threshold),
+                "generate": group_thresholds.get("generate", routing.generate_threshold),
+            }
+
+        return {
+            "template": routing.template_threshold,
+            "context": routing.context_threshold,
+            "generate": routing.generate_threshold,
+        }
+
+    def _normalize_routing_decision(self, result_type: str) -> str:
+        if result_type == "generated":
+            return "generate"
+        if result_type == "template":
+            return "template"
+        return "clarify"
+
+    def _record_routing_metrics(
+        self,
+        incoming: str,
+        decision: str,
+        similarity_score: float,
+        latency_ms: dict[str, float],
+        cached_embedder: CachedEmbedder,
+        faiss_candidates: int,
+        model_loaded: bool,
+    ) -> None:
+        try:
+            metrics = RoutingMetrics(
+                timestamp=time.time(),
+                query_hash=hash_query(incoming),
+                latency_ms=latency_ms,
+                embedding_computations=cached_embedder.embedding_computations,
+                faiss_candidates=faiss_candidates,
+                routing_decision=decision,
+                similarity_score=similarity_score,
+                cache_hit=cached_embedder.cache_hit,
+                model_loaded=model_loaded,
+            )
+            get_routing_metrics_store().record(metrics)
+
+            # Validation layer: audit logging
+            try:
+                get_audit_logger().log_request(metrics)
+            except Exception as e:
+                logger.debug("Audit logging failed: %s", e)
+
+            # Validation layer: sampling validator
+            try:
+                validator = get_sampling_validator()
+                if validator.should_sample():
+                    validator.validate_sample(
+                        query=incoming,
+                        decision=decision,
+                        similarity=similarity_score,
+                        latency_ms=latency_ms,
+                        computations=cached_embedder.embedding_computations,
+                        cache_hit=cached_embedder.cache_hit,
+                        model_loaded=model_loaded,
+                    )
+            except Exception as e:
+                logger.debug("Sampling validation failed: %s", e)
+
+        except Exception as e:
+            logger.debug("Routing metrics write failed: %s", e)
+
     def _is_simple_acknowledgment(self, text: str) -> bool:
         """Check if the message is a simple acknowledgment.
 
@@ -271,6 +455,87 @@ class ReplyRouter:
         # Remove punctuation for matching
         normalized = normalized.rstrip("!.?")
         return normalized in SIMPLE_ACKNOWLEDGMENTS
+
+    def _is_context_dependent(self, text: str) -> bool:
+        """Check if the message is context-dependent or requires user input.
+
+        Two categories that should NOT use template responses:
+        1. Context-dependent: "what time?", "where?" - need to know WHAT we're discussing
+        2. User-input-required: "are you coming?", "can you?" - system can't answer for user
+
+        Args:
+            text: The incoming message text.
+
+        Returns:
+            True if the message requires current context or user's personal input.
+        """
+        normalized = text.lower().strip()
+        # Remove punctuation for matching
+        normalized_no_punct = normalized.rstrip("!.?")
+
+        # Check exact matches for context-dependent patterns
+        if normalized_no_punct in CONTEXT_DEPENDENT_PATTERNS:
+            return True
+
+        # Check if message starts with context-dependent patterns
+        context_starters = ("what time", "when ", "where ", "which ")
+        if any(normalized.startswith(s) for s in context_starters):
+            return True
+
+        # Check if message requires user's personal input
+        # These are questions only the USER can answer (commitments, opinions, facts)
+        if any(normalized.startswith(s) for s in USER_INPUT_REQUIRED_STARTERS):
+            return True
+
+        return False
+
+    def _should_generate_after_acknowledgment(
+        self,
+        incoming: str,
+        contact: Contact | None,
+        thread: list[str] | None,
+    ) -> bool:
+        """Check if user typically provides substantive info after acknowledgments.
+
+        Returns True if we should generate instead of using canned acknowledgment.
+        This helps avoid responding with just "Got it!" when the user typically
+        follows acknowledgments with substantive information.
+
+        Args:
+            incoming: The incoming acknowledgment message.
+            contact: Optional contact for pattern lookup.
+            thread: Optional conversation thread context.
+
+        Returns:
+            True if generation is recommended over canned acknowledgment.
+        """
+        # If we have active thread context, likely mid-conversation
+        if thread and len(thread) >= 2:
+            return True
+
+        # Check contact's historical pattern
+        if contact and contact.id:
+            try:
+                ack_pairs = self.db.get_pairs_by_trigger_pattern(
+                    contact_id=contact.id,
+                    pattern_type="acknowledgment",
+                    limit=10,
+                )
+                if ack_pairs:
+                    # If user's actual responses were substantive (>30 chars avg),
+                    # we should generate rather than use canned response
+                    avg_response_len = sum(len(p.response_text) for p in ack_pairs) / len(ack_pairs)
+                    if avg_response_len > 30:
+                        logger.debug(
+                            "Contact %s has avg ack response length %.1f, using generation",
+                            contact.display_name,
+                            avg_response_len,
+                        )
+                        return True
+            except Exception as e:
+                logger.debug("Could not check ack patterns: %s", e)
+
+        return False
 
     def _generic_acknowledgment_response(
         self,
@@ -329,8 +594,19 @@ class ReplyRouter:
 
         # Unprofessional indicators
         unprofessional = [
-            "lol", "haha", "lmao", "omg", "wtf", "bruh", "dude", "bro",
-            "🤣", "😂", "😝", "🙄", "💀",
+            "lol",
+            "haha",
+            "lmao",
+            "omg",
+            "wtf",
+            "bruh",
+            "dude",
+            "bro",
+            "🤣",
+            "😂",
+            "😝",
+            "🙄",
+            "💀",
         ]
 
         return not any(term in response_lower for term in unprofessional)
@@ -344,8 +620,11 @@ class ReplyRouter:
     ) -> dict[str, Any]:
         """Route an incoming message to the appropriate response strategy.
 
-        Uses intent classification to handle different message types appropriately:
-        - Simple acknowledgments are handled directly without FAISS search
+        Uses both intent classification and message classification:
+        - Message classifier determines type (question, statement, acknowledgment, etc.)
+        - Intent classifier determines user intent (reply, summarize, search, etc.)
+        - Simple acknowledgments/reactions are handled directly
+        - Messages needing clarification are flagged appropriately
         - Other messages go through the template/generate/clarify pipeline
 
         Args:
@@ -359,13 +638,40 @@ class ReplyRouter:
             - type: 'template', 'generated', 'clarify', or 'acknowledgment'
             - response: The response text
             - confidence: 'high', 'medium', or 'low'
-            - Additional metadata (cluster_name, similarity_score, etc.)
+            - Additional metadata (cluster_name, similarity_score, message_type, etc.)
         """
+        routing_start = time.perf_counter()
+        latency_ms: dict[str, float] = {}
+        cached_embedder = CachedEmbedder(get_embedder())
+
+        def record_and_return(
+            result: dict[str, Any],
+            similarity_score: float,
+            faiss_candidates: int = 0,
+            model_loaded: bool = False,
+            decision: str | None = None,
+        ) -> dict[str, Any]:
+            latency_ms["total"] = (time.perf_counter() - routing_start) * 1000
+            routing_decision = decision or self._normalize_routing_decision(
+                result.get("type", "clarify")
+            )
+            self._record_routing_metrics(
+                incoming=incoming,
+                decision=routing_decision,
+                similarity_score=similarity_score,
+                latency_ms=latency_ms,
+                cached_embedder=cached_embedder,
+                faiss_candidates=faiss_candidates,
+                model_loaded=model_loaded,
+            )
+            return result
+
         if not incoming or not incoming.strip():
-            return self._clarify_response(
+            result = self._clarify_response(
                 "I received an empty message. Could you tell me what you need?",
                 reason="empty_message",
             )
+            return record_and_return(result, similarity_score=0.0, decision="clarify")
 
         # Step 0: Get contact info for personalization (needed early for acknowledgments)
         contact = None
@@ -374,9 +680,32 @@ class ReplyRouter:
         elif chat_id:
             contact = self.db.get_contact_by_chat_id(chat_id)
 
-        # Step 1: Classify intent
+        # Step 1: Classify message type using the new MessageClassifier
         try:
-            intent_result = self.intent_classifier.classify(incoming)
+            msg_start = time.perf_counter()
+            msg_classification = self.message_classifier.classify(
+                incoming,
+                embedder=cached_embedder,
+            )
+            latency_ms["message_classify"] = (time.perf_counter() - msg_start) * 1000
+            logger.debug(
+                "Message classified as %s (confidence: %.3f, method: %s)",
+                msg_classification.message_type.value,
+                msg_classification.type_confidence,
+                msg_classification.classification_method,
+            )
+        except Exception as e:
+            logger.warning("Message classification failed: %s", e)
+            msg_classification = None
+
+        # Step 2: Classify intent (for routing decisions)
+        try:
+            intent_start = time.perf_counter()
+            intent_result = self.intent_classifier.classify(
+                incoming,
+                embedder=cached_embedder,
+            )
+            latency_ms["intent_classify"] = (time.perf_counter() - intent_start) * 1000
             logger.debug(
                 "Intent classified as %s (confidence: %.3f)",
                 intent_result.intent.value,
@@ -386,11 +715,69 @@ class ReplyRouter:
             logger.warning("Intent classification failed: %s", e)
             intent_result = None
 
-        # Step 2: Handle simple acknowledgments directly (no FAISS search needed)
-        if self._is_simple_acknowledgment(incoming):
-            return self._generic_acknowledgment_response(incoming, contact)
+        # Step 3: Handle acknowledgments and reactions directly (no FAISS search needed)
+        if msg_classification:
+            # Acknowledgments - check if we should generate instead
+            if msg_classification.message_type == MessageType.ACKNOWLEDGMENT:
+                # Check if user typically follows acks with substantive info
+                if self._should_generate_after_acknowledgment(incoming, contact, thread):
+                    logger.debug("Acknowledgment but context suggests generation needed")
+                    # Fall through to FAISS search and generation
+                else:
+                    result = self._generic_acknowledgment_response(incoming, contact)
+                    return record_and_return(
+                        result,
+                        similarity_score=result.get("similarity_score", 0.0),
+                        decision="clarify",
+                    )
 
-        # Step 3: For QUICK_REPLY intents with high confidence, check if it's a simple ack
+            # Reactions typically don't need responses
+            if msg_classification.message_type == MessageType.REACTION:
+                result = self._generic_acknowledgment_response(incoming, contact)
+                return record_and_return(
+                    result,
+                    similarity_score=result.get("similarity_score", 0.0),
+                    decision="clarify",
+                )
+
+            # Greetings get quick responses
+            if msg_classification.message_type == MessageType.GREETING:
+                result = self._generic_acknowledgment_response(incoming, contact)
+                return record_and_return(
+                    result,
+                    similarity_score=result.get("similarity_score", 0.0),
+                    decision="clarify",
+                )
+
+            # Farewells get quick responses
+            if msg_classification.message_type == MessageType.FAREWELL:
+                result = self._generic_acknowledgment_response(incoming, contact)
+                return record_and_return(
+                    result,
+                    similarity_score=result.get("similarity_score", 0.0),
+                    decision="clarify",
+                )
+
+            # If context is vague and we need clarification, ask for it
+            if msg_classification.context_requirement == ContextRequirement.VAGUE:
+                if not thread or len(thread) < 2:
+                    result = self._ask_for_clarification(incoming, thread)
+                    return record_and_return(
+                        result,
+                        similarity_score=result.get("similarity_score", 0.0),
+                        decision="clarify",
+                    )
+
+        # Legacy fallback: Handle simple acknowledgments using old method
+        elif self._is_simple_acknowledgment(incoming):
+            result = self._generic_acknowledgment_response(incoming, contact)
+            return record_and_return(
+                result,
+                similarity_score=result.get("similarity_score", 0.0),
+                decision="clarify",
+            )
+
+        # Step 4: For QUICK_REPLY intents with high confidence, handle as acknowledgment
         if (
             intent_result
             and intent_result.intent == IntentType.QUICK_REPLY
@@ -398,16 +785,29 @@ class ReplyRouter:
         ):
             # Even if not in our exact list, high-confidence quick replies
             # should be handled with generic responses
-            return self._generic_acknowledgment_response(incoming, contact)
+            result = self._generic_acknowledgment_response(incoming, contact)
+            return record_and_return(
+                result,
+                similarity_score=result.get("similarity_score", 0.0),
+                decision="clarify",
+            )
 
-        # Step 4: Search FAISS index for similar triggers
+        thresholds = self._get_thresholds()
+        template_threshold = thresholds["template"]
+        context_threshold = thresholds["context"]
+        generate_threshold = thresholds["generate"]
+
+        # Step 5: Search FAISS index for similar triggers
         try:
+            search_start = time.perf_counter()
             search_results = self.index_searcher.search_with_pairs(
                 query=incoming,
                 k=5,
-                threshold=GENERATE_THRESHOLD,
+                threshold=generate_threshold,
                 prefer_recent=True,
+                embedder=cached_embedder,
             )
+            latency_ms["faiss_search"] = (time.perf_counter() - search_start) * 1000
         except FileNotFoundError:
             # Index not built yet - fall back to generation
             logger.warning("FAISS index not found, falling back to generation")
@@ -416,47 +816,154 @@ class ReplyRouter:
             logger.exception("Error searching index: %s", e)
             search_results = []
 
-        # Step 5: Route based on best similarity score
+        # Step 6: Check if message is context-dependent (needs current info)
+        is_context_dependent = self._is_context_dependent(incoming)
+        if is_context_dependent:
+            logger.debug("Message is context-dependent, skipping template matching")
+            # Context-dependent questions need clarification or current context
+            if not thread or len(thread) < 2:
+                result = self._ask_for_clarification(incoming, thread)
+                return record_and_return(
+                    result,
+                    similarity_score=0.0,
+                    faiss_candidates=len(search_results),
+                    decision="clarify",
+                )
+            # If we have thread context, generate with it
+            model_loaded = self.generator.is_loaded()
+            generate_start = time.perf_counter()
+            result = self._generate_response(
+                incoming,
+                search_results,
+                contact,
+                thread,
+                chat_id=chat_id,
+                reason="context_dependent",
+            )
+            latency_ms["generate"] = (time.perf_counter() - generate_start) * 1000
+            similarity = search_results[0]["similarity"] if search_results else 0.0
+            return record_and_return(
+                result,
+                similarity_score=similarity,
+                faiss_candidates=len(search_results),
+                model_loaded=model_loaded,
+                decision="generate",
+            )
+
+        # Step 7: Route based on best similarity score
         if search_results:
             best_result = search_results[0]
             best_score = best_result["similarity"]
 
             # High confidence -> template response with top-K variety
-            if best_score >= TEMPLATE_THRESHOLD:
+            if best_score >= template_threshold:
                 # Get all high-confidence matches for variety
                 high_confidence_matches = [
-                    r for r in search_results if r["similarity"] >= TEMPLATE_THRESHOLD
+                    r for r in search_results if r["similarity"] >= template_threshold
                 ]
+                template_start = time.perf_counter()
                 result = self._template_response(high_confidence_matches, contact, incoming)
+                latency_ms["template_select"] = (time.perf_counter() - template_start) * 1000
 
                 # Handle fallback if no coherent templates found
                 if result.get("type") == "fallback_to_generation":
                     logger.debug("Falling back to generation due to no coherent matches")
-                    return self._generate_response(
-                        incoming, search_results, contact, thread,
-                        chat_id=chat_id, fallback=True, reason="no_coherent_templates"
+                    model_loaded = self.generator.is_loaded()
+                    generate_start = time.perf_counter()
+                    result = self._generate_response(
+                        incoming,
+                        search_results,
+                        contact,
+                        thread,
+                        chat_id=chat_id,
+                        fallback=True,
+                        reason="no_coherent_templates",
                     )
-                return result
+                    latency_ms["generate"] = (time.perf_counter() - generate_start) * 1000
+                    return record_and_return(
+                        result,
+                        similarity_score=best_score,
+                        faiss_candidates=len(search_results),
+                        model_loaded=model_loaded,
+                        decision="generate",
+                    )
+                return record_and_return(
+                    result,
+                    similarity_score=best_score,
+                    faiss_candidates=len(search_results),
+                    decision="template",
+                )
 
             # Medium confidence -> LLM generation with context
-            if best_score >= CONTEXT_THRESHOLD:
-                return self._generate_response(
-                    incoming, search_results, contact, thread, chat_id=chat_id
+            if best_score >= context_threshold:
+                model_loaded = self.generator.is_loaded()
+                generate_start = time.perf_counter()
+                result = self._generate_response(
+                    incoming,
+                    search_results,
+                    contact,
+                    thread,
+                    chat_id=chat_id,
+                )
+                latency_ms["generate"] = (time.perf_counter() - generate_start) * 1000
+                return record_and_return(
+                    result,
+                    similarity_score=best_score,
+                    faiss_candidates=len(search_results),
+                    model_loaded=model_loaded,
+                    decision="generate",
                 )
 
             # Low but above minimum -> try generation with caution
-            if best_score >= GENERATE_THRESHOLD:
-                return self._generate_response(
-                    incoming, search_results, contact, thread, chat_id=chat_id, cautious=True
+            if best_score >= generate_threshold:
+                model_loaded = self.generator.is_loaded()
+                generate_start = time.perf_counter()
+                result = self._generate_response(
+                    incoming,
+                    search_results,
+                    contact,
+                    thread,
+                    chat_id=chat_id,
+                    cautious=True,
+                )
+                latency_ms["generate"] = (time.perf_counter() - generate_start) * 1000
+                return record_and_return(
+                    result,
+                    similarity_score=best_score,
+                    faiss_candidates=len(search_results),
+                    model_loaded=model_loaded,
+                    decision="generate",
                 )
 
         # Very low confidence or no results -> check for vague references
         if self._needs_clarification(incoming, thread):
-            return self._ask_for_clarification(incoming, thread)
+            result = self._ask_for_clarification(incoming, thread)
+            return record_and_return(
+                result,
+                similarity_score=0.0,
+                faiss_candidates=len(search_results),
+                decision="clarify",
+            )
 
         # No similar patterns found - generate with general context
-        return self._generate_response(
-            incoming, search_results, contact, thread, chat_id=chat_id, fallback=True
+        model_loaded = self.generator.is_loaded()
+        generate_start = time.perf_counter()
+        result = self._generate_response(
+            incoming,
+            search_results,
+            contact,
+            thread,
+            chat_id=chat_id,
+            fallback=True,
+        )
+        latency_ms["generate"] = (time.perf_counter() - generate_start) * 1000
+        similarity = search_results[0]["similarity"] if search_results else 0.0
+        return record_and_return(
+            result,
+            similarity_score=similarity,
+            faiss_candidates=len(search_results),
+            model_loaded=model_loaded,
+            decision="generate",
         )
 
     def _template_response(
@@ -506,7 +1013,8 @@ class ReplyRouter:
             # For professional relationships, filter out casual responses
             if relationship in ("boss", "manager", "coworker", "colleague", "client"):
                 scored_matches = [
-                    (m, c) for m, c in scored_matches
+                    (m, c)
+                    for m, c in scored_matches
                     if self._is_professional_response(m["response_text"])
                 ]
 
@@ -618,9 +1126,7 @@ class ReplyRouter:
             # Fetch conversation history from iMessage database
             context_messages = self._fetch_conversation_context(chat_id, limit=10)
             if context_messages:
-                logger.debug(
-                    "Fetched %d messages from iMessage for context", len(context_messages)
-                )
+                logger.debug("Fetched %d messages from iMessage for context", len(context_messages))
 
         # Format context for prompt
         context = ""
@@ -685,6 +1191,43 @@ class ReplyRouter:
 
             response = self.generator.generate(request)
             generated_text = response.text.strip()
+
+            # Remove common formal greetings that don't match texting style
+            formal_greetings = (
+                "hey!",
+                "hi!",
+                "hello!",
+                "hey there!",
+                "hi there!",
+                "hello there!",
+            )
+            for greeting in formal_greetings:
+                if generated_text.lower().startswith(greeting):
+                    generated_text = generated_text[len(greeting) :].strip()
+                    # Re-capitalize first letter
+                    if generated_text:
+                        generated_text = generated_text[0].upper() + generated_text[1:]
+                    break
+
+            # Trim overly long responses (>2x expected length)
+            avg_msg_len = 50
+            if relationship_profile:
+                avg_msg_len = relationship_profile.get("avg_message_length", 50)
+            expected_length = int(avg_msg_len) * 2
+            if len(generated_text) > max(80, expected_length) and ". " in generated_text:
+                # Keep only first sentence(s) up to limit
+                sentences = generated_text.split(". ")
+                trimmed = []
+                current_len = 0
+                for s in sentences:
+                    if current_len + len(s) > expected_length:
+                        break
+                    trimmed.append(s)
+                    current_len += len(s) + 2
+                if trimmed:
+                    generated_text = ". ".join(trimmed)
+                    if not generated_text.endswith((".", "!", "?")):
+                        generated_text += "."
 
             # Add hedge for cautious mode
             if cautious and generated_text:

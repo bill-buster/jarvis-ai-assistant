@@ -1498,12 +1498,8 @@ Critical threshold: {MEMORY_CRITICAL_THRESHOLD_GB:.1f} GB
         report.append(f"**Phases Completed**: {self.phase - 1}")
         report.append(f"**Total Experiments**: {len(self.results)}")
         report.append(f"**Random Seed**: {self.seed}")
-        report.append(
-            f"**Index Version**: {active_index.version_id if active_index else 'N/A'}"
-        )
-        report.append(
-            f"**Index Model**: {active_index.model_name if active_index else 'N/A'}"
-        )
+        report.append(f"**Index Version**: {active_index.version_id if active_index else 'N/A'}")
+        report.append(f"**Index Model**: {active_index.model_name if active_index else 'N/A'}")
 
         # Executive Summary
         report.append("\n## Executive Summary\n")

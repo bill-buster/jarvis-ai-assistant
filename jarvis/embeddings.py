@@ -1,20 +1,25 @@
-"""Embedding-based conversation RAG for semantic search and personalized responses.
+"""Embedding Store - SQLite-backed message embedding storage and search.
 
-Provides semantic search capabilities over iMessage conversations using
-sentence embeddings. Embeddings are computed on-demand and cached in a
-local SQLite database for efficient retrieval.
+This module provides STORAGE and SEARCH for message embeddings. It does NOT
+compute embeddings directly - it delegates to jarvis/embedding_adapter.py.
 
 Key Features:
+- SQLite-backed persistent storage of message embeddings
 - Semantic search across messages with optional contact filtering
 - Relationship profiling based on conversation patterns
 - Similar situation detection for context-aware responses
 - Privacy-preserving local storage (no cloud transmission)
 
-Performance Optimizations:
-- Lazy-loaded sentence transformer (shared with template matcher)
-- SQLite with FTS5 for hybrid search
-- Batch embedding computation
-- LRU cache for frequent queries
+Architecture (3-layer embedding stack):
+    1. jarvis/embeddings.py       - Embedding STORAGE (this file)
+           Stores embeddings in SQLite, provides search APIs
+    2. jarvis/embedding_adapter.py - UNIFIED INTERFACE (use for computing)
+           MLX-first with CPU fallback
+    3. models/embeddings.py       - MLX SERVICE CLIENT (low-level)
+           Direct HTTP client to MLX microservice
+
+NOTE: If you need to compute embeddings, import from jarvis/embedding_adapter.py:
+    from jarvis.embedding_adapter import get_embedder
 
 Usage:
     from jarvis.embeddings import (
@@ -23,7 +28,7 @@ Usage:
         get_relationship_profile,
     )
 
-    # Index messages
+    # Index messages (computes embeddings internally via embedding_adapter)
     store = get_embedding_store()
     store.index_messages(messages)
 
@@ -49,10 +54,11 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from contracts.imessage import Message
+from jarvis.embedding_adapter import get_embedder
 from jarvis.errors import ErrorCode, JarvisError
 
 if TYPE_CHECKING:
-    from sentence_transformers import SentenceTransformer
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -61,10 +67,13 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 DEFAULT_DB_PATH = Path.home() / ".jarvis" / "embeddings.db"
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384  # Dimension for all-MiniLM-L6-v2
+# Use bge-small-en-v1.5 via unified adapter for consistency
+EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
+EMBEDDING_DIM = 384  # Dimension for bge-small-en-v1.5
 BATCH_SIZE = 100  # Batch size for embedding computation
 MIN_TEXT_LENGTH = 3  # Minimum text length to embed
+# Schema version - bump when changing embedding model to invalidate cache
+SCHEMA_VERSION = 2
 
 
 # =============================================================================
@@ -130,62 +139,8 @@ class RelationshipProfile:
 
 
 # =============================================================================
-# Embedding Model Management (Lazy Loading)
+# Embedding Functions (using unified adapter)
 # =============================================================================
-
-# Reuse the sentence model from templates.py if available
-_embedding_model: SentenceTransformer | None = None
-_embedding_model_lock = threading.Lock()
-
-
-def _get_embedding_model() -> Any:
-    """Get or load the sentence transformer model.
-
-    Uses lazy loading with thread-safe singleton pattern.
-    Shares the model with templates.py if already loaded.
-
-    Returns:
-        The loaded SentenceTransformer model
-
-    Raises:
-        EmbeddingError: If model cannot be loaded
-    """
-    global _embedding_model
-
-    # Fast path: already loaded
-    if _embedding_model is not None:
-        return _embedding_model
-
-    # Slow path: acquire lock and load
-    with _embedding_model_lock:
-        # Double-check after acquiring lock
-        if _embedding_model is not None:
-            return _embedding_model
-
-        try:
-            # Try to get model from templates module first
-            from models.templates import _get_sentence_model, is_sentence_model_loaded
-
-            if is_sentence_model_loaded():
-                _embedding_model = _get_sentence_model()
-                logger.debug("Reusing sentence model from templates module")
-                return _embedding_model
-        except ImportError:
-            pass
-
-        # Load model ourselves
-        try:
-            from sentence_transformers import SentenceTransformer
-
-            logger.info("Loading sentence transformer: %s", EMBEDDING_MODEL)
-            _embedding_model = SentenceTransformer(EMBEDDING_MODEL)
-            return _embedding_model
-        except Exception as e:
-            logger.exception("Failed to load embedding model")
-            raise EmbeddingError(
-                f"Failed to load embedding model: {e}",
-                cause=e,
-            ) from e
 
 
 def _compute_embedding(text: str) -> np.ndarray:
@@ -196,10 +151,20 @@ def _compute_embedding(text: str) -> np.ndarray:
 
     Returns:
         Normalized embedding vector
+
+    Raises:
+        EmbeddingError: If embedding computation fails
     """
-    model = _get_embedding_model()
-    embedding = model.encode([text], convert_to_numpy=True, normalize_embeddings=True)[0]
-    return embedding
+    try:
+        embedder = get_embedder()
+        embedding = embedder.encode([text], normalize=True)[0]
+        return embedding
+    except Exception as e:
+        logger.exception("Failed to compute embedding")
+        raise EmbeddingError(
+            f"Failed to compute embedding: {e}",
+            cause=e,
+        ) from e
 
 
 def _compute_embeddings_batch(texts: list[str]) -> np.ndarray:
@@ -210,13 +175,23 @@ def _compute_embeddings_batch(texts: list[str]) -> np.ndarray:
 
     Returns:
         Array of normalized embedding vectors
+
+    Raises:
+        EmbeddingError: If embedding computation fails
     """
     if not texts:
         return np.array([])
 
-    model = _get_embedding_model()
-    embeddings = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
-    return embeddings
+    try:
+        embedder = get_embedder()
+        embeddings = embedder.encode(texts, normalize=True)
+        return embeddings
+    except Exception as e:
+        logger.exception("Failed to compute batch embeddings")
+        raise EmbeddingError(
+            f"Failed to compute batch embeddings: {e}",
+            cause=e,
+        ) from e
 
 
 # =============================================================================

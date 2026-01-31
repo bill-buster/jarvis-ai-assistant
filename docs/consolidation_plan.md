@@ -2,7 +2,7 @@
 
 **Date**: 2026-01-30
 **Status**: Ready for Execution
-**Based on**: [audit_report.md](./audit_report.md)
+**Based on**: previous audits (archived)
 
 ---
 
@@ -124,8 +124,7 @@ jarvis-ai-assistant/
 ├── docs/                        # Documentation
 │   ├── CLI_GUIDE.md
 │   ├── API_REFERENCE.md
-│   ├── CODEBASE_AUDIT_REPORT.md
-│   ├── audit_report.md         # NEW: This audit
+│   ├── AUDIT_REMEDIATION_PLAN.md
 │   ├── consolidation_plan.md   # NEW: This plan
 │   └── known_issues.md         # NEW: Known issues
 │
@@ -274,16 +273,16 @@ make health
 
 ```bash
 # CLI help
-python -m jarvis --help
+uv run python -m jarvis --help
 
 # Version
-python -m jarvis version
+uv run python -m jarvis version
 
 # Setup check
-python -m jarvis.setup --check
+uv run python -m jarvis.setup --check
 
 # API server (manual test)
-python -m jarvis serve --reload
+uv run python -m jarvis serve --reload
 ```
 
 ---
