@@ -511,6 +511,12 @@ class ReplyRouter:
         """
         # If we have active thread context, likely mid-conversation
         if thread and len(thread) >= 2:
+            # Check if previous message was a question - if so, definitely generate
+            if thread:
+                last_thread_msg = thread[-1] if thread else ""
+                if "?" in last_thread_msg:
+                    logger.debug("Acknowledgment follows question, generating substantive response")
+                    return True
             return True
 
         # Check contact's historical pattern
@@ -522,10 +528,10 @@ class ReplyRouter:
                     limit=10,
                 )
                 if ack_pairs:
-                    # If user's actual responses were substantive (>30 chars avg),
+                    # If user's actual responses were substantive (>15 chars avg, lowered from 30),
                     # we should generate rather than use canned response
                     avg_response_len = sum(len(p.response_text) for p in ack_pairs) / len(ack_pairs)
-                    if avg_response_len > 30:
+                    if avg_response_len > 15:
                         logger.debug(
                             "Contact %s has avg ack response length %.1f, using generation",
                             contact.display_name,
@@ -1229,11 +1235,6 @@ class ReplyRouter:
                     if not generated_text.endswith((".", "!", "?")):
                         generated_text += "."
 
-            # Add hedge for cautious mode
-            if cautious and generated_text:
-                # Don't modify the response, just mark it as lower confidence
-                pass
-
             confidence = "medium" if not cautious else "low"
             similarity = search_results[0]["similarity"] if search_results else 0.0
 
@@ -1372,8 +1373,8 @@ class ReplyRouter:
                 stats["index_version"] = active_index.version_id
                 stats["index_vectors"] = active_index.num_vectors
                 stats["index_model"] = active_index.model_name
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to get index stats: %s", e)
 
         return stats
 

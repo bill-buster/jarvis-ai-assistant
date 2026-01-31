@@ -476,6 +476,8 @@ class TestConfigMigration:
         assert config.imessage_default_limit == 75
         # Migrated: imessage_default_limit -> search.default_limit
         assert config.search.default_limit == 75
+        # Migrated: template_similarity_threshold -> routing.template_threshold (v8)
+        assert config.routing.template_threshold == 0.8
         # New defaults added
         assert config.config_version == CONFIG_VERSION
         assert config.ui.theme == "system"
@@ -523,6 +525,69 @@ class TestConfigMigration:
         assert config.ui.theme == "light"
         assert config.search.default_limit == 200
         assert config.chat.stream_responses is False
+
+    def test_migrate_v7_to_v8_template_threshold(self, tmp_path):
+        """Test migration of template_similarity_threshold to routing.template_threshold."""
+        config_file = tmp_path / "config.json"
+        # V7 config with custom template_similarity_threshold
+        v7_config = {
+            "config_version": 7,
+            "model_path": "test/model",
+            "template_similarity_threshold": 0.85,  # Non-default value
+            "routing": {},  # Empty routing section
+        }
+        with config_file.open("w") as f:
+            json.dump(v7_config, f)
+
+        config = load_config(config_file)
+
+        # Legacy field preserved
+        assert config.template_similarity_threshold == 0.85
+        # Migrated to routing.template_threshold
+        assert config.routing.template_threshold == 0.85
+        assert config.config_version == CONFIG_VERSION
+
+    def test_migrate_v7_to_v8_default_threshold_not_migrated(self, tmp_path):
+        """Test that default template_similarity_threshold (0.7) is not migrated."""
+        config_file = tmp_path / "config.json"
+        # V7 config with default template_similarity_threshold
+        v7_config = {
+            "config_version": 7,
+            "model_path": "test/model",
+            "template_similarity_threshold": 0.7,  # Default value
+            "routing": {},
+        }
+        with config_file.open("w") as f:
+            json.dump(v7_config, f)
+
+        config = load_config(config_file)
+
+        # Default not migrated - routing uses its own default (0.90)
+        assert config.template_similarity_threshold == 0.7
+        assert config.routing.template_threshold == 0.90
+        assert config.config_version == CONFIG_VERSION
+
+    def test_migrate_v7_to_v8_existing_routing_threshold_not_overwritten(self, tmp_path):
+        """Test that existing routing.template_threshold is not overwritten by migration."""
+        config_file = tmp_path / "config.json"
+        # V7 config with both legacy and routing thresholds set
+        v7_config = {
+            "config_version": 7,
+            "model_path": "test/model",
+            "template_similarity_threshold": 0.85,
+            "routing": {
+                "template_threshold": 0.95,  # Already set
+            },
+        }
+        with config_file.open("w") as f:
+            json.dump(v7_config, f)
+
+        config = load_config(config_file)
+
+        # Routing threshold preserved, not overwritten by legacy value
+        assert config.template_similarity_threshold == 0.85
+        assert config.routing.template_threshold == 0.95
+        assert config.config_version == CONFIG_VERSION
 
 
 class TestSaveConfig:

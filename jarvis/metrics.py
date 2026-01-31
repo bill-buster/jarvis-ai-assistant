@@ -11,6 +11,7 @@ Thread-safe implementations suitable for concurrent access.
 from __future__ import annotations
 
 import gc
+import logging
 import os
 import threading
 import time
@@ -20,6 +21,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 import psutil
+
+logger = logging.getLogger(__name__)
 
 # Constants
 BYTES_PER_MB = 1024 * 1024
@@ -201,7 +204,7 @@ class MemorySampler:
                     self._samples = self._samples[-self._max_samples :]
 
         except Exception:
-            pass  # Silently handle sampling errors
+            logger.debug("Memory sampling error", exc_info=True)
 
     def sample_now(self) -> MemorySample:
         """Take an immediate memory sample and return it.

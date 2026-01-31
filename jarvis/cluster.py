@@ -71,6 +71,7 @@ class ResponseClusterer:
         """
         self.config = config or ClusterConfig()
         self._embedder = None
+        self._cluster_labels: list[int] | None = None
 
     @property
     def embedder(self) -> Any:
@@ -139,6 +140,9 @@ class ResponseClusterer:
             metric=self.config.metric,
         )
         labels = clusterer.fit_predict(embeddings.astype(np.float32))
+
+        # Store labels for later retrieval
+        self._cluster_labels = labels.tolist()
 
         # Stage 4: Extract cluster information
         if progress_callback:
@@ -239,9 +243,13 @@ class ResponseClusterer:
 
         Returns:
             List of cluster labels (-1 for noise).
+
+        Raises:
+            RuntimeError: If cluster_responses() has not been called yet.
         """
-        # This would need to be stored from the last clustering run
-        raise NotImplementedError("Call cluster_responses first")
+        if self._cluster_labels is None:
+            raise RuntimeError("Call cluster_responses first")
+        return self._cluster_labels
 
 
 def suggest_cluster_names(

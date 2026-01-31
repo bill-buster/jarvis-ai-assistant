@@ -31,7 +31,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, runtime_checkable
 
 import numpy as np
 
@@ -39,7 +39,27 @@ from jarvis.embedding_adapter import get_embedder, reset_embedder
 from jarvis.metrics import get_template_analytics
 
 if TYPE_CHECKING:
-    pass
+    from numpy.typing import NDArray
+
+
+@runtime_checkable
+class Embedder(Protocol):
+    """Protocol for embedder objects that can encode text to embeddings.
+
+    This allows TemplateMatcher to accept either UnifiedEmbedder or CachedEmbedder
+    (or any other compatible embedder) for cache cohesion across the request pipeline.
+    """
+
+    def encode(
+        self,
+        texts: list[str] | str,
+        normalize: bool = True,
+        convert_to_numpy: bool = True,
+        normalize_embeddings: bool | None = None,
+    ) -> NDArray[np.float32]:
+        """Encode texts to embeddings."""
+        ...
+
 
 logger = logging.getLogger(__name__)
 
@@ -1949,15 +1969,23 @@ class TemplateMatcher:
                 logger.error("Failed to compute pattern embeddings: %s", e)
                 raise
 
-    def _get_query_embedding(self, query: str) -> np.ndarray:
+    def _get_query_embedding(self, query: str, embedder: Embedder | None = None) -> np.ndarray:
         """Get embedding for a query, using cache if available.
 
         Args:
             query: Query string to encode
+            embedder: Optional embedder override. If provided, uses this embedder
+                directly (which may have its own caching, e.g., CachedEmbedder).
+                If None, uses internal cache with default embedder.
 
         Returns:
             Query embedding as numpy array (normalized)
         """
+        # If external embedder provided, use it directly (it handles its own caching)
+        if embedder is not None:
+            embedding_result = embedder.encode([query], normalize=True)[0]
+            return np.asarray(embedding_result)
+
         # Create cache key from query hash
         cache_key = hashlib.md5(query.encode(), usedforsecurity=False).hexdigest()
 
@@ -1967,19 +1995,28 @@ class TemplateMatcher:
             return cached
 
         # Encode and cache (normalized by default)
-        embedder = _get_sentence_model()
-        embedding_result = embedder.encode([query], normalize=True)[0]
+        default_embedder = _get_sentence_model()
+        embedding_result = default_embedder.encode([query], normalize=True)[0]
         # Cast to ndarray to satisfy mypy (encode returns Any)
         embedding: np.ndarray = np.asarray(embedding_result)
         self._query_cache.set(cache_key, embedding)
         return embedding
 
-    def match(self, query: str, track_analytics: bool = True) -> TemplateMatch | None:
+    def match(
+        self,
+        query: str,
+        track_analytics: bool = True,
+        embedder: Embedder | None = None,
+    ) -> TemplateMatch | None:
         """Find best matching template for a query.
 
         Args:
             query: Input prompt to match against templates
             track_analytics: Whether to record this query in template analytics
+            embedder: Optional embedder override for cache cohesion. If provided,
+                uses this embedder (e.g., CachedEmbedder from router) instead of
+                internal cache. This allows sharing cached embeddings across the
+                request pipeline.
 
         Returns:
             TemplateMatch if similarity >= threshold, None otherwise.
@@ -2001,8 +2038,8 @@ class TemplateMatcher:
                 pattern_norms = np.linalg.norm(pattern_embeddings, axis=1)
                 pattern_norms = np.where(pattern_norms == 0, 1, pattern_norms)
 
-            # Get query embedding (cached if previously seen)
-            query_embedding = self._get_query_embedding(query)
+            # Get query embedding (uses external embedder if provided for cache cohesion)
+            query_embedding = self._get_query_embedding(query, embedder=embedder)
             query_norm = np.linalg.norm(query_embedding)
 
             if query_norm == 0:
@@ -2085,7 +2122,11 @@ class TemplateMatcher:
         return True
 
     def match_with_context(
-        self, query: str, group_size: int | None = None, track_analytics: bool = True
+        self,
+        query: str,
+        group_size: int | None = None,
+        track_analytics: bool = True,
+        embedder: Embedder | None = None,
     ) -> TemplateMatch | None:
         """Find best matching template considering conversation context.
 
@@ -2095,13 +2136,16 @@ class TemplateMatcher:
             query: Input prompt to match
             group_size: Number of participants in the chat
             track_analytics: Whether to record in analytics
+            embedder: Optional embedder override for cache cohesion. If provided,
+                uses this embedder (e.g., CachedEmbedder from router) instead of
+                internal cache.
 
         Returns:
             TemplateMatch or None
         """
         # If no group size provided, use standard match
         if group_size is None:
-            return self.match(query, track_analytics)
+            return self.match(query, track_analytics, embedder=embedder)
 
         try:
             self._ensure_embeddings()
@@ -2115,8 +2159,8 @@ class TemplateMatcher:
                 pattern_norms = np.linalg.norm(pattern_embeddings, axis=1)
                 pattern_norms = np.where(pattern_norms == 0, 1, pattern_norms)
 
-            # Get query embedding
-            query_embedding = self._get_query_embedding(query)
+            # Get query embedding (uses external embedder if provided for cache cohesion)
+            query_embedding = self._get_query_embedding(query, embedder=embedder)
             query_norm = np.linalg.norm(query_embedding)
             if query_norm == 0:
                 return None

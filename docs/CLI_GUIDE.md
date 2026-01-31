@@ -656,11 +656,11 @@ JARVIS stores configuration in `~/.jarvis/config.json`. The setup wizard creates
 | `search.default_limit` | Default search result limit | `50` |
 | `search.default_date_range_days` | Default date range (days) | `null` |
 
-#### Template Matching
+#### Template Matching (Deprecated)
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `template_similarity_threshold` | Template matcher similarity threshold (0-1) | `0.7` |
+| `template_similarity_threshold` | **DEPRECATED** - use `routing.template_threshold` instead. Kept for backwards compatibility; non-default values are migrated to `routing.template_threshold` on load. | `0.7` |
 
 #### Routing Thresholds
 

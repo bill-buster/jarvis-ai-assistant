@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 from contracts.models import GenerationRequest, GenerationResponse
 from models.loader import MLXModelLoader, ModelConfig
 from models.prompt_builder import PromptBuilder
-from models.templates import TemplateMatcher
+from models.templates import Embedder, TemplateMatcher
 
 if TYPE_CHECKING:
     from jarvis.threading import ThreadContext, ThreadTopic
@@ -59,30 +59,43 @@ class MLXGenerator:
         self._template_matcher = None if skip_templates else (template_matcher or TemplateMatcher())
         self._prompt_builder = prompt_builder or PromptBuilder()
 
-    def generate(self, request: GenerationRequest) -> GenerationResponse:
+    def generate(
+        self,
+        request: GenerationRequest,
+        embedder: Embedder | None = None,
+    ) -> GenerationResponse:
         """Generate a response using template matching or model.
 
         Args:
             request: Generation request with prompt, context, and examples
+            embedder: Optional embedder override for cache cohesion. If provided,
+                uses this embedder (e.g., CachedEmbedder) for template matching
+                instead of internal cache.
 
         Returns:
             GenerationResponse with text and metadata
         """
         start_time = time.perf_counter()
 
-        # Try template match first
-        template_response = self._try_template_match(request)
+        # Try template match first (pass embedder for cache cohesion)
+        template_response = self._try_template_match(request, embedder=embedder)
         if template_response is not None:
             return template_response
 
         # Fall back to model generation
         return self._generate_with_model(request, start_time)
 
-    def _try_template_match(self, request: GenerationRequest) -> GenerationResponse | None:
+    def _try_template_match(
+        self,
+        request: GenerationRequest,
+        embedder: Embedder | None = None,
+    ) -> GenerationResponse | None:
         """Attempt to match request to a template.
 
         Args:
             request: Generation request
+            embedder: Optional embedder override for cache cohesion. If provided,
+                uses this embedder (e.g., CachedEmbedder) for query encoding.
 
         Returns:
             GenerationResponse if template matched, None otherwise
@@ -90,7 +103,7 @@ class MLXGenerator:
         if self._template_matcher is None:
             return None
 
-        match = self._template_matcher.match(request.prompt)
+        match = self._template_matcher.match(request.prompt, embedder=embedder)
         if match is None:
             return None
 
@@ -184,7 +197,11 @@ class MLXGenerator:
         """Return current memory usage of the model."""
         return self._loader.get_memory_usage_mb()
 
-    async def generate_stream(self, request: GenerationRequest) -> AsyncIterator[dict[str, Any]]:
+    async def generate_stream(
+        self,
+        request: GenerationRequest,
+        embedder: Embedder | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
         """Generate a response with streaming output (yields tokens).
 
         Yields tokens as they're generated for real-time display.
@@ -192,6 +209,7 @@ class MLXGenerator:
 
         Args:
             request: Generation request with prompt, context, and examples
+            embedder: Optional embedder override for cache cohesion.
 
         Yields:
             Dictionary with token information:
@@ -200,7 +218,7 @@ class MLXGenerator:
                 - is_final: Whether this is the last token
         """
         # Try template match first - if matched, yield complete response
-        template_response = self._try_template_match(request)
+        template_response = self._try_template_match(request, embedder=embedder)
         if template_response is not None:
             # Templates return complete responses, yield as single token
             yield {
@@ -288,6 +306,7 @@ class ThreadAwareGenerator:
         thread_context: ThreadContext,
         instruction: str | None = None,
         temperature: float | None = None,
+        embedder: Embedder | None = None,
     ) -> GenerationResponse:
         """Generate a thread-aware reply.
 
@@ -298,6 +317,7 @@ class ThreadAwareGenerator:
             thread_context: Analyzed thread context from ThreadAnalyzer
             instruction: Optional custom instruction for the reply
             temperature: Optional temperature override (auto-selected if not provided)
+            embedder: Optional embedder override for cache cohesion.
 
         Returns:
             GenerationResponse with generated reply and metadata
@@ -325,9 +345,9 @@ class ThreadAwareGenerator:
         if temperature is None:
             temperature = self._get_temperature_for_topic(thread_context.topic)
 
-        # Try template match first for quick exchanges
+        # Try template match first for quick exchanges (pass embedder for cache cohesion)
         if thread_context.topic == ThreadTopic.QUICK_EXCHANGE:
-            template_response = self._try_quick_template(thread_context)
+            template_response = self._try_quick_template(thread_context, embedder=embedder)
             if template_response is not None:
                 return template_response
 
@@ -388,11 +408,16 @@ class ThreadAwareGenerator:
 
         return temperature_map.get(topic, 0.6)
 
-    def _try_quick_template(self, thread_context: ThreadContext) -> GenerationResponse | None:
+    def _try_quick_template(
+        self,
+        thread_context: ThreadContext,
+        embedder: Embedder | None = None,
+    ) -> GenerationResponse | None:
         """Try to match quick exchange to a template.
 
         Args:
             thread_context: The thread context
+            embedder: Optional embedder override for cache cohesion.
 
         Returns:
             GenerationResponse if matched, None otherwise
@@ -412,10 +437,10 @@ class ThreadAwareGenerator:
         if not last_text or not last_text.strip():
             return None
 
-        # Try template matching
+        # Try template matching (pass embedder for cache cohesion)
         if self._generator._template_matcher is None:
             return None
-        match = self._generator._template_matcher.match(last_text)
+        match = self._generator._template_matcher.match(last_text, embedder=embedder)
         if match is not None:
             return GenerationResponse(
                 text=match.template.response,
@@ -526,13 +551,18 @@ class ThreadAwareGenerator:
         """Return current memory usage of the model."""
         return self._generator.get_memory_usage_mb()
 
-    def generate(self, request: GenerationRequest) -> GenerationResponse:
+    def generate(
+        self,
+        request: GenerationRequest,
+        embedder: Embedder | None = None,
+    ) -> GenerationResponse:
         """Standard generation (delegates to base generator).
 
         Args:
             request: Generation request
+            embedder: Optional embedder override for cache cohesion.
 
         Returns:
             GenerationResponse
         """
-        return self._generator.generate(request)
+        return self._generator.generate(request, embedder=embedder)

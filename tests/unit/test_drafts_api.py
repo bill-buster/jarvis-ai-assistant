@@ -212,7 +212,7 @@ Key points:
 class TestDraftReplyEndpoint:
     """Tests for POST /drafts/reply endpoint."""
 
-    @patch("api.routers.drafts.get_generator")
+    @patch("api.routers.drafts.get_warm_generator")
     def test_successful_reply_generation(
         self, mock_get_generator, client, mock_reader, mock_messages
     ):
@@ -250,7 +250,7 @@ class TestDraftReplyEndpoint:
         assert data["context_used"]["num_messages"] == 3
         assert "John Smith" in data["context_used"]["participants"]
 
-    @patch("api.routers.drafts.get_generator")
+    @patch("api.routers.drafts.get_warm_generator")
     def test_reply_with_instruction(self, mock_get_generator, client, mock_reader, mock_messages):
         """Generates reply with custom instruction."""
         mock_reader.get_messages.return_value = mock_messages
@@ -305,7 +305,7 @@ class TestDraftReplyEndpoint:
         assert response.status_code == 500
         assert "Failed to fetch" in response.json()["detail"]
 
-    @patch("api.routers.drafts.get_generator")
+    @patch("api.routers.drafts.get_warm_generator")
     def test_reply_generator_unavailable(
         self, mock_get_generator, client, mock_reader, mock_messages
     ):
@@ -321,7 +321,7 @@ class TestDraftReplyEndpoint:
         assert response.status_code == 503
         assert "unavailable" in response.json()["detail"]
 
-    @patch("api.routers.drafts.get_generator")
+    @patch("api.routers.drafts.get_warm_generator")
     def test_reply_all_generations_fail(
         self, mock_get_generator, client, mock_reader, mock_messages
     ):
@@ -372,7 +372,7 @@ class TestDraftReplyEndpoint:
 class TestDraftSummarizeEndpoint:
     """Tests for POST /drafts/summarize endpoint."""
 
-    @patch("api.routers.drafts.get_generator")
+    @patch("api.routers.drafts.get_warm_generator")
     def test_successful_summarization(self, mock_get_generator, client, mock_reader, mock_messages):
         """Successfully summarizes a conversation."""
         mock_reader.get_messages.return_value = mock_messages
@@ -435,7 +435,7 @@ class TestDraftSummarizeEndpoint:
         assert response.status_code == 500
         assert "Failed to fetch" in response.json()["detail"]
 
-    @patch("api.routers.drafts.get_generator")
+    @patch("api.routers.drafts.get_warm_generator")
     def test_summarize_generator_unavailable(
         self, mock_get_generator, client, mock_reader, mock_messages
     ):
@@ -451,7 +451,7 @@ class TestDraftSummarizeEndpoint:
         assert response.status_code == 503
         assert "unavailable" in response.json()["detail"]
 
-    @patch("api.routers.drafts.get_generator")
+    @patch("api.routers.drafts.get_warm_generator")
     def test_summarize_generation_fails(
         self, mock_get_generator, client, mock_reader, mock_messages
     ):

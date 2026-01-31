@@ -4,7 +4,6 @@ Tests cover database initialization, contact CRUD operations, pair operations,
 cluster operations, train/test split, embedding operations, and edge cases.
 """
 
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -12,14 +11,9 @@ import pytest
 
 from jarvis.db import (
     CURRENT_SCHEMA_VERSION,
-    Cluster,
     Contact,
-    ContactStyleTargets,
-    IndexVersion,
     JarvisDB,
     Pair,
-    PairArtifact,
-    PairEmbedding,
     get_db,
     reset_db,
 )
@@ -912,6 +906,7 @@ class TestClusterOperations:
     def test_update_cluster_label(self, db: JarvisDB) -> None:
         """Test updating a cluster's name and description."""
         cluster = db.add_cluster(name="OLD_NAME", description="Old description")
+        assert cluster.id is not None  # For type checker
         result = db.update_cluster_label(
             cluster.id,
             name="NEW_NAME",
@@ -920,7 +915,7 @@ class TestClusterOperations:
 
         assert result is True
 
-        retrieved = db.get_cluster(cluster.id)  # type: ignore[arg-type]
+        retrieved = db.get_cluster(cluster.id)
         assert retrieved is not None
         assert retrieved.name == "NEW_NAME"
         assert retrieved.description == "New description"
@@ -1452,7 +1447,7 @@ class TestStatistics:
         """Test statistics with populated database."""
         # Add contacts
         contact1 = db.add_contact(display_name="Contact1", chat_id="chat1")
-        contact2 = db.add_contact(display_name="Contact2", chat_id="chat2")
+        _contact2 = db.add_contact(display_name="Contact2", chat_id="chat2")  # noqa: F841
 
         # Add pairs with varying quality
         now = datetime.now()
@@ -1470,7 +1465,7 @@ class TestStatistics:
             )
 
         # Add clusters
-        cluster = db.add_cluster(name="TEST_CLUSTER")
+        _cluster = db.add_cluster(name="TEST_CLUSTER")  # noqa: F841 - setup
 
         # Add embeddings
         pairs = db.get_pairs()
@@ -1902,7 +1897,7 @@ class TestEdgeCases:
     def test_connection_rollback_on_error(self, db: JarvisDB) -> None:
         """Test that connection rolls back on error."""
         # Add a contact first
-        contact = db.add_contact(display_name="Test")
+        _contact = db.add_contact(display_name="Test")  # noqa: F841 - setup
 
         # Try to add an invalid entry that should fail
         # (violating unique constraint on chat_id)

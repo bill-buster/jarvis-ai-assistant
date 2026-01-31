@@ -40,8 +40,8 @@ from api.schemas import (
 from contracts.imessage import Message
 from contracts.models import GenerationRequest
 from integrations.imessage import ChatDBReader
+from jarvis.model_warmer import get_warm_generator
 from jarvis.prompts import API_REPLY_EXAMPLES, API_SUMMARY_EXAMPLES
-from models import get_generator
 
 logger = logging.getLogger(__name__)
 
@@ -340,7 +340,7 @@ async def generate_draft_reply(
 
     # Get the generator
     try:
-        generator = await run_in_threadpool(get_generator)
+        generator = await run_in_threadpool(get_warm_generator)
     except Exception as e:
         logger.error("Failed to get generator: %s", e)
         raise HTTPException(
@@ -567,7 +567,7 @@ async def summarize_conversation(
 
     # Get the generator
     try:
-        generator = await run_in_threadpool(get_generator)
+        generator = await run_in_threadpool(get_warm_generator)
     except Exception as e:
         logger.error("Failed to get generator: %s", e)
         raise HTTPException(
@@ -758,7 +758,7 @@ async def generate_smart_reply(
     Uses the ReplyRouter to intelligently decide how to respond:
 
     - **Template (high confidence):** When the incoming message closely matches
-      a pattern we've seen before (similarity >= 0.85), returns a template
+      a pattern we've seen before (similarity >= 0.90), returns a template
       response instantly without calling the LLM.
 
     - **Generated (medium confidence):** When there's some similarity to past

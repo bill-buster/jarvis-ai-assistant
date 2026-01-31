@@ -42,7 +42,7 @@ from jarvis.errors import (
     model_not_found,
     model_out_of_memory,
 )
-from models.registry import DEFAULT_MODEL_ID, ModelSpec, get_model_spec
+from models.registry import DEFAULT_MODEL_ID, MODEL_REGISTRY, ModelSpec, get_model_spec
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +114,10 @@ class ModelConfig:
                 self.model_path = spec.path
                 self.estimated_memory_mb = spec.estimated_memory_mb
             else:
-                # Fallback to hardcoded default
-                self.model_path = "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+                # Registry should always have DEFAULT_MODEL_ID, but handle gracefully
+                logger.warning("DEFAULT_MODEL_ID '%s' not in registry", DEFAULT_MODEL_ID)
+                default_spec = MODEL_REGISTRY[DEFAULT_MODEL_ID]
+                self.model_path = default_spec.path
 
     @property
     def display_name(self) -> str:

@@ -450,7 +450,7 @@ async def run_http_server(host: str = "127.0.0.1", port: int = 8765) -> None:
         while True:
             await asyncio.sleep(3600)
     except asyncio.CancelledError:
-        pass
+        logger.info("MCP server received shutdown signal")
     finally:
         await runner.cleanup()
 

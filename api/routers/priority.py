@@ -499,7 +499,7 @@ def get_priority_inbox(
                 if level_order[score.level] < level_order[min_level_enum]:
                     continue
             except ValueError:
-                pass  # Ignore invalid level filter
+                logger.warning("Invalid priority level filter: %s", min_level)
 
         filtered_scores.append(score)
 

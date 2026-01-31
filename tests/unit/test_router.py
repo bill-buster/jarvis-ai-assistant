@@ -11,8 +11,6 @@ The ReplyRouter routes messages through three paths based on similarity:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,15 +28,13 @@ from jarvis.router import (
     SIMPLE_ACKNOWLEDGMENTS,
     TEMPLATE_THRESHOLD,
     ReplyRouter,
-    RouteResult,
     RouterError,
+    RouteResult,
     get_reply_router,
     reset_reply_router,
 )
 
 # Marker for tests requiring sentence_transformers
-from tests.conftest import requires_sentence_transformers
-
 
 # =============================================================================
 # Fixtures
@@ -211,9 +207,9 @@ class TestReplyRouterInit:
         mock_db.init_schema = MagicMock()
 
         with patch("jarvis.router.get_db", return_value=mock_db):
-            with patch("jarvis.index.TriggerIndexSearcher") as MockSearcher:
+            with patch("jarvis.index.TriggerIndexSearcher") as mock_searcher_cls:
                 mock_searcher = MagicMock()
-                MockSearcher.return_value = mock_searcher
+                mock_searcher_cls.return_value = mock_searcher
 
                 router = ReplyRouter()
                 # Access the property to trigger lazy creation
@@ -633,23 +629,23 @@ class TestSingleton:
 
     def test_get_reply_router_returns_same_instance(self) -> None:
         """Test that get_reply_router returns the same instance."""
-        with patch("jarvis.router.ReplyRouter") as MockRouter:
+        with patch("jarvis.router.ReplyRouter") as mock_router_cls:
             mock_router = MagicMock()
-            MockRouter.return_value = mock_router
+            mock_router_cls.return_value = mock_router
 
             router1 = get_reply_router()
             router2 = get_reply_router()
 
             assert router1 is router2
             # Constructor should only be called once
-            MockRouter.assert_called_once()
+            mock_router_cls.assert_called_once()
 
     def test_reset_reply_router(self) -> None:
         """Test that reset creates new instance on next access."""
-        with patch("jarvis.router.ReplyRouter") as MockRouter:
+        with patch("jarvis.router.ReplyRouter") as mock_router_cls:
             mock_router1 = MagicMock()
             mock_router2 = MagicMock()
-            MockRouter.side_effect = [mock_router1, mock_router2]
+            mock_router_cls.side_effect = [mock_router1, mock_router2]
 
             router1 = get_reply_router()
             reset_reply_router()
@@ -696,7 +692,7 @@ class TestEdgeCases:
         mock_db.get_contact.return_value = sample_contact
         mock_index_searcher.search_with_pairs.return_value = []
 
-        result = router.route("hello", contact_id=1)
+        router.route("hello", contact_id=1)
 
         mock_db.get_contact.assert_called_with(1)
 
@@ -712,7 +708,7 @@ class TestEdgeCases:
         mock_db.get_contact_by_chat_id.return_value = sample_contact
         mock_index_searcher.search_with_pairs.return_value = []
 
-        result = router.route("hello", chat_id="chat123")
+        router.route("hello", chat_id="chat123")
 
         mock_db.get_contact_by_chat_id.assert_called_with("chat123")
 
@@ -1097,7 +1093,9 @@ class TestIMessageReaderProperty:
         # Don't set _imessage_reader, let it try to create
         router._imessage_reader = None
 
-        with patch("jarvis.router.ChatDBReader", side_effect=Exception("Cannot init")):
+        with patch(
+            "integrations.imessage.reader.ChatDBReader", side_effect=Exception("Cannot init")
+        ):
             result = router.imessage_reader
             assert result is None
 
@@ -1287,10 +1285,11 @@ class TestShouldGenerateAfterAcknowledgment:
     def test_generate_after_ack_short_thread(
         self,
         router: ReplyRouter,
+        mock_db: MagicMock,
         sample_contact: Contact,
     ) -> None:
         """Test returns False when thread is short and no patterns found."""
-        router._db.get_pairs_by_trigger_pattern.return_value = []
+        mock_db.get_pairs_by_trigger_pattern.return_value = []
         result = router._should_generate_after_acknowledgment("ok", sample_contact, ["Hey!"])
         assert result is False
 
@@ -1412,7 +1411,7 @@ class TestReactionHandling:
             message_type=MessageType.REACTION,
             type_confidence=0.99,
             context_requirement=ContextRequirement.SELF_CONTAINED,
-            reply_requirement=ReplyRequirement.NONE,
+            reply_requirement=ReplyRequirement.NO_REPLY,
             classification_method="rule",
         )
 
@@ -1436,7 +1435,7 @@ class TestVagueContextRequirement:
     ) -> None:
         """Test vague messages without thread context request clarification."""
         mock_message_classifier.classify.return_value = MessageClassification(
-            message_type=MessageType.QUESTION,
+            message_type=MessageType.QUESTION_INFO,
             type_confidence=0.85,
             context_requirement=ContextRequirement.VAGUE,
             reply_requirement=ReplyRequirement.INFO_RESPONSE,
@@ -1456,7 +1455,7 @@ class TestVagueContextRequirement:
     ) -> None:
         """Test vague messages with thread context proceed to processing."""
         mock_message_classifier.classify.return_value = MessageClassification(
-            message_type=MessageType.QUESTION,
+            message_type=MessageType.QUESTION_INFO,
             type_confidence=0.85,
             context_requirement=ContextRequirement.VAGUE,
             reply_requirement=ReplyRequirement.INFO_RESPONSE,

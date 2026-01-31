@@ -33,7 +33,6 @@ from contracts.imessage import Message
 if TYPE_CHECKING:
     from jarvis.embedding_adapter import UnifiedEmbedder
     from jarvis.exchange import CandidateExchange
-    from numpy.typing import NDArray
 
 logger = logging.getLogger(__name__)
 
@@ -793,7 +792,17 @@ class TurnBasedExtractor:
             if self._is_substantive_response(response_text):
                 flags["ack_trigger_substantive_response"] = True
                 # The response is probably new info, not a reply to the ack
-                quality *= 0.3
+                # Penalty increased from 0.3 to 0.15 for stricter filtering
+                quality *= 0.15
+
+        # 4b. Semantic coherence check for acknowledgment triggers
+        #     Even if response looks substantive, check if it's actually related
+        if self._is_acknowledgment_trigger(trigger_text) and semantic_similarity is not None:
+            # Acknowledgment triggers need higher similarity to be valid pairs
+            # because they often precede unrelated new topics
+            if semantic_similarity < 0.6:
+                flags["ack_low_coherence"] = True
+                quality *= 0.2
 
         # === EXISTING QUALITY RULES ===
 

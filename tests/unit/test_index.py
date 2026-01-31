@@ -11,22 +11,24 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
-import sys
 import numpy as np
 import pytest
 
 from jarvis.db import Cluster, IndexVersion, Pair, PairEmbedding
 from jarvis.index import (
+    IncrementalIndexConfig,
+    IncrementalTriggerIndex,
     IndexConfig,
     IndexStats,
     TriggerIndexBuilder,
     TriggerIndexSearcher,
     build_index_from_db,
+    get_incremental_index,
     get_index_stats,
     list_index_versions,
+    reset_incremental_index,
 )
 
 # Create a mock faiss module for testing
@@ -281,7 +283,7 @@ class TestTriggerIndexBuilder:
             def progress_callback(stage: str, progress: float, message: str) -> None:
                 progress_updates.append((stage, progress, message))
 
-            stats = builder.build_index(sample_pairs, mock_jarvis_db, progress_callback)
+            _stats = builder.build_index(sample_pairs, mock_jarvis_db, progress_callback)  # noqa: F841
 
         assert len(progress_updates) > 0
         # Should have stages: extracting, encoding, indexing, saving, storing, done
@@ -361,7 +363,6 @@ class TestTriggerIndexSearcher:
     def test_search_returns_results(
         self,
         mock_get_embedder: MagicMock,
-        mock_faiss: MagicMock,
         mock_jarvis_db: MagicMock,
         mock_embedder: MagicMock,
         temp_jarvis_dir: Path,
@@ -398,7 +399,7 @@ class TestTriggerIndexSearcher:
             np.array([[0.9, 0.8, 0.7, 0.6, 0.3]]),  # scores
             np.array([[0, 1, 2, 3, 4]]),  # indices
         )
-        mock_faiss.read_index.return_value = mock_index
+        mock_faiss_module.read_index.return_value = mock_index
 
         with patch("jarvis.index.JARVIS_DIR", temp_jarvis_dir):
             searcher = TriggerIndexSearcher(jarvis_db=mock_jarvis_db)
@@ -413,7 +414,6 @@ class TestTriggerIndexSearcher:
     def test_search_respects_threshold(
         self,
         mock_get_embedder: MagicMock,
-        mock_faiss: MagicMock,
         mock_jarvis_db: MagicMock,
         mock_embedder: MagicMock,
         temp_jarvis_dir: Path,
@@ -442,7 +442,7 @@ class TestTriggerIndexSearcher:
             np.array([[0.95, 0.85, 0.75, 0.65, 0.45]]),
             np.array([[0, 1, 2, 3, 4]]),
         )
-        mock_faiss.read_index.return_value = mock_index
+        mock_faiss_module.read_index.return_value = mock_index
 
         with patch("jarvis.index.JARVIS_DIR", temp_jarvis_dir):
             searcher = TriggerIndexSearcher(jarvis_db=mock_jarvis_db)
@@ -465,7 +465,6 @@ class TestTriggerIndexSearcher:
     def test_search_handles_invalid_indices(
         self,
         mock_get_embedder: MagicMock,
-        mock_faiss: MagicMock,
         mock_jarvis_db: MagicMock,
         mock_embedder: MagicMock,
         temp_jarvis_dir: Path,
@@ -494,7 +493,7 @@ class TestTriggerIndexSearcher:
             np.array([[0.9, 0.8, 0.0, 0.0, 0.0]]),
             np.array([[0, 1, -1, -1, -1]]),
         )
-        mock_faiss.read_index.return_value = mock_index
+        mock_faiss_module.read_index.return_value = mock_index
 
         with patch("jarvis.index.JARVIS_DIR", temp_jarvis_dir):
             searcher = TriggerIndexSearcher(jarvis_db=mock_jarvis_db)
@@ -516,7 +515,6 @@ class TestTriggerIndexSearcher:
     def test_search_with_pairs_returns_full_info(
         self,
         mock_get_embedder: MagicMock,
-        mock_faiss: MagicMock,
         mock_jarvis_db: MagicMock,
         mock_embedder: MagicMock,
         sample_pairs: list[Pair],
@@ -554,7 +552,7 @@ class TestTriggerIndexSearcher:
             np.array([[0.9, 0.85]]),
             np.array([[0, 1]]),
         )
-        mock_faiss.read_index.return_value = mock_index
+        mock_faiss_module.read_index.return_value = mock_index
 
         with patch("jarvis.index.JARVIS_DIR", temp_jarvis_dir):
             searcher = TriggerIndexSearcher(jarvis_db=mock_jarvis_db)
@@ -573,7 +571,6 @@ class TestTriggerIndexSearcher:
     def test_search_with_pairs_freshness_weighting(
         self,
         mock_get_embedder: MagicMock,
-        mock_faiss: MagicMock,
         mock_jarvis_db: MagicMock,
         mock_embedder: MagicMock,
         temp_jarvis_dir: Path,
@@ -629,7 +626,7 @@ class TestTriggerIndexSearcher:
             np.array([[0.9, 0.9]]),
             np.array([[0, 1]]),
         )
-        mock_faiss.read_index.return_value = mock_index
+        mock_faiss_module.read_index.return_value = mock_index
 
         with patch("jarvis.index.JARVIS_DIR", temp_jarvis_dir):
             searcher = TriggerIndexSearcher(jarvis_db=mock_jarvis_db)
@@ -925,7 +922,6 @@ class TestEdgeCases:
     def test_search_empty_query(
         self,
         mock_get_embedder: MagicMock,
-        mock_faiss: MagicMock,
         mock_jarvis_db: MagicMock,
         mock_embedder: MagicMock,
         temp_jarvis_dir: Path,
@@ -954,7 +950,7 @@ class TestEdgeCases:
             np.array([[0.1, 0.1, 0.1, 0.1, 0.1]]),
             np.array([[0, 1, 2, 3, 4]]),
         )
-        mock_faiss.read_index.return_value = mock_index
+        mock_faiss_module.read_index.return_value = mock_index
 
         with patch("jarvis.index.JARVIS_DIR", temp_jarvis_dir):
             searcher = TriggerIndexSearcher(jarvis_db=mock_jarvis_db)
@@ -970,7 +966,6 @@ class TestEdgeCases:
     def test_search_no_matches_above_threshold(
         self,
         mock_get_embedder: MagicMock,
-        mock_faiss: MagicMock,
         mock_jarvis_db: MagicMock,
         mock_embedder: MagicMock,
         temp_jarvis_dir: Path,
@@ -999,7 +994,7 @@ class TestEdgeCases:
             np.array([[0.3, 0.2, 0.1, 0.05, 0.01]]),
             np.array([[0, 1, 2, 3, 4]]),
         )
-        mock_faiss.read_index.return_value = mock_index
+        mock_faiss_module.read_index.return_value = mock_index
 
         with patch("jarvis.index.JARVIS_DIR", temp_jarvis_dir):
             searcher = TriggerIndexSearcher(jarvis_db=mock_jarvis_db)
@@ -1038,3 +1033,409 @@ class TestEdgeCases:
 
         assert stats.pairs_indexed == 1
         assert stats.embeddings_stored == 1
+
+
+# =============================================================================
+# IncrementalTriggerIndex Tests
+# =============================================================================
+
+
+@pytest.fixture
+def incremental_config(temp_jarvis_dir: Path) -> IncrementalIndexConfig:
+    """Create an incremental index config pointing to temp directory."""
+    indexes_dir = temp_jarvis_dir / "indexes" / "triggers"
+    indexes_dir.mkdir(parents=True, exist_ok=True)
+    return IncrementalIndexConfig(
+        indexes_dir=indexes_dir,
+        compact_threshold=0.2,
+        auto_save=False,  # Manual save for testing
+    )
+
+
+class TestIncrementalIndexConfig:
+    """Tests for IncrementalIndexConfig."""
+
+    def test_default_config(self) -> None:
+        """Test default configuration values."""
+        config = IncrementalIndexConfig()
+        assert config.compact_threshold == 0.2
+        assert config.auto_save is True
+        assert config.normalize is True
+
+    def test_custom_config(self) -> None:
+        """Test custom configuration values."""
+        config = IncrementalIndexConfig(
+            compact_threshold=0.3,
+            auto_save=False,
+            normalize=False,
+        )
+        assert config.compact_threshold == 0.3
+        assert config.auto_save is False
+        assert config.normalize is False
+
+
+class TestIncrementalTriggerIndex:
+    """Tests for IncrementalTriggerIndex class."""
+
+    def setup_method(self) -> None:
+        """Reset singleton before each test."""
+        reset_incremental_index()
+
+    def teardown_method(self) -> None:
+        """Reset singleton after each test."""
+        reset_incremental_index()
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_add_pairs(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        sample_pairs: list[Pair],
+        incremental_config: IncrementalIndexConfig,
+        temp_jarvis_dir: Path,
+    ) -> None:
+        """Test adding pairs to incremental index."""
+        mock_get_embedder.return_value = mock_embedder
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            index = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index._embedder = mock_embedder
+
+            added = index.add_pairs(sample_pairs)
+
+            assert added == 3
+            assert len(index._pair_to_faiss) == 3
+            assert len(index._faiss_to_pair) == 3
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_add_pairs_skips_duplicates(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        sample_pairs: list[Pair],
+        incremental_config: IncrementalIndexConfig,
+    ) -> None:
+        """Test that adding the same pairs twice doesn't duplicate them."""
+        mock_get_embedder.return_value = mock_embedder
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            index = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index._embedder = mock_embedder
+
+            # Add pairs twice
+            added1 = index.add_pairs(sample_pairs)
+            added2 = index.add_pairs(sample_pairs)
+
+            assert added1 == 3
+            assert added2 == 0  # No new pairs added
+            assert len(index._pair_to_faiss) == 3
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_remove_pairs(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        sample_pairs: list[Pair],
+        incremental_config: IncrementalIndexConfig,
+    ) -> None:
+        """Test removing pairs from incremental index."""
+        mock_get_embedder.return_value = mock_embedder
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            index = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index._embedder = mock_embedder
+
+            # Add pairs
+            index.add_pairs(sample_pairs)
+
+            # Remove one pair
+            removed = index.remove_pairs([sample_pairs[0].id])
+
+            assert removed == 1
+            assert len(index._deleted_faiss_ids) == 1
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_search_skips_deleted(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        sample_pairs: list[Pair],
+        incremental_config: IncrementalIndexConfig,
+    ) -> None:
+        """Test that search skips deleted pairs."""
+        mock_get_embedder.return_value = mock_embedder
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            index = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index._embedder = mock_embedder
+
+            # Add pairs
+            index.add_pairs(sample_pairs)
+
+            # Remove first pair
+            faiss_id_removed = index._pair_to_faiss[sample_pairs[0].id]
+            index.remove_pairs([sample_pairs[0].id])
+
+            # Search - deleted should be skipped
+            results = index.search("test query", k=10, threshold=0.0)
+
+            # Check that the deleted faiss_id is not in results
+            result_ids = [fid for fid, _ in results]
+            assert faiss_id_removed not in result_ids
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_needs_compact(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        incremental_config: IncrementalIndexConfig,
+    ) -> None:
+        """Test needs_compact detection."""
+        mock_get_embedder.return_value = mock_embedder
+
+        # Create 5 pairs
+        now = datetime.now()
+        pairs = [
+            Pair(
+                id=i,
+                contact_id=1,
+                trigger_text=f"Trigger {i}",
+                response_text=f"Response {i}",
+                trigger_timestamp=now,
+                response_timestamp=now,
+                chat_id="chat1",
+            )
+            for i in range(1, 6)
+        ]
+
+        # Set threshold to 0.2 (20%)
+        incremental_config.compact_threshold = 0.2
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            index = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index._embedder = mock_embedder
+
+            # Add 5 pairs
+            index.add_pairs(pairs)
+            assert index.needs_compact() is False
+
+            # Delete 1 pair (20% deleted)
+            index.remove_pairs([pairs[0].id])
+            assert index.needs_compact() is True
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_get_stats(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        sample_pairs: list[Pair],
+        incremental_config: IncrementalIndexConfig,
+    ) -> None:
+        """Test get_stats returns correct statistics."""
+        mock_get_embedder.return_value = mock_embedder
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            index = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index._embedder = mock_embedder
+
+            # Initially empty
+            stats = index.get_stats()
+            assert stats.total_vectors == 0
+            assert stats.active_vectors == 0
+
+            # Add pairs
+            index.add_pairs(sample_pairs)
+            stats = index.get_stats()
+            assert stats.total_vectors == 3
+            assert stats.active_vectors == 3
+            assert stats.deleted_vectors == 0
+            assert stats.deletion_ratio == 0.0
+
+            # Remove one
+            index.remove_pairs([sample_pairs[0].id])
+            stats = index.get_stats()
+            assert stats.total_vectors == 3
+            assert stats.active_vectors == 2
+            assert stats.deleted_vectors == 1
+            assert stats.deletion_ratio == pytest.approx(1 / 3, rel=0.01)
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_compact(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        sample_pairs: list[Pair],
+        incremental_config: IncrementalIndexConfig,
+    ) -> None:
+        """Test compact rebuilds index without deleted pairs."""
+        mock_get_embedder.return_value = mock_embedder
+
+        # Mock get_pair to return pairs by ID
+        def mock_get_pair(pair_id: int) -> Pair | None:
+            for p in sample_pairs:
+                if p.id == pair_id:
+                    return p
+            return None
+
+        mock_jarvis_db.get_pair.side_effect = mock_get_pair
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            index = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index._embedder = mock_embedder
+
+            # Add pairs
+            index.add_pairs(sample_pairs)
+
+            # Remove one pair
+            index.remove_pairs([sample_pairs[0].id])
+
+            # Before compact: 3 vectors, 1 deleted
+            stats_before = index.get_stats()
+            assert stats_before.total_vectors == 3
+            assert stats_before.deleted_vectors == 1
+
+            # Compact
+            stats_after = index.compact()
+
+            # After compact: 2 vectors, 0 deleted
+            assert stats_after.total_vectors == 2
+            assert stats_after.deleted_vectors == 0
+            assert len(index._deleted_faiss_ids) == 0
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_save_and_load(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        sample_pairs: list[Pair],
+        incremental_config: IncrementalIndexConfig,
+    ) -> None:
+        """Test saving and loading index from disk."""
+        mock_get_embedder.return_value = mock_embedder
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            # Create and populate index
+            index1 = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index1._embedder = mock_embedder
+            index1.add_pairs(sample_pairs)
+            index1.remove_pairs([sample_pairs[0].id])
+            index1.save()
+
+            # Create new index and load
+            index2 = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index2._embedder = mock_embedder
+            index2._ensure_loaded()
+
+            # Verify state was preserved
+            assert len(index2._pair_to_faiss) == 3
+            assert len(index2._deleted_faiss_ids) == 1
+            assert sample_pairs[0].id not in [
+                pair_id
+                for pair_id, fid in index2._pair_to_faiss.items()
+                if fid not in index2._deleted_faiss_ids
+            ]
+
+    @patch("jarvis.embedding_adapter.get_embedder")
+    def test_sync_with_db(
+        self,
+        mock_get_embedder: MagicMock,
+        mock_jarvis_db: MagicMock,
+        mock_embedder: MagicMock,
+        incremental_config: IncrementalIndexConfig,
+    ) -> None:
+        """Test sync_with_db adds new and removes deleted pairs."""
+        mock_get_embedder.return_value = mock_embedder
+
+        now = datetime.now()
+        initial_pairs = [
+            Pair(
+                id=1,
+                contact_id=1,
+                trigger_text="Initial 1",
+                response_text="Response 1",
+                trigger_timestamp=now,
+                response_timestamp=now,
+                chat_id="chat1",
+                quality_score=0.8,
+            ),
+            Pair(
+                id=2,
+                contact_id=1,
+                trigger_text="Initial 2",
+                response_text="Response 2",
+                trigger_timestamp=now,
+                response_timestamp=now,
+                chat_id="chat1",
+                quality_score=0.8,
+            ),
+        ]
+
+        # New pair added to DB
+        updated_pairs = initial_pairs + [
+            Pair(
+                id=3,
+                contact_id=1,
+                trigger_text="New pair",
+                response_text="New response",
+                trigger_timestamp=now,
+                response_timestamp=now,
+                chat_id="chat1",
+                quality_score=0.8,
+            ),
+        ]
+        # Remove pair 1 from DB
+        updated_pairs = [p for p in updated_pairs if p.id != 1]
+
+        with patch("jarvis.index.INDEXES_DIR", incremental_config.indexes_dir):
+            index = IncrementalTriggerIndex(mock_jarvis_db, incremental_config)
+            index._embedder = mock_embedder
+
+            # Add initial pairs
+            index.add_pairs(initial_pairs)
+
+            # Now sync with "updated" DB
+            mock_jarvis_db.get_training_pairs.return_value = updated_pairs
+
+            added, removed = index.sync_with_db()
+
+            assert added == 1  # Pair 3 added
+            assert removed == 1  # Pair 1 removed
+
+
+class TestIncrementalIndexSingleton:
+    """Tests for incremental index singleton functions."""
+
+    def setup_method(self) -> None:
+        """Reset singleton before each test."""
+        reset_incremental_index()
+
+    def teardown_method(self) -> None:
+        """Reset singleton after each test."""
+        reset_incremental_index()
+
+    def test_get_incremental_index_returns_same_instance(
+        self,
+        mock_jarvis_db: MagicMock,
+    ) -> None:
+        """Test that get_incremental_index returns the same instance."""
+        index1 = get_incremental_index(mock_jarvis_db)
+        index2 = get_incremental_index(mock_jarvis_db)
+        assert index1 is index2
+
+    def test_reset_incremental_index(
+        self,
+        mock_jarvis_db: MagicMock,
+    ) -> None:
+        """Test that reset_incremental_index clears the singleton."""
+        index1 = get_incremental_index(mock_jarvis_db)
+        reset_incremental_index()
+        index2 = get_incremental_index(mock_jarvis_db)
+        assert index1 is not index2

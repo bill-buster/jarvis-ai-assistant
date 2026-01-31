@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 DEFAULT_MODEL_PATH = "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+# DEPRECATED: Use routing.template_threshold instead. Kept for backwards compatibility.
 DEFAULT_TEMPLATE_THRESHOLD = 0.7
 CHAT_DB_PATH = Path.home() / "Library" / "Messages" / "chat.db"
 JARVIS_CONFIG_DIR = Path.home() / ".jarvis"
@@ -592,10 +593,11 @@ class SetupWizard:
                 logger.warning(f"Error reading existing config: {e}")
 
         # Create new config with defaults
+        # Note: template_similarity_threshold is deprecated, routing.template_threshold
+        # is the active threshold used by the router
         try:
             config = JarvisConfig(
                 model_path=DEFAULT_MODEL_PATH,
-                template_similarity_threshold=DEFAULT_TEMPLATE_THRESHOLD,
             )
 
             if save_config(config, JARVIS_CONFIG_FILE):

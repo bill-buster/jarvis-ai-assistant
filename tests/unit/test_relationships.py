@@ -352,6 +352,63 @@ class TestBuildRelationshipProfile:
 
         assert profile1.contact_id == profile2.contact_id
 
+    def test_topic_distribution_prefers_specific_topics(self):
+        """Test that specific topics outrank general chat keywords."""
+        messages = [
+            MockMessage(
+                text="What time is the meeting tomorrow?",
+                is_from_me=True,
+                date=datetime.now() - timedelta(minutes=i),
+            )
+            for i in range(MIN_MESSAGES_FOR_PROFILE + 5)
+        ]
+        profile = build_relationship_profile("test_contact", messages)
+
+        assert "scheduling" in profile.topic_distribution.top_topics
+
+    def test_embedding_topics_merge_with_keywords(self, monkeypatch):
+        """Test embedding-derived topics merge into distribution."""
+        from jarvis.embedding_profile import EmbeddingProfile, TopicCluster
+
+        messages = [
+            MockMessage(
+                text="okay",
+                is_from_me=True,
+                date=datetime.now() - timedelta(minutes=i),
+            )
+            for i in range(MIN_MESSAGES_FOR_PROFILE + 15)
+        ]
+
+        def fake_build_embedding_profile(
+            contact_id, messages, embedder, contact_name=None, n_clusters=5
+        ):
+            return EmbeddingProfile(
+                contact_id="fake",
+                topic_clusters=[
+                    TopicCluster(
+                        cluster_id=0,
+                        centroid=[0.0],
+                        sample_messages=["Meeting tomorrow at 5pm"],
+                        message_count=10,
+                        from_me_ratio=0.5,
+                    )
+                ],
+                message_count=len(messages),
+            )
+
+        monkeypatch.setattr(
+            "jarvis.embedding_profile.build_embedding_profile", fake_build_embedding_profile
+        )
+
+        profile = build_relationship_profile(
+            "test_contact",
+            messages,
+            use_embeddings=True,
+            embedder=object(),
+        )
+
+        assert "scheduling" in profile.topic_distribution.top_topics
+
 
 # =============================================================================
 # Storage Tests
@@ -816,3 +873,17 @@ class TestEdgeCases:
         assert profile.message_count == 30
         # Response patterns should still work
         assert profile.response_patterns is not None
+
+    def test_common_phrases_skips_stopwords(self):
+        """Test that stopword-only phrases are excluded."""
+        messages = [
+            MockMessage(
+                text="in the end",
+                is_from_me=True,
+                date=datetime.now() - timedelta(minutes=i),
+            )
+            for i in range(MIN_MESSAGES_FOR_PROFILE + 5)
+        ]
+        profile = build_relationship_profile("test_contact", messages)
+
+        assert "in the" not in profile.response_patterns.common_phrases

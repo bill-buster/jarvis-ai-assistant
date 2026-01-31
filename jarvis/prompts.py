@@ -10,6 +10,7 @@ Import prompts from here, not from other modules.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -1120,7 +1121,7 @@ def _get_thread_examples(topic_name: str) -> list[FewShotExample]:
     return THREAD_EXAMPLES.get(key, CATCHING_UP_THREAD_EXAMPLES)
 
 
-def _format_thread_context(messages: list[object]) -> str:
+def _format_thread_context(messages: Sequence[Any]) -> str:
     """Format thread messages for prompt context.
 
     Args:
@@ -1328,12 +1329,16 @@ RAG_REPLY_TEMPLATE = PromptTemplate(
 
 ### Instructions:
 Generate a reply (~{avg_length} chars) that EXACTLY matches the user's style:
-- Match the user's texting style exactly (see examples above)
-- Keep response length similar to user's typical responses
-- Use the same level of formality as the examples
-- If user uses lowercase/abbreviations, do the same
-- No formal greetings like "Hey!" or "Hi there!" unless user does that
-- Sound like the user wrote it, not an AI
+- Match the user's texting style EXACTLY (see examples above)
+- Keep response length within ±20% of user's typical responses
+- Use the SAME level of formality as the examples (casual/professional)
+- If user uses lowercase/abbreviations (u, ur, gonna), do the SAME
+- NO formal greetings like "Hey!" or "Hi there!" unless user uses them
+- NO complete sentences if user uses fragments (check examples)
+- Match user's punctuation style (minimal vs formal)
+- Match user's emoji usage frequency exactly
+- Sound like the user wrote it naturally, not an AI assistant
+- NEVER use phrases like "I hope this helps" or "Let me know if you need anything"
 {custom_instruction}
 
 ### Last message:

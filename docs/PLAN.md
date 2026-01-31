@@ -76,19 +76,40 @@ Planned work:
 
 ## Phase 4: Smart Model Loading
 
-Status: Pending
+Status: Done
 
-Planned work:
-- `jarvis/model_warmer.py` to keep model warm for recent traffic
-- Integrate with model loader unload policy
+Deliverables:
+- `jarvis/model_warmer.py` with `ModelWarmer` class
+- `get_model_warmer()` singleton accessor
+- `get_warm_generator()` convenience function
+- Config options: `idle_timeout_seconds`, `warm_on_startup` in `jarvis/config.py`
+- Integration with API lifecycle (start on startup, stop on shutdown)
+- Memory pressure callback integration for emergency unloads
+
+Success criteria:
+- Model unloads after configurable idle timeout (default 5 minutes)
+- Model warmer respects memory controller modes (FULL/LITE/MINIMAL)
+- All API generation endpoints use `get_warm_generator()` to touch warmer
 
 ## Phase 5: Incremental FAISS Updates
 
-Status: Pending
+Status: Done
 
-Planned work:
-- `IncrementalTriggerIndex` in `jarvis/index.py`
-- Persist incremental updates without full rebuilds
+Deliverables:
+- `IncrementalTriggerIndex` class in `jarvis/index.py`
+- `IncrementalIndexConfig` and `IncrementalIndexStats` dataclasses
+- `get_incremental_index()` singleton accessor
+- Incremental add/remove without full rebuilds
+- Soft-delete with automatic skip during search
+- `compact()` method to rebuild when deletion ratio exceeds threshold
+- `sync_with_db()` to sync index with database state
+- Persistent storage of metadata (deleted IDs, mappings)
+
+Success criteria:
+- New pairs can be added without full index rebuild
+- Deleted pairs are soft-deleted and skipped during search
+- `needs_compact()` returns True when deletion ratio >= 20%
+- Index state persists across restarts
 
 ## Verification
 
@@ -101,22 +122,29 @@ Current baseline checks:
 
 Candidates to reduce drift and tech debt:
 
-1. Config alignment
+1. ~~Config alignment~~ (DONE)
    - Problem: `template_similarity_threshold` and `routing.template_threshold` can diverge.
-   - Plan: Deprecate top-level field and map into `routing.template_threshold` during migration.
+   - Solution: Deprecated top-level field. Non-default values are migrated to `routing.template_threshold` during config load (v8 migration).
 
-2. Routing metrics write strategy
+2. ~~Routing metrics write strategy~~ (DONE)
    - Problem: Per-request SQLite connection may add overhead/locks.
-   - Plan: Add buffered writer or a single queued writer thread.
+   - Solution: Added `RoutingMetricsStore` with buffered writes. Metrics are queued
+     in memory and flushed in batches (by count or time interval) via background thread.
+     Uses `executemany` for efficient batch inserts.
 
-3. Embedder cache cohesion
+3. ~~Embedder cache cohesion~~ (DONE)
    - Problem: Template matcher caches query embeddings separately from per-request cache.
-   - Plan: Allow template matcher to accept an embedder override to reuse per-request cache.
+   - Solution: Added `embedder` parameter to `TemplateMatcher.match()`, `match_with_context()`,
+     and generator methods. When a `CachedEmbedder` is passed, it's used directly instead of
+     internal cache, enabling cache sharing across the request pipeline.
 
-4. Generator test alignment
+4. ~~Generator test alignment~~ (DONE)
    - Problem: mocks do not accept `top_p`/`top_k`, causing failures.
-   - Plan: Update test mocks to match sampler signature.
+   - Solution: Updated 4 test mocks in `test_generator.py` to use `**kwargs` instead
+     of hardcoded positional defaults.
 
-5. Known issues doc consolidation
+5. ~~Known issues doc consolidation~~ (DONE)
    - Problem: `docs/known_issues.md` duplicates `docs/EVALUATION_AND_KNOWN_ISSUES.md`.
-   - Plan: Merge and delete legacy file.
+   - Solution: Merged all content into `docs/EVALUATION_AND_KNOWN_ISSUES.md` with
+     unified structure (platform reqs, known issues by priority, feature limitations,
+     performance, pair quality, workarounds). Deleted `docs/known_issues.md`.

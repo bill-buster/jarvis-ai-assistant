@@ -457,7 +457,11 @@ The project uses Python Protocols in `contracts/` to enable parallel development
 
 ### Key Patterns (Implemented)
 
-**Template-First Generation**: Queries are matched against templates (semantic similarity via all-MiniLM-L6-v2) before invoking the model. Threshold: 0.7 similarity. Supports group chat context with `match_with_context(query, group_size)` method.
+**Two Template Systems**: JARVIS has two separate template matching systems:
+
+1. **Static TemplateMatcher** (`models/templates.py`): Matches queries against ~25 canned response templates using semantic similarity (threshold: 0.70). Used for common patterns like greetings, thank-yous, and confirmations. Supports group chat context via `match_with_context(query, group_size)`.
+
+2. **FAISS ReplyRouter** (`jarvis/router.py`): Matches incoming messages against historical (trigger, response) pairs extracted from the user's iMessage history. Uses configurable thresholds (see below). This is the primary routing system for personalized replies.
 
 **Group Chat Templates**: `models/templates.py` includes 25+ group-specific templates organized into categories:
 - Event planning (scheduling, day proposals, conflicts)
@@ -497,9 +501,26 @@ Templates can specify `min_group_size` and `max_group_size` constraints for size
 **MLX Embeddings**: `models/embeddings.py` provides `MLXEmbedder` class for fast embedding computation on Apple Silicon using mlx-embeddings. Thread-safe singleton via `get_mlx_embedder()`. Supports bge-small-en-v1.5 (384 dimensions) with automatic L2 normalization.
 
 **Reply Router**: `jarvis/router.py` implements intelligent routing for reply generation via `ReplyRouter`:
-- Template (similarity >= 0.85): Returns cached response instantly from cluster
-- Generate (0.40-0.85): Uses LLM with similar past exchanges as few-shot examples
-- Clarify (< 0.40): Asks for more context when message is vague
+- Template (similarity >= 0.90): Returns cached response instantly from FAISS index
+- Generate (0.50-0.90): Uses LLM with similar past exchanges as few-shot examples
+- Clarify (< 0.50): Asks for more context when message is vague
+
+Thresholds are configurable via `~/.jarvis/config.json` under the `routing` section:
+```json
+{
+  "routing": {
+    "template_threshold": 0.90,
+    "context_threshold": 0.70,
+    "generate_threshold": 0.50
+  }
+}
+```
+
+**Note**: Overnight evaluation (2026-01-30) recommended lower thresholds for better LLM quality:
+- `template_threshold`: 0.65 (vs default 0.90)
+- `generate_threshold`: 0.45 (vs default 0.50)
+See `docs/PLAN.md` Phase 2 for threshold tuning history.
+
 Use `get_reply_router()` for singleton access. API endpoint: `POST /drafts/smart-reply`.
 
 **FAISS Trigger Index**: `jarvis/index.py` provides `TriggerIndexBuilder` and `TriggerIndexSearcher` for versioned vector search. Indexes trigger texts from extracted pairs. Use `build_index_from_db()` to build, `TriggerIndexSearcher.search_with_pairs()` to query.
@@ -535,12 +556,17 @@ Storage: `~/.jarvis/embedding_profiles/{contact_hash}.json`
 ### Data Flow for Text Generation (Current)
 
 1. Intent classification via `IntentClassifier` - route to appropriate handler
-2. Template matching (fast path, no model load) - if match >= 0.7, return immediately
-3. Memory check via MemoryController - determine operating mode (FULL/LITE/MINIMAL)
-4. Context fetching via `ContextFetcher` for iMessage-related intents
-5. Prompt building via `jarvis/prompts.py` with tone detection and few-shot examples
-6. MLX model generation with temperature control
-7. (Optional) HHEM quality validation post-generation
+2. Message classification via `MessageClassifier` - detect acknowledgments, reactions, context requirements
+3. FAISS similarity search against historical triggers - get similarity score
+4. Route based on thresholds:
+   - Score >= 0.90: Template response from FAISS index
+   - Score 0.50-0.90: LLM generation with few-shot examples
+   - Score < 0.50: Clarification request or cautious generation
+5. Memory check via MemoryController - determine operating mode (FULL/LITE/MINIMAL)
+6. Context fetching via `ContextFetcher` for iMessage-related intents
+7. Prompt building via `jarvis/prompts.py` with tone detection and few-shot examples
+8. MLX model generation with temperature control
+9. (Optional) HHEM quality validation post-generation
 
 ---
 

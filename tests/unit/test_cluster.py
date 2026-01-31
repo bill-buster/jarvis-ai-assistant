@@ -22,7 +22,6 @@ from jarvis.cluster import (
     suggest_cluster_names,
 )
 
-
 # =============================================================================
 # Check for HDBSCAN availability
 # =============================================================================
@@ -319,11 +318,11 @@ class TestResponseClusterer:
         assert "extracting" in stages
         assert "done" in stages
 
-    def test_get_cluster_labels_not_implemented(self) -> None:
-        """Test that get_cluster_labels raises NotImplementedError."""
+    def test_get_cluster_labels_before_clustering(self) -> None:
+        """Test that get_cluster_labels raises RuntimeError before clustering."""
         clusterer = ResponseClusterer()
 
-        with pytest.raises(NotImplementedError, match="Call cluster_responses first"):
+        with pytest.raises(RuntimeError, match="Call cluster_responses first"):
             clusterer.get_cluster_labels()
 
 
@@ -385,7 +384,7 @@ class TestSelectDiverseExamples:
 
         # Should select one from each cluster
         assert len(selected) == 2
-        cluster1 = {0, 1, 2}
+        _cluster1 = {0, 1, 2}  # noqa: F841 - for documentation
         cluster2 = {3, 4, 5}
         # First should be 0, second should be from cluster 2
         assert selected[0] == 0
@@ -589,7 +588,7 @@ class TestSuggestClusterNames:
             )
         ]
 
-        suggestions = suggest_cluster_names(results)
+        _suggestions = suggest_cluster_names(results)  # noqa: F841 - call for side effects
 
         # "sounds good" matches once, but needs 2+ matches
         # This actually matches because "sounds good" has multiple keywords
@@ -1254,7 +1253,7 @@ class TestClusterAndStoreIntegration:
         for i in range(20):
             mock_pair = MagicMock()
             mock_pair.id = i
-            mock_pair.trigger_text = f"want to grab dinner?"
+            mock_pair.trigger_text = "want to grab dinner?"
             mock_pair.response_text = "sounds good" if i < 10 else "can't today"
             mock_pairs.append(mock_pair)
         mock_db.get_all_pairs.return_value = mock_pairs
@@ -1280,7 +1279,7 @@ class TestClusterAndStoreIntegration:
             mock_db.add_cluster.return_value = mock_cluster
 
             if HDBSCAN_AVAILABLE:
-                stats = cluster_and_store(mock_db)
+                _stats = cluster_and_store(mock_db)  # noqa: F841 - call for side effects
 
                 # Verify add_cluster was called with suggested name
                 call_args = mock_db.add_cluster.call_args

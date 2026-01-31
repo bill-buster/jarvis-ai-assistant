@@ -54,6 +54,17 @@ logger = logging.getLogger(__name__)
 
 def _cleanup() -> None:
     """Clean up system resources."""
+    # Stop model warmer first (before resetting generator)
+    try:
+        from jarvis.model_warmer import get_model_warmer
+
+        warmer = get_model_warmer()
+        warmer.stop()
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.debug("Error stopping model warmer during cleanup: %s", e)
+
     try:
         reset_memory_controller()
         reset_degradation_controller()
@@ -79,6 +90,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("Failed to initialize JARVIS system")
     for warning in warnings:
         logger.warning(warning)
+
+    # Start model warmer for smart model loading
+    try:
+        from jarvis.model_warmer import get_model_warmer
+
+        warmer = get_model_warmer()
+        warmer.start()
+        logger.info("Model warmer started")
+    except ImportError:
+        logger.debug("Model warmer not available")
+    except Exception as e:
+        logger.warning("Failed to start model warmer: %s", e)
 
     yield
 
@@ -224,9 +247,9 @@ async def chat(request: ChatRequest) -> ChatResponse | StreamingResponse:
         )
 
     try:
-        from models import get_generator
+        from jarvis.model_warmer import get_warm_generator
 
-        generator = get_generator()
+        generator = get_warm_generator()
         deg_controller = get_degradation_controller()
 
         def generate_response(prompt: str) -> tuple[str, dict[str, Any]]:
@@ -294,9 +317,9 @@ async def _stream_chat_response(request: ChatRequest) -> AsyncGenerator[str, Non
     Yields Server-Sent Events with token data.
     """
     try:
-        from models import get_generator
+        from jarvis.model_warmer import get_warm_generator
 
-        generator = get_generator()
+        generator = get_warm_generator()
 
         gen_request = GenerationRequest(
             prompt=request.message,

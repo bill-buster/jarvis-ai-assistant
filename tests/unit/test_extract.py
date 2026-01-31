@@ -8,15 +8,14 @@ import pytest
 
 from contracts.imessage import Attachment, Conversation, Message
 from jarvis.extract import (
+    ExtractedPair,
     ExtractionConfig,
     ExtractionStats,
-    ExtractedPair,
     Turn,
     TurnBasedExtractor,
     extract_all_pairs,
     extract_pairs_from_reader,
 )
-
 
 # =============================================================================
 # Fixtures

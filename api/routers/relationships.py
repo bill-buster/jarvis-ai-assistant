@@ -237,7 +237,12 @@ def get_relationship_profile(
     contact_name = _get_contact_name(reader, contact_id)
 
     # Build and save profile
-    profile = build_relationship_profile(contact_id, messages, contact_name)
+    profile = build_relationship_profile(
+        contact_id,
+        messages,
+        contact_name,
+        use_embeddings=True,
+    )
     save_profile(profile)
 
     return _profile_to_response(profile)
@@ -363,7 +368,12 @@ def get_style_guide(
             )
 
         contact_name = _get_contact_name(reader, contact_id)
-        profile = build_relationship_profile(contact_id, messages, contact_name)
+        profile = build_relationship_profile(
+            contact_id,
+            messages,
+            contact_name,
+            use_embeddings=True,
+        )
         save_profile(profile)
 
     # Generate style guide
@@ -494,7 +504,12 @@ def refresh_relationship_profile(
     contact_name = _get_contact_name(reader, contact_id)
 
     # Build new profile
-    profile = build_relationship_profile(contact_id, messages, contact_name)
+    profile = build_relationship_profile(
+        contact_id,
+        messages,
+        contact_name,
+        use_embeddings=True,
+    )
 
     # Save profile
     if not save_profile(profile):

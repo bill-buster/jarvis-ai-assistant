@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 CONFIG_PATH = Path.home() / ".jarvis" / "config.json"
 
 # Current config schema version for migration tracking
-CONFIG_VERSION = 7
+CONFIG_VERSION = 8
 
 
 class MemoryThresholds(BaseModel):
@@ -119,6 +119,9 @@ class ModelSettings(BaseModel):
         max_tokens_summary: Maximum tokens for summarization.
         temperature: Sampling temperature for generation (0.0-2.0).
         generation_timeout_seconds: Timeout for model generation in seconds.
+        idle_timeout_seconds: Unload model after this many seconds of inactivity.
+            Set to 0 to disable automatic unloading.
+        warm_on_startup: Pre-load model when warmer starts (increases startup time).
     """
 
     model_id: str = "qwen-1.5b"
@@ -127,6 +130,8 @@ class ModelSettings(BaseModel):
     max_tokens_summary: int = Field(default=500, ge=1, le=4096)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     generation_timeout_seconds: float = Field(default=60.0, ge=1.0, le=600.0)
+    idle_timeout_seconds: float = Field(default=300.0, ge=0.0, le=3600.0)
+    warm_on_startup: bool = False
 
 
 class TaskQueueConfig(BaseModel):
@@ -173,7 +178,9 @@ class JarvisConfig(BaseModel):
     Attributes:
         config_version: Schema version for migration tracking.
         model_path: HuggingFace model path for MLX inference (deprecated, use model.model_id).
-        template_similarity_threshold: Minimum similarity score for template matching (0-1).
+        template_similarity_threshold: DEPRECATED - use routing.template_threshold instead.
+            Kept for backwards compatibility. Non-default values are migrated to
+            routing.template_threshold during config load.
         memory_thresholds: Memory thresholds for mode selection.
         imessage_default_limit: Default limit for iMessage search (deprecated).
         ui: UI preferences for the Tauri frontend.
@@ -285,6 +292,30 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
             data["routing"] = {}
 
         version = 7
+
+    if version < 8:
+        logger.info(f"Migrating config from version {version} to {CONFIG_VERSION}")
+
+        # Migrate template_similarity_threshold to routing.template_threshold
+        # Only migrate if legacy field has a non-default value (0.7) and routing
+        # section doesn't have an explicit template_threshold set
+        legacy_threshold = data.get("template_similarity_threshold")
+        if "routing" not in data:
+            data["routing"] = {}
+
+        routing = data["routing"]
+        if (
+            legacy_threshold is not None
+            and legacy_threshold != 0.7
+            and "template_threshold" not in routing
+        ):
+            logger.info(
+                f"Migrating template_similarity_threshold={legacy_threshold} "
+                f"to routing.template_threshold"
+            )
+            routing["template_threshold"] = legacy_threshold
+
+        version = 8
 
     # Update version
     data["config_version"] = CONFIG_VERSION

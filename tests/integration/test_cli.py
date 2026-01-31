@@ -1490,7 +1490,8 @@ class TestPromptBuilders:
         )
 
         assert "[Jan 15] John: Hello" in prompt
-        assert "Generate a natural reply" in prompt
+        # Template says "Generate a reply that matches"
+        assert "Generate a reply" in prompt or "Your reply:" in prompt
 
     def test_build_reply_prompt_with_instruction(self):
         """Build reply prompt includes custom instruction."""

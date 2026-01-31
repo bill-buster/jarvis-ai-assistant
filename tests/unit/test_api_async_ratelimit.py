@@ -238,7 +238,7 @@ class TestAsyncDraftsEndpoint:
         mock_generator.generate.return_value = mock_response
 
         try:
-            with patch("api.routers.drafts.get_generator", return_value=mock_generator):
+            with patch("api.routers.drafts.get_warm_generator", return_value=mock_generator):
                 response = client.post(
                     "/drafts/reply",
                     json={"chat_id": "chat123", "num_suggestions": 1},
@@ -269,7 +269,7 @@ class TestAsyncDraftsEndpoint:
         mock_generator.generate.return_value = mock_response
 
         try:
-            with patch("api.routers.drafts.get_generator", return_value=mock_generator):
+            with patch("api.routers.drafts.get_warm_generator", return_value=mock_generator):
                 response = client.post(
                     "/drafts/summarize",
                     json={"chat_id": "chat123", "num_messages": 10},

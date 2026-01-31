@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from collections import Counter
 from dataclasses import asdict, dataclass, field
@@ -30,6 +31,14 @@ from typing import Any, Literal
 RELATIONSHIPS_DIR = Path.home() / ".jarvis" / "relationships"
 MIN_MESSAGES_FOR_PROFILE = 20  # Minimum messages needed for reliable analysis
 PROFILE_VERSION = "1.0.0"
+
+# Embedding topic analysis
+MIN_MESSAGES_FOR_EMBEDDING_TOPICS = 30
+MAX_EMBEDDING_MESSAGES = 200
+EMBEDDING_TOPIC_WEIGHT = 0.7
+KEYWORD_TOPIC_WEIGHT = 0.3
+
+logger = logging.getLogger(__name__)
 
 # Emoji pattern for detection
 EMOJI_PATTERN = re.compile(
@@ -260,6 +269,47 @@ TOPIC_KEYWORDS: dict[str, set[str]] = {
     },
 }
 
+# Common stopwords for phrase extraction
+STOPWORDS: set[str] = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "but",
+    "by",
+    "for",
+    "from",
+    "have",
+    "i",
+    "if",
+    "in",
+    "is",
+    "it",
+    "just",
+    "me",
+    "my",
+    "no",
+    "not",
+    "of",
+    "on",
+    "or",
+    "our",
+    "so",
+    "that",
+    "the",
+    "their",
+    "they",
+    "this",
+    "to",
+    "we",
+    "with",
+    "you",
+    "your",
+}
+
 
 # =============================================================================
 # Data Classes
@@ -388,6 +438,76 @@ def _hash_contact_id(contact_id: str) -> str:
     return hashlib.sha256(contact_id.encode("utf-8")).hexdigest()[:16]
 
 
+def _normalize_text(text: str) -> str:
+    """Normalize text for token-level analysis."""
+    cleaned = re.sub(r"[^\w\s']", " ", text.lower())
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _tokenize(text: str) -> list[str]:
+    """Tokenize normalized text into words."""
+    if not text:
+        return []
+    return re.findall(r"\b\w+\b", text)
+
+
+def _contains_all_caps_word(text: str) -> bool:
+    """Check if text contains any all-caps word (length >= 3)."""
+    for word in text.split():
+        if len(word) >= 3 and word.isupper():
+            return True
+    return False
+
+
+def _score_topic_keywords(text: str, keywords: set[str]) -> int:
+    normalized = _normalize_text(text)
+    if not normalized:
+        return 0
+    tokens = set(_tokenize(normalized))
+
+    score = 0
+    for keyword in keywords:
+        if " " in keyword:
+            if f" {keyword} " in f" {normalized} ":
+                score += 2
+        elif keyword in tokens:
+            score += 1
+
+    return score
+
+
+def _sample_messages_for_embeddings(messages: list[Any], max_messages: int) -> list[Any]:
+    if len(messages) <= max_messages:
+        return messages
+    step = max(1, len(messages) // max_messages)
+    return messages[::step][:max_messages]
+
+
+def _label_cluster_topic(sample_messages: list[str]) -> str | None:
+    if not sample_messages:
+        return None
+
+    combined = " ".join(sample_messages)
+    scores: dict[str, int] = {}
+    for topic, keywords in TOPIC_KEYWORDS.items():
+        if topic == "general_chat":
+            continue
+        score = _score_topic_keywords(combined, keywords)
+        if score > 0:
+            scores[topic] = score
+
+    if scores:
+        best_score = max(scores.values())
+        best_topics = [topic for topic, score in scores.items() if score == best_score]
+        return best_topics[0]
+
+    general_score = _score_topic_keywords(combined, TOPIC_KEYWORDS["general_chat"])
+    if general_score >= 2:
+        return "general_chat"
+
+    return None
+
+
 def _analyze_formality(messages: list[Any]) -> float:
     """Analyze the formality level of messages.
 
@@ -455,32 +575,54 @@ def _analyze_formality(messages: list[Any]) -> float:
         "dr.",
     }
 
-    casual_count = 0
-    formal_count = 0
+    casual_score = 0.0
+    formal_score = 0.0
 
     for msg in messages:
         if not msg.text:
             continue
-        text_lower = msg.text.lower()
-        words = set(re.findall(r"\b\w+\b", text_lower))
+        text = msg.text.strip()
+        if not text:
+            continue
 
-        casual_count += len(words & casual_indicators)
-        formal_count += len(words & formal_indicators)
+        normalized = _normalize_text(text)
+        words = set(_tokenize(normalized))
+
+        casual_score += len(words & casual_indicators)
+        formal_score += len(words & formal_indicators)
 
         # Emoji presence indicates casual
-        if EMOJI_PATTERN.search(msg.text):
-            casual_count += 2
+        emoji_matches = EMOJI_PATTERN.findall(text)
+        if emoji_matches:
+            casual_score += len(emoji_matches) * 1.5
 
         # Multiple exclamation marks indicate casual
-        if msg.text.count("!") > 1:
-            casual_count += 1
+        if text.count("!") > 1:
+            casual_score += 1.0
 
-    total = casual_count + formal_count
+        # Very short messages tend to be casual
+        if len(text) <= 10:
+            casual_score += 0.5
+        elif len(text) >= 80:
+            formal_score += 0.5
+
+        # Sentence structure hints formality
+        first_alpha = next((c for c in text if c.isalpha()), "")
+        if first_alpha and first_alpha.isupper():
+            formal_score += 0.5
+        if text.endswith((".", "?", "!")):
+            formal_score += 0.3
+
+        # ALL CAPS usage tends to be informal
+        if _contains_all_caps_word(text):
+            casual_score += 0.5
+
+    total = formal_score + casual_score
     if total == 0:
         return 0.5
 
-    # Higher formal ratio = higher score
-    return formal_count / total
+    # Smooth to avoid extremes with tiny samples
+    return (formal_score + 1.0) / (total + 2.0)
 
 
 def _analyze_emoji_usage(messages: list[Any]) -> float:
@@ -598,8 +740,8 @@ def _extract_greetings(messages: list[Any]) -> list[str]:
             continue
 
         # Check first few words of message
-        text_lower = msg.text.lower().strip()
-        first_words = " ".join(text_lower.split()[:3])
+        normalized = _normalize_text(msg.text)
+        first_words = " ".join(normalized.split()[:4])
 
         for pattern in GREETING_PATTERNS:
             if first_words.startswith(pattern):
@@ -619,8 +761,8 @@ def _extract_signoffs(messages: list[Any]) -> list[str]:
             continue
 
         # Check last few words of message
-        text_lower = msg.text.lower().strip()
-        last_words = " ".join(text_lower.split()[-3:])
+        normalized = _normalize_text(msg.text)
+        last_words = " ".join(normalized.split()[-4:])
 
         for pattern in SIGNOFF_PATTERNS:
             if last_words.endswith(pattern) or pattern in last_words:
@@ -639,51 +781,144 @@ def _extract_common_phrases(messages: list[Any], min_count: int = 3) -> list[str
         if not msg.text or len(msg.text) < 5:
             continue
 
-        text_lower = msg.text.lower()
-        words = re.findall(r"\b\w+\b", text_lower)
+        normalized = _normalize_text(msg.text)
+        words = _tokenize(normalized)
 
         # Extract 2-word phrases
         for i in range(len(words) - 1):
             phrase = f"{words[i]} {words[i + 1]}"
             if len(phrase) >= 5:  # Skip very short phrases
-                phrase_counter[phrase] += 1
+                if not all(w in STOPWORDS for w in phrase.split()):
+                    phrase_counter[phrase] += 1
 
         # Extract 3-word phrases
         for i in range(len(words) - 2):
             phrase = f"{words[i]} {words[i + 1]} {words[i + 2]}"
-            phrase_counter[phrase] += 1
+            if not all(w in STOPWORDS for w in phrase.split()):
+                phrase_counter[phrase] += 1
 
     # Filter and return top phrases
     filtered = [(p, c) for p, c in phrase_counter.items() if c >= min_count]
     return [p for p, _ in sorted(filtered, key=lambda x: x[1], reverse=True)[:5]]
 
 
-def _analyze_topics(messages: list[Any]) -> TopicDistribution:
-    """Analyze topic distribution in messages."""
+def _build_keyword_topic_distribution(messages: list[Any]) -> TopicDistribution:
     topic_counts: Counter[str] = Counter()
-    total_matches = 0
 
     for msg in messages:
         if not msg.text:
             continue
 
-        text_lower = msg.text.lower()
-        words = set(re.findall(r"\b\w+\b", text_lower))
+        normalized = _normalize_text(msg.text)
+        if not normalized:
+            continue
 
+        scores: dict[str, int] = {}
         for topic, keywords in TOPIC_KEYWORDS.items():
-            matches = len(words & keywords)
-            if matches > 0:
-                topic_counts[topic] += matches
-                total_matches += matches
+            if topic == "general_chat":
+                continue
+            score = _score_topic_keywords(normalized, keywords)
+            if score > 0:
+                scores[topic] = score
 
-    # Convert to distribution
+        # Fallback to general chat only if no other topic matches
+        if not scores:
+            general_score = _score_topic_keywords(normalized, TOPIC_KEYWORDS["general_chat"])
+            if general_score >= 2:
+                scores["general_chat"] = general_score
+
+        if not scores:
+            continue
+
+        max_score = max(scores.values())
+        best_topics = [topic for topic, score in scores.items() if score == max_score]
+        for topic in best_topics:
+            topic_counts[topic] += 1
+
     topics: dict[str, float] = {}
-    if total_matches > 0:
+    total = sum(topic_counts.values())
+    if total > 0:
         for topic, count in topic_counts.items():
-            topics[topic] = round(count / total_matches, 3)
+            topics[topic] = round(count / total, 3)
 
-    # Get top 3 topics
     top_topics = [t for t, _ in topic_counts.most_common(3)]
+
+    return TopicDistribution(topics=topics, top_topics=top_topics)
+
+
+def _build_embedding_topic_distribution(
+    messages: list[Any],
+    embedder: Any,
+) -> TopicDistribution | None:
+    valid_messages = [m for m in messages if m.text and len(m.text.strip()) > 2]
+    if len(valid_messages) < MIN_MESSAGES_FOR_EMBEDDING_TOPICS:
+        return None
+
+    sampled = _sample_messages_for_embeddings(valid_messages, MAX_EMBEDDING_MESSAGES)
+
+    try:
+        from jarvis.embedding_profile import build_embedding_profile
+    except Exception as e:
+        logger.debug("Embedding profile not available: %s", e)
+        return None
+
+    try:
+        profile = build_embedding_profile(
+            contact_id="topic_probe",
+            messages=sampled,
+            embedder=embedder,
+        )
+    except Exception as e:
+        logger.debug("Embedding topic analysis failed: %s", e)
+        return None
+
+    if not profile.topic_clusters:
+        return None
+
+    topic_counts: Counter[str] = Counter()
+    for cluster in profile.topic_clusters:
+        label = _label_cluster_topic(cluster.sample_messages)
+        if label is None:
+            continue
+        topic_counts[label] += cluster.message_count
+
+    if not topic_counts:
+        return None
+
+    total = sum(topic_counts.values())
+    topics = {topic: round(count / total, 3) for topic, count in topic_counts.items()}
+    top_topics = [t for t, _ in topic_counts.most_common(3)]
+
+    return TopicDistribution(topics=topics, top_topics=top_topics)
+
+
+def _analyze_topics(
+    messages: list[Any],
+    embedder: Any | None = None,
+    use_embeddings: bool = False,
+) -> TopicDistribution:
+    """Analyze topic distribution in messages."""
+    keyword_distribution = _build_keyword_topic_distribution(messages)
+
+    if not use_embeddings or embedder is None:
+        return keyword_distribution
+
+    embedding_distribution = _build_embedding_topic_distribution(messages, embedder)
+    if embedding_distribution is None:
+        return keyword_distribution
+
+    merged_scores: dict[str, float] = {}
+    for topic, score in keyword_distribution.topics.items():
+        merged_scores[topic] = merged_scores.get(topic, 0.0) + score * KEYWORD_TOPIC_WEIGHT
+    for topic, score in embedding_distribution.topics.items():
+        merged_scores[topic] = merged_scores.get(topic, 0.0) + score * EMBEDDING_TOPIC_WEIGHT
+
+    total = sum(merged_scores.values())
+    if total == 0:
+        return keyword_distribution
+
+    topics = {topic: round(score / total, 3) for topic, score in merged_scores.items()}
+    top_topics = [t for t, _ in sorted(topics.items(), key=lambda x: x[1], reverse=True)[:3]]
 
     return TopicDistribution(topics=topics, top_topics=top_topics)
 
@@ -692,6 +927,8 @@ def build_relationship_profile(
     contact_id: str,
     messages: list[Any],
     contact_name: str | None = None,
+    embedder: Any | None = None,
+    use_embeddings: bool = False,
 ) -> RelationshipProfile:
     """Build a relationship profile from message history.
 
@@ -748,7 +985,22 @@ def build_relationship_profile(
     )
 
     # Analyze topics (from all messages)
-    topic_distribution = _analyze_topics(messages)
+    embedder_to_use = embedder
+    if use_embeddings and embedder_to_use is None:
+        try:
+            from jarvis.embedding_adapter import get_embedder
+
+            candidate = get_embedder()
+            if candidate.is_available():
+                embedder_to_use = candidate
+        except Exception as e:
+            logger.debug("Embedding backend unavailable: %s", e)
+
+    topic_distribution = _analyze_topics(
+        messages,
+        embedder=embedder_to_use,
+        use_embeddings=use_embeddings,
+    )
 
     return RelationshipProfile(
         contact_id=hashed_id,

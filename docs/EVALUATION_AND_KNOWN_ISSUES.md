@@ -1,6 +1,22 @@
 # Evaluation Pipeline & Known Issues
 
-This document describes the evaluation system for JARVIS reply generation and documents known issues that need to be addressed.
+This document describes the evaluation system for JARVIS reply generation and documents all known issues and limitations.
+
+**Last Updated**: 2026-01-30
+
+---
+
+## Table of Contents
+
+1. [Evaluation Pipeline](#evaluation-pipeline)
+2. [Platform Requirements](#platform-requirements)
+3. [Known Issues](#known-issues)
+4. [Feature Limitations](#feature-limitations)
+5. [Performance Characteristics](#performance-characteristics)
+6. [Pair Quality Analysis](#pair-quality-analysis)
+7. [Reporting New Issues](#reporting-new-issues)
+
+---
 
 ## Evaluation Pipeline
 
@@ -55,9 +71,75 @@ Metrics:
 
 ---
 
+## Platform Requirements
+
+### macOS Only
+
+JARVIS requires macOS because:
+- iMessage database (`~/Library/Messages/chat.db`) is macOS-specific
+- MLX acceleration requires Apple Silicon
+- AddressBook contacts integration is macOS-specific
+- Calendar integration uses macOS Calendar database
+
+**Will NOT work on**: Linux, Windows, Intel Macs
+
+### Memory Requirements
+
+| Model | Min RAM | Recommended |
+|-------|---------|-------------|
+| Qwen2.5-0.5B-4bit | 8GB | 8GB |
+| Qwen2.5-1.5B-4bit | 8GB | 8GB |
+| Qwen2.5-3B-4bit | 8GB | 12GB |
+| LFM2.5-1.2B-4bit | 8GB | 8GB (default) |
+
+The default model (LFM2.5-1.2B-Instruct-MLX-4bit) targets 8GB Macs.
+
+---
+
 ## Known Issues
 
-### CRITICAL: Pair Quality Problem
+### HIGH Priority
+
+#### 1. iMessage Database Access Requires Full Disk Access
+
+**Symptom**: "Permission denied" or empty conversation list
+
+**Cause**: macOS Sequoia+ requires explicit Full Disk Access for applications reading `~/Library/Messages/chat.db`
+
+**Solution**:
+1. Open System Settings > Privacy & Security > Full Disk Access
+2. Add your Terminal app (or IDE)
+3. Restart the Terminal/IDE
+
+**Verification**: `uv run python -m jarvis.setup --check`
+
+#### 2. Model Download Required Before First Use
+
+**Symptom**: "FileNotFoundError: Model not found"
+
+**Cause**: MLX models must be downloaded from HuggingFace before use
+
+**Solution**:
+```bash
+huggingface-cli download LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit
+```
+
+Or run setup wizard:
+```bash
+uv run python -m jarvis.setup
+```
+
+#### 3. First Generation is Slow (Cold Start)
+
+**Symptom**: First reply takes 10-15 seconds
+
+**Cause**: Model loading and Metal shader compilation on first run
+
+**Solution**: This is expected behavior. Subsequent generations use cached model (~2-3s).
+
+**Mitigation**: The API server pre-loads the model on startup.
+
+#### 4. Pair Quality Problem
 
 **Issue**: Many extracted (trigger, response) pairs are NOT true Q&A pairs.
 
@@ -75,20 +157,42 @@ The "Ok" acknowledged something earlier. The "almonds" message is a NEW TOPIC, n
 - Training data contains false patterns
 - Evaluation metrics are misleading
 
-**Root Cause**:
-The pair extractor (`jarvis/extract.py`) pairs consecutive speaker turns without verifying conversational coherence.
+**Root Cause**: The pair extractor (`jarvis/extract.py`) pairs consecutive speaker turns without verifying conversational coherence.
 
-**Proposed Solutions**:
-1. **Embedding similarity filter**: Require trigger-response similarity >= 0.55
-2. **Reaction removal**: Filter out "Liked", "Loved", etc. tapback reactions
-3. **Topic shift detection**: Flag responses starting with "btw", "anyway", etc.
-4. **LLM coherence judge**: Use LLM to verify if response addresses trigger
+**Mitigations Implemented**:
+1. Embedding similarity filter (>= 0.55)
+2. Reaction removal ("Liked", "Loved", etc.)
+3. Topic shift detection ("btw", "anyway", etc.)
+4. Quality scoring via `scripts/score_pair_quality.py`
 
-**Script**: `scripts/score_pair_quality.py` implements basic coherence scoring.
+### MEDIUM Priority
 
----
+#### 5. iMessage Sender is Unreliable (DEPRECATED)
 
-### Issue: Generated Responses Too Formal
+**Symptom**: Sending messages fails or requires constant permission prompts
+
+**Cause**: Apple restricts AppleScript automation for Messages.app. Known issues:
+- Requires Automation permission
+- May be blocked by SIP
+- Requires Messages.app to be running
+- Breaks with macOS updates
+
+**Solution**: The `IMessageSender` class is deprecated. JARVIS generates reply suggestions but does NOT send them automatically.
+
+**Location**: `integrations/imessage/sender.py` (marked DEPRECATED)
+
+#### 6. Group Chat Handling is Limited
+
+**Symptom**: Reply suggestions for group chats may be less accurate
+
+**Cause**:
+- Template matching uses group size but context is still limited
+- Multiple participant threads are harder to track
+- RAG search doesn't distinguish group context well
+
+**Mitigation**: The intent classifier has GROUP_COORDINATION, GROUP_RSVP, GROUP_CELEBRATION intents, but quality varies.
+
+#### 7. Generated Responses Too Formal
 
 **Issue**: Model generates formal text when user's actual style is casual.
 
@@ -99,9 +203,6 @@ Generated: "Hey! Yeah, that sounds good!"
 
 Actual:  "LOL"
 Generated: "Okay!"
-
-Actual:  "Nah bro im telling u SF is DIFFERENT"
-Generated: "Hey there! So yeah, I'm all in and ready..."
 ```
 
 **Impact**: Generated responses don't match user's texting voice.
@@ -109,17 +210,13 @@ Generated: "Hey there! So yeah, I'm all in and ready..."
 **Root Cause**:
 - LLM (LFM 2.5 1.2B) has formal training bias
 - No explicit style constraints in prompt
-- Relationship profiles not enforced strongly enough
 
-**Proposed Solutions**:
-1. Add explicit length constraints ("respond in 1-5 words")
-2. Include user's actual message examples in prompt
-3. Lower temperature further (currently 0.1)
-4. Fine-tune style matching in prompt template
+**Mitigations**:
+1. Length constraints in prompts
+2. User's actual message examples in prompt
+3. Low temperature (0.1)
 
----
-
-### Issue: Acknowledgment Handling
+#### 8. Acknowledgment Handling
 
 **Issue**: Short acknowledgments ("Ok", "Yes", "Sure") get generic emoji responses, but actual responses are often new information.
 
@@ -130,20 +227,52 @@ Actual: "Got link for Stanford immunology will call tmrw morning"
 Generated: "👍"
 ```
 
-**Impact**: System assumes "Ok" needs an acknowledgment, but conversation flow requires substantive response.
+**Root Cause**: "Ok" triggers acknowledgment handler before context is considered.
 
-**Root Cause**:
-- "Ok" triggers acknowledgment handler before context is considered
-- No way to distinguish "Ok (end of topic)" from "Ok (I'll share more)"
+**Mitigation**: Context-aware acknowledgment routing via `_should_generate_after_acknowledgment()`.
 
-**Proposed Solutions**:
-1. Use context to determine if acknowledgment trigger needs substantive response
-2. Check if user typically follows "Ok" with new info
-3. Fallback to generation instead of canned acknowledgments
+#### 9. HHEM Model Requires Separate Download
 
----
+**Symptom**: HHEM benchmark fails with model not found
 
-### Issue: Context Not Stored Historically
+**Cause**: Vectara HHEM model must be downloaded separately
+
+**Solution**:
+```bash
+huggingface-cli download vectara/hallucination_evaluation_model
+```
+
+### LOW Priority
+
+#### 10. Contact Resolution May Miss Some Contacts
+
+**Symptom**: Phone numbers shown instead of names
+
+**Cause**: AddressBook database structure varies across macOS versions and sync sources (iCloud, Google, etc.)
+
+**Workaround**: JARVIS tries multiple AddressBook sources but may miss contacts synced from certain providers.
+
+#### 11. Schema Detection for Older macOS
+
+**Symptom**: Query errors on older macOS versions
+
+**Cause**: JARVIS supports macOS Sonoma (v14) and Sequoia (v15) schemas. Older versions may have incompatible schemas.
+
+**Solution**: Upgrade to macOS Sonoma or later.
+
+#### 12. PDF Export Requires Additional Dependencies
+
+**Symptom**: PDF export fails
+
+**Cause**: PDF generation requires `weasyprint` which has system dependencies
+
+**Solution**: Install system dependencies:
+```bash
+brew install pango gdk-pixbuf libffi
+pip install weasyprint
+```
+
+#### 13. Context Not Stored Historically
 
 **Issue**: Pairs extracted before 2026-01-30 don't have `context_text` stored.
 
@@ -151,9 +280,7 @@ Generated: "👍"
 
 **Migration**: Re-run `jarvis db extract` to populate context for existing pairs.
 
----
-
-### Issue: Contact-Pair Linking
+#### 14. Contact-Pair Linking
 
 **Issue**: Pairs weren't linked to contacts due to chat_id format mismatch.
 
@@ -164,6 +291,56 @@ Generated: "👍"
 **Status**: Fixed via phone number extraction. ~76% of pairs now have contact_id.
 
 **Remaining**: Group chats and some edge cases still unlinked.
+
+---
+
+## Feature Limitations
+
+### What JARVIS Does NOT Do
+
+1. **Send messages automatically** - Generates suggestions only
+2. **Access other messaging apps** - iMessage only
+3. **Work offline completely** - Model download requires internet initially
+4. **Fine-tune models** - Uses RAG + few-shot (fine-tuning increases hallucinations)
+5. **Store conversation history** - Reads iMessage database directly, no duplication
+6. **Sync across devices** - Local-only, per-machine
+
+### Template Coverage
+
+The template system covers common responses (~25 templates) but won't match every message. When templates don't match:
+1. System falls back to LLM generation
+2. Quality depends on conversation context
+3. Very specific or unusual messages may produce generic responses
+
+### RAG Limitations
+
+- RAG search requires embedding index build (first run)
+- Cross-conversation search requires relationship registry setup
+- Embedding similarity thresholds are configurable; defaults may still miss relevant context
+
+---
+
+## Performance Characteristics
+
+### Expected Latencies
+
+| Operation | Cold Start | Warm Start |
+|-----------|------------|------------|
+| Model load | 10-15s | N/A |
+| Template match | <50ms | <50ms |
+| LLM generation | N/A | 2-3s |
+| iMessage query | 50-200ms | 50-200ms |
+| Embedding search | 100-500ms | 100-500ms |
+
+### Memory Usage
+
+| Component | Usage |
+|-----------|-------|
+| Qwen2.5-1.5B-4bit | ~1.5GB |
+| Embedding model | ~400MB |
+| Python runtime | ~200MB |
+| Total typical | ~2.5GB |
+| Peak during generation | ~4GB |
 
 ---
 
@@ -193,9 +370,7 @@ python -m scripts.score_pair_quality --update
 python -m scripts.score_pair_quality --update --commit
 ```
 
----
-
-## Embedding Profiles
+### Embedding Profiles
 
 Embedding-based relationship profiles analyze communication patterns:
 
@@ -213,6 +388,30 @@ python -m scripts.build_embedding_profiles --limit 50
 - Response semantic shift
 
 **Storage**: `~/.jarvis/embedding_profiles/{contact_hash}.json`
+
+---
+
+## Reporting New Issues
+
+1. Check if issue is listed above
+2. Run `make health` and capture output
+3. Run `uv run python -m jarvis.setup --check` and capture output
+4. Include macOS version, Python version, available RAM
+5. Report at: https://github.com/anthropics/claude-code/issues
+
+---
+
+## Workarounds Summary
+
+| Issue | Workaround |
+|-------|------------|
+| Permission denied | Grant Full Disk Access |
+| Model not found | `huggingface-cli download <model>` |
+| Slow first generation | Expected (cold start) |
+| Sending fails | Don't use sender (deprecated) |
+| Wrong contact names | Check AddressBook sync |
+| Group chat quality | Use simpler responses |
+| PDF fails | Install weasyprint deps |
 
 ---
 
@@ -250,14 +449,14 @@ python -m scripts.build_embedding_profiles --limit 50
 
 ---
 
-## Files Added/Modified
+## Files Reference
 
 | File | Purpose |
 |------|---------|
-| `jarvis/db.py` | Added `is_holdout` column, `split_train_test()`, `get_training_pairs()`, `get_holdout_pairs()` |
-| `jarvis/index.py` | Added `include_holdout` parameter to `build_index_from_db()` |
-| `jarvis/extract.py` | Fixed `context_text` not being saved in `extract_all_pairs()` |
-| `jarvis/embedding_profile.py` | NEW - Embedding-based relationship profiles |
-| `scripts/eval_pipeline.py` | NEW - Train/test split and evaluation pipeline |
-| `scripts/build_embedding_profiles.py` | NEW - Build embedding profiles for contacts |
-| `scripts/score_pair_quality.py` | NEW - Analyze and update pair quality scores |
+| `jarvis/db.py` | Train/test split methods (`split_train_test()`, `get_training_pairs()`, `get_holdout_pairs()`) |
+| `jarvis/index.py` | `include_holdout` parameter for index building |
+| `jarvis/extract.py` | Pair extraction with context |
+| `jarvis/embedding_profile.py` | Embedding-based relationship profiles |
+| `scripts/eval_pipeline.py` | Train/test split and evaluation pipeline |
+| `scripts/build_embedding_profiles.py` | Build embedding profiles for contacts |
+| `scripts/score_pair_quality.py` | Analyze and update pair quality scores |
