@@ -24,11 +24,10 @@ right reference quickly.
 
 ## Evaluation, Quality, and Validation
 
-- `docs/EVALUATION_AND_KNOWN_ISSUES.md` - Evaluation pipeline + known issues
+- `docs/EVALUATION_AND_KNOWN_ISSUES.md` - Evaluation pipeline + known issues (consolidated)
 - `docs/PLAN.md` - Active implementation plan
 - `docs/DECISIONS_AND_FINDINGS.md` - Consolidated research takeaways
 - `BENCHMARKS.md` - Benchmark results summary
-- `docs/known_issues.md` - Additional known issues (legacy)
 
 ## Audits and Reviews
 

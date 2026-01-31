@@ -38,128 +38,19 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# Module-Level Detection Functions (for external use)
+# Module-Level Detection Functions (imported from text_normalizer)
 # =============================================================================
 
-# iMessage tapback reaction patterns (responses that quote what was reacted to)
-_REACTION_PATTERNS = (
-    re.compile(r'^Liked ".*"$', re.IGNORECASE),
-    re.compile(r'^Loved ".*"$', re.IGNORECASE),
-    re.compile(r'^Laughed at ".*"$', re.IGNORECASE),
-    re.compile(r'^Emphasized ".*"$', re.IGNORECASE),
-    re.compile(r'^Disliked ".*"$', re.IGNORECASE),
-    re.compile(r'^Questioned ".*"$', re.IGNORECASE),
+# Import centralized detection functions from text_normalizer
+from jarvis.text_normalizer import (
+    is_acknowledgment_only as is_simple_acknowledgment,
 )
-
-# Topic shift indicators - response is about something new, not a reply
-_TOPIC_SHIFT_INDICATORS = frozenset(
-    {
-        "btw",
-        "anyway",
-        "oh also",
-        "unrelated",
-        "unrelated but",
-        "speaking of",
-        "on another note",
-        "separately",
-        "side note",
-        "by the way",
-    }
+from jarvis.text_normalizer import (
+    is_reaction as is_reaction_message,
 )
-
-# Acknowledgment-only triggers that often precede NEW topics (not responses)
-_ACKNOWLEDGMENT_TRIGGERS = frozenset(
-    {
-        "ok",
-        "okay",
-        "k",
-        "kk",
-        "yes",
-        "yeah",
-        "yep",
-        "yup",
-        "sure",
-        "cool",
-        "nice",
-        "got it",
-        "sounds good",
-        "alright",
-        "np",
-        "no problem",
-        "thanks",
-        "thank you",
-        "ty",
-        "thx",
-    }
+from jarvis.text_normalizer import (
+    starts_new_topic as is_topic_shift,
 )
-
-
-def is_reaction_message(text: str) -> bool:
-    """Check if text is an iMessage tapback reaction.
-
-    Detects: "Liked", "Loved", "Laughed at", "Emphasized", "Questioned", "Disliked"
-    patterns that appear when someone reacts to a message.
-
-    Args:
-        text: The message text to check.
-
-    Returns:
-        True if the text is a tapback reaction message.
-
-    Example:
-        >>> is_reaction_message('Liked "hello there"')
-        True
-        >>> is_reaction_message("I liked that movie")
-        False
-    """
-    text_stripped = text.strip()
-    return any(pattern.match(text_stripped) for pattern in _REACTION_PATTERNS)
-
-
-def is_topic_shift(text: str) -> bool:
-    """Check if response appears to be a topic shift, not a direct reply.
-
-    Topic shifts start with indicators like "btw", "anyway", "oh also", etc.
-    that signal the responder is changing the subject rather than replying
-    to the trigger.
-
-    Args:
-        text: The response text to check.
-
-    Returns:
-        True if the text starts with a topic shift indicator.
-
-    Example:
-        >>> is_topic_shift("btw, are you free tomorrow?")
-        True
-        >>> is_topic_shift("Yes, I'm free at 3pm")
-        False
-    """
-    text_lower = text.lower().strip()
-    return any(text_lower.startswith(ind) for ind in _TOPIC_SHIFT_INDICATORS)
-
-
-def is_simple_acknowledgment(text: str) -> bool:
-    """Check if text is a simple acknowledgment.
-
-    Simple acknowledgments like "Ok", "Yes", "Sure", "Got it" often precede
-    NEW topics, not responses to the acknowledgment itself.
-
-    Args:
-        text: The text to check.
-
-    Returns:
-        True if the text is a simple acknowledgment.
-
-    Example:
-        >>> is_simple_acknowledgment("Ok")
-        True
-        >>> is_simple_acknowledgment("What time?")
-        False
-    """
-    # Normalize: lowercase, strip punctuation
-    normalized = text.lower().strip().rstrip("!.?,")
-    return normalized in _ACKNOWLEDGMENT_TRIGGERS
 
 
 @dataclass
@@ -643,17 +534,6 @@ class TurnBasedExtractor:
         }
     )
 
-    # Use module-level constants for consistency
-    TOPIC_SHIFT_INDICATORS = _TOPIC_SHIFT_INDICATORS
-    REACTION_PATTERNS = _REACTION_PATTERNS
-    ACKNOWLEDGMENT_TRIGGERS = _ACKNOWLEDGMENT_TRIGGERS
-
-    # Emoji pattern for detecting emoji-only responses
-    EMOJI_PATTERN = re.compile(
-        r"^[\U0001F300-\U0001F9FF\U00002600-\U000027BF\U0001F600-\U0001F64F"
-        r"\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\s]+$"
-    )
-
     def _is_generic_response(self, text: str) -> bool:
         """Check if response is a generic/context-dependent phrase."""
         normalized = text.lower().strip()
@@ -661,7 +541,9 @@ class TurnBasedExtractor:
 
     def _is_emoji_only(self, text: str) -> bool:
         """Check if response contains only emojis."""
-        return bool(self.EMOJI_PATTERN.match(text.strip()))
+        from jarvis.text_normalizer import is_emoji_only
+
+        return is_emoji_only(text)
 
     def _is_topic_shift(self, response_text: str) -> bool:
         """Check if response appears to be a topic shift, not a direct reply.

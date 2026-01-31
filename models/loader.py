@@ -22,12 +22,18 @@ from __future__ import annotations
 
 import gc
 import logging
+import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass, field
 from typing import Any
+
+# Disable HuggingFace hub network checks after initial download
+# This prevents slow version checks on every model load/generate call
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 import mlx.core as mx
 import psutil

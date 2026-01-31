@@ -60,7 +60,7 @@ benchmarks = [
 ]
 
 [project.scripts]
-jarvis = "jarvis.cli:run"
+jarvis = "jarvis._cli_main:run"
 
 [project.urls]
 Homepage = "https://github.com/jwalinshah/jarvis-ai-assistant"

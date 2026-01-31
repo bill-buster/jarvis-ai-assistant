@@ -2,7 +2,7 @@
 
 This document describes the evaluation system for JARVIS reply generation and documents all known issues and limitations.
 
-**Last Updated**: 2026-01-30
+**Last Updated**: 2026-01-30 21:57 PST
 
 ---
 
@@ -54,20 +54,24 @@ python -m scripts.eval_pipeline --output results.json
 | **Quality Threshold** | % of pairs with similarity >= 0.5 |
 | **Latency** | Time per generation in milliseconds |
 
-### Current Results (as of 2026-01-30)
+### Current Results (as of 2026-01-30 21:57 PST)
 
 ```
-Total pairs evaluated: 30
+Total pairs evaluated: 200
 Route distribution:
-  acknowledgment :   12 ( 40.0%)
-  generated      :   17 ( 56.7%)
-  clarify        :    1 (  3.3%)
+  generated      :  134 ( 67.0%)
+  acknowledgment :   63 ( 31.5%)
+  clarify        :    2 (  1.0%)
+  template       :    1 (  0.5%)
 
 Metrics:
-  Avg semantic similarity: 0.590
-  Avg length ratio:        2.483
-  Quality threshold (>= 0.5): 90.0%
+  Avg semantic similarity: 0.539
+  Avg length ratio:        0.665
+  Avg latency:             1301ms
+  Quality threshold (>= 0.5): 70.0%
 ```
+
+See [Evaluation Run: 2026-01-30 21:57 PST](#evaluation-run-2026-01-30-2157-pst) for detailed analysis.
 
 ---
 
@@ -446,6 +450,117 @@ python -m scripts.build_embedding_profiles --limit 50
    ```bash
    python -m scripts.build_embedding_profiles
    ```
+
+---
+
+## Evaluation Run: 2026-01-30 21:57 PST
+
+### Summary
+
+| Metric | Value |
+|--------|-------|
+| Total pairs evaluated | 200 |
+| Avg semantic similarity | 0.539 |
+| Avg length ratio | 0.665 |
+| Avg latency | 1301ms |
+| Quality threshold (>= 0.5) | 70.0% |
+
+### Route Distribution
+
+| Route | Count | % | Avg Similarity |
+|-------|-------|---|----------------|
+| generated | 134 | 67.0% | 0.545 |
+| acknowledgment | 63 | 31.5% | 0.525 |
+| clarify | 2 | 1.0% | 0.519 |
+| template | 1 | 0.5% | 0.619 |
+
+### Key Findings
+
+#### 1. Acknowledgment Route Over-Classification (HIGH)
+
+The acknowledgment route produces only 4 responses for 63 different triggers:
+- `👍`: 25x
+- `Got it!`: 18x
+- `Okay!`: 16x
+- `Perfect!`: 3x
+
+**Problem**: Many triggers classified as "acknowledgments" actually need substantive responses.
+
+**Example**:
+```
+Trigger: "Bruh fuckkk"
+Actual:  "Podz was the last man standing wemby aint even see him"
+Generated: "Okay!"
+```
+
+#### 2. LLM "Yeah" Bias (MEDIUM)
+
+- 91 out of 200 responses (45.5%) start with "Yeah"
+- Model has learned this as a default pattern
+- Reduces response diversity
+
+#### 3. Bad Pairs in Holdout Data (HIGH)
+
+Many "worst" responses are actually topic shifts in the original data:
+
+| Trigger | Actual Response | Issue |
+|---------|-----------------|-------|
+| "You were holding it together..." | "engineers can't find ur calendar" | Topic shift |
+| "Bruh fuckkk" | "Podz was the last man standing" | New topic |
+| "Like fully functional hooked up..." | "Like 250k arr 75k base..." | Conversation fork |
+
+**Impact**: Evaluation metrics are misleading because we're measuring against bad pairs.
+
+#### 4. Template Threshold Too High (MEDIUM)
+
+Only 1 template match out of 200 (0.5%) suggests the template threshold (0.90) is too strict.
+
+**Recommendation**: Lower to 0.65-0.75 based on overnight eval findings.
+
+### Latency Analysis
+
+| Segment | Avg Latency |
+|---------|-------------|
+| First 50 pairs | 1293ms |
+| Second 50 pairs | 1570ms |
+| Third 50 pairs | 1458ms |
+| Last 50 pairs | 884ms |
+
+**Finding**: NOT thermal throttling (latency decreased over time). High early latency due to model warm-up and outlier requests.
+
+**Slowest requests**: 8223ms, 7471ms, 7399ms, 7280ms (all early in run)
+
+### Latency by Route Type
+
+| Route | Avg Latency | Count |
+|-------|-------------|-------|
+| acknowledgment | 144ms | 63 |
+| clarify | 19ms | 2 |
+| template | 19ms | 1 |
+| generated | 1874ms | 134 |
+
+### Data Quality Distribution (Full Dataset)
+
+| Quality | Count | % |
+|---------|-------|---|
+| GOOD | 18,413 | 53.8% |
+| MEDIOCRE | 14,358 | 41.9% |
+| BAD | 1,475 | 4.3% |
+
+### Recommendations
+
+1. **Filter Training Data**: Exclude pairs with quality_score < 0.5 from FAISS index
+2. **Tune Acknowledgment Classifier**: Reduce over-classification of emotional expressions
+3. **Lower Template Threshold**: Change from 0.90 to 0.65-0.70
+4. **Add Prompt Diversity**: Reduce "Yeah" prefix bias in LLM prompts
+5. **Re-extract Pairs**: Run `jarvis db extract` with stricter coherence filtering
+
+### Next Steps
+
+- [ ] Update quality scores: `python -m scripts.score_pair_quality --update --commit`
+- [ ] Rebuild index with min_quality=0.6: Update `build_index_from_db()` call
+- [ ] Tune acknowledgment classifier in `jarvis/message_classifier.py`
+- [ ] Re-run evaluation to measure improvement
 
 ---
 

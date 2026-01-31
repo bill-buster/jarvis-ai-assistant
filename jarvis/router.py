@@ -80,39 +80,21 @@ COHERENCE_THRESHOLD = 0.5  # Minimum coherence score to use a template response
 MAX_TEMPLATE_RESPONSES = 5  # Max responses to choose from for variety
 MIN_RESPONSE_SIMILARITY = 0.6  # Responses must be somewhat similar to pick randomly
 
-# Simple acknowledgments that should be handled directly
-SIMPLE_ACKNOWLEDGMENTS = frozenset(
-    {
-        "ok",
-        "okay",
-        "k",
-        "kk",
-        "yes",
-        "yeah",
-        "yep",
-        "yup",
-        "no",
-        "nope",
-        "nah",
-        "sure",
-        "thanks",
-        "thank you",
-        "thx",
-        "ty",
-        "np",
-        "cool",
-        "nice",
-        "good",
-        "great",
-        "awesome",
-        "alright",
-        "got it",
-        "lol",
-        "haha",
-        "bye",
-        "later",
-    }
-)
+# Import centralized acknowledgment detection from text_normalizer
+from jarvis.text_normalizer import is_acknowledgment_only as _is_ack
+
+# Keep this for backwards compatibility during migration
+# All code should use is_acknowledgment_only() from text_normalizer for exact matching
+SIMPLE_ACKNOWLEDGMENTS = frozenset({})
+
+
+def _check_acknowledgment(text: str) -> bool:
+    """Check if text is a simple acknowledgment using centralized logic.
+
+    Uses exact matching from text_normalizer to avoid substring false positives.
+    """
+    return _is_ack(text)
+
 
 # Context-dependent patterns that ALWAYS need clarification
 # These should NEVER use template responses even with high similarity
@@ -441,6 +423,7 @@ class ReplyRouter:
     def _is_simple_acknowledgment(self, text: str) -> bool:
         """Check if the message is a simple acknowledgment.
 
+        Uses centralized exact matching to avoid substring false positives.
         Simple acknowledgments like "ok", "thanks", "yes" are too
         context-dependent for template matching and should be handled
         directly with generic responses.
@@ -451,10 +434,7 @@ class ReplyRouter:
         Returns:
             True if the message is a simple acknowledgment.
         """
-        normalized = text.lower().strip()
-        # Remove punctuation for matching
-        normalized = normalized.rstrip("!.?")
-        return normalized in SIMPLE_ACKNOWLEDGMENTS
+        return _check_acknowledgment(text)
 
     def _is_context_dependent(self, text: str) -> bool:
         """Check if the message is context-dependent or requires user input.

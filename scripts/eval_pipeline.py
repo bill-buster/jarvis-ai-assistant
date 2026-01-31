@@ -499,17 +499,24 @@ def main() -> None:
         f"({summary.threshold_rate * 100:.1f}%)"
     )
 
-    # Save detailed results if requested
+    # Always save detailed results (auto-generate filename if not provided)
     if args.output:
         output_path = Path(args.output)
-        output_data = {
-            "timestamp": datetime.now().isoformat(),
-            "summary": asdict(summary),
-            "results": [asdict(r) for r in results],
-        }
-        with open(output_path, "w") as f:
-            json.dump(output_data, f, indent=2, default=str)
-        print(f"\nDetailed results saved to: {output_path}")
+    else:
+        # Auto-save to results/eval_pipeline/ with timestamp
+        results_dir = Path("results/eval_pipeline")
+        results_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = results_dir / f"eval_{timestamp}.json"
+
+    output_data = {
+        "timestamp": datetime.now().isoformat(),
+        "summary": asdict(summary),
+        "results": [asdict(r) for r in results],
+    }
+    with open(output_path, "w") as f:
+        json.dump(output_data, f, indent=2, default=str)
+    print(f"\nDetailed results saved to: {output_path}")
 
 
 if __name__ == "__main__":

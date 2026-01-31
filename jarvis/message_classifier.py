@@ -115,12 +115,19 @@ class MessageClassification:
 # Compiled regex patterns for rule-based classification
 # High confidence patterns that don't need embedding fallback
 
-ACKNOWLEDGMENT_PATTERNS = re.compile(
-    r"^(?:ok|okay|k|kk|yes|yeah|yep|yup|sure|thanks?|ty|np|"
-    r"cool|nice|good|great|awesome|alright|got it|sounds good|"
-    r"perfect|fine|works|bet|word|ight|aight)$",
-    re.IGNORECASE,
-)
+# Import centralized acknowledgment detection from text_normalizer
+# This ensures exact matching (not substring matching) across all modules
+from jarvis.text_normalizer import is_acknowledgment_only
+
+
+# Legacy wrapper for regex-based checking - now uses centralized exact matching
+def _match_acknowledgment(text: str) -> bool:
+    """Check if text is an acknowledgment using centralized exact matching."""
+    return is_acknowledgment_only(text)
+
+
+# Keep REACTION_PATTERNS for emotional reactions (lol, haha, wow, etc.)
+# These are different from acknowledgments and need context-aware responses
 
 REACTION_PATTERNS = re.compile(
     r"^(?:lol|lmao|rofl|haha+|hehe+|omg|wow|nice!*|"
@@ -449,8 +456,8 @@ class MessageClassifier:
         text_stripped = text.strip()
         text_lower = text_stripped.lower()
 
-        # Check acknowledgment (exact match, stripped)
-        if ACKNOWLEDGMENT_PATTERNS.match(text_stripped):
+        # Check acknowledgment using centralized exact matching
+        if _match_acknowledgment(text_stripped):
             return MessageType.ACKNOWLEDGMENT, self.RULE_CONFIDENCE, "acknowledgment"
 
         # Check reaction
@@ -545,7 +552,7 @@ class MessageClassifier:
         word_count = len(text.split())
         if word_count <= 2:
             # But acknowledgments and reactions are self-contained
-            if ACKNOWLEDGMENT_PATTERNS.match(text.strip()):
+            if _match_acknowledgment(text.strip()):
                 return ContextRequirement.SELF_CONTAINED
             if REACTION_PATTERNS.match(text.strip()):
                 return ContextRequirement.SELF_CONTAINED

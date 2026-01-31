@@ -32,8 +32,11 @@ REACTION_PATTERNS = [
 REACTION_REGEX = re.compile("|".join(REACTION_PATTERNS), re.IGNORECASE | re.DOTALL)
 
 # Acknowledgment phrases that are too generic to be useful alone
+# NOTE: Emotional reactions (cool, nice, good, great, awesome, lol, haha) are NOT acknowledgments
+# They express emotion and need context-aware LLM generation
 ACKNOWLEDGMENT_PHRASES = frozenset(
     {
+        # True acknowledgments - confirmations and agreements
         "ok",
         "okay",
         "k",
@@ -49,17 +52,14 @@ ACKNOWLEDGMENT_PHRASES = frozenset(
         "nah",
         "na",
         "sure",
+        # Gratitude expressions
         "thanks",
         "thank you",
         "thx",
         "ty",
         "np",
         "yw",
-        "cool",
-        "nice",
-        "good",
-        "great",
-        "awesome",
+        # Understanding confirmations
         "alright",
         "aight",
         "sounds good",
@@ -68,16 +68,13 @@ ACKNOWLEDGMENT_PHRASES = frozenset(
         "heard",
         "bet",
         "word",
-        "lol",
-        "lmao",
-        "haha",
-        "hahaha",
-        "ha",
-        "hehe",
+        # Status updates (not emotional reactions)
         "omw",
         "otw",
         "on my way",
         "be there soon",
+        # NOTE: Removed emotional reactions (cool, nice, good, great, awesome, lol, lmao, haha, hehe)
+        # These should trigger LLM generation, not canned acknowledgment responses
         "see you",
         "bye",
         "later",
@@ -105,7 +102,9 @@ TOPIC_SHIFT_MARKERS = frozenset(
         "speaking of",
         "on another note",
         "random but",
+        "unrelated",
         "unrelated but",
+        "separately",
         "side note",
         "quick question",
         "actually",

@@ -126,7 +126,7 @@ jarvis-ai-assistant/
 │   ├── API_REFERENCE.md
 │   ├── AUDIT_REMEDIATION_PLAN.md
 │   ├── consolidation_plan.md   # NEW: This plan
-│   └── known_issues.md         # NEW: Known issues
+│   └── EVALUATION_AND_KNOWN_ISSUES.md - Evaluation pipeline + known issues
 │
 └── results/                     # Benchmark results
 ```

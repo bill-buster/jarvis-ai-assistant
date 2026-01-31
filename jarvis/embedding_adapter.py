@@ -39,11 +39,17 @@ from __future__ import annotations
 import gc
 import hashlib
 import logging
+import os
 import threading
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+
+# Disable HuggingFace hub network checks after initial download
+# This prevents slow version checks on every embedding computation
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -126,7 +132,15 @@ class UnifiedEmbedder:
                 from sentence_transformers import SentenceTransformer
 
                 logger.info("Loading SentenceTransformer: %s (CPU fallback)", EMBEDDING_MODEL)
-                self._sentence_model = SentenceTransformer(EMBEDDING_MODEL)
+                # Use local_files_only to skip network checks (model must be pre-downloaded)
+                try:
+                    self._sentence_model = SentenceTransformer(
+                        EMBEDDING_MODEL, local_files_only=True
+                    )
+                except Exception:
+                    # First time download - allow network access
+                    logger.info("Model not cached, downloading %s...", EMBEDDING_MODEL)
+                    self._sentence_model = SentenceTransformer(EMBEDDING_MODEL)
                 self._backend = "cpu"
                 logger.info("Using SentenceTransformer backend (CPU)")
             except Exception as e:
